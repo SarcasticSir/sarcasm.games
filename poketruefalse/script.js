@@ -43,6 +43,17 @@
   // calculating reaction‑time based points. Set in askNextQuestion().
   let questionStartTime = 0;
 
+  // Preloaded data for the upcoming question. To improve perceived
+  // responsiveness, we prepare the next question in the background
+  // while the current question is being answered. When the next
+  // question is requested, we consume this preloaded data rather
+  // than waiting for network requests.
+  let preloadedNext = null;
+
+  // Track whether the player has already answered the current question
+  // to prevent multiple clicks causing duplicate scoring.
+  let answeredThisQuestion = false;
+
   // Cache for fetched generation species lists and Pokémon details
   const generationCache = {};
   const pokemonCache = {};
@@ -482,6 +493,52 @@
   }
 
   /**
+   * Prepare a single question by selecting a random Pokémon, fetching
+   * its details and species data, and constructing a statement. Returns
+   * an object containing the Pokémon details, statement text, answer,
+   * explanation and whether to hide the Pokémon name. In case of
+   * fetch failure, null is returned.
+   *
+   * @returns {Promise<Object|null>}
+   */
+  async function prepareQuestion() {
+    // Pick a random species
+    const randomName = speciesList[Math.floor(Math.random() * speciesList.length)];
+    const pokemon = await fetchPokemonDetails(randomName);
+    if (!pokemon) return null;
+    let statementData;
+    try {
+      const speciesData = await fetchSpeciesData(pokemon.name);
+      if (speciesData) {
+        statementData = await buildTriviaStatement(pokemon, speciesData);
+      } else {
+        statementData = buildStatement(pokemon);
+      }
+    } catch (err) {
+      console.warn('Error generating statement for preloaded question', err);
+      statementData = buildStatement(pokemon);
+    }
+    return { pokemon, ...statementData };
+  }
+
+  /**
+   * Preload the next question data in the background. This function
+   * populates the global `preloadedNext` variable with the prepared
+   * question so it can be consumed immediately when needed. If the
+   * question cannot be prepared (e.g., due to a fetch error), the
+   * preloaded data will remain null and `askNextQuestion` will
+   * generate a fresh question on demand.
+   */
+  async function preloadNextQuestion() {
+    // Only preload if there are remaining questions and no preload in progress
+    if (currentQuestion < numQuestions) {
+      preloadedNext = await prepareQuestion();
+    } else {
+      preloadedNext = null;
+    }
+  }
+
+  /**
    * Reset game state and hide all screens except the start screen.
    */
   function resetGame() {
@@ -537,7 +594,11 @@
     startScreen.style.display = 'none';
     endScreen.style.display = 'none';
     gameScreen.style.display = 'block';
-    // Begin with the first question
+    // Preload the first question and then begin. We don't await
+    // preloadNextQuestion here to avoid delaying UI, but the first
+    // call to askNextQuestion will generate a question if preloading
+    // hasn't finished yet.
+    preloadNextQuestion();
     askNextQuestion();
   }
 
@@ -555,32 +616,23 @@
     // Display current number of correct answers and total points
     scoreDisplayEl.textContent = `Score: ${score} | Points: ${totalPoints}`;
     feedbackEl.textContent = '';
-    // Pick a random species
-    const randomName = speciesList[Math.floor(Math.random() * speciesList.length)];
-    const pokemon = await fetchPokemonDetails(randomName);
-    if (!pokemon) {
-      // In case of fetch error, skip this question
+    // Retrieve preloaded data if available; otherwise prepare a question now
+    let qData = preloadedNext;
+    preloadedNext = null;
+    if (!qData) {
+      qData = await prepareQuestion();
+    }
+    // If still no data (e.g., fetch error), skip this question
+    if (!qData) {
       currentQuestion++;
       askNextQuestion();
       return;
     }
-    // Generate the statement and correct answer
-    // Attempt to fetch species data to enable trivia-based statements
-    let statementData;
-    try {
-      const speciesData = await fetchSpeciesData(pokemon.name);
-      if (speciesData) {
-        statementData = await buildTriviaStatement(pokemon, speciesData);
-      } else {
-        statementData = buildStatement(pokemon);
-      }
-    } catch (err) {
-      console.warn('Error generating trivia statement', err);
-      statementData = buildStatement(pokemon);
-    }
-    const { text, answer, explanation, hideName } = statementData;
+    const { pokemon, text, answer, explanation, hideName } = qData;
     correctAnswer = answer;
     correctExplanation = explanation;
+    // Reset answered flag so only the first click counts
+    answeredThisQuestion = false;
     // Display Pokémon info and statement
     pokemonImageEl.src = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemon.id}.png`;
     pokemonImageEl.alt = pokemon.name;
@@ -595,11 +647,12 @@
     // Enable answer buttons
     trueBtn.disabled = false;
     falseBtn.disabled = false;
-
-    // Record the time when the question is fully displayed. This
-    // timestamp will be used to compute reaction‑time based points
-    // when the user answers.
+    // Record display time
     questionStartTime = Date.now();
+    // Begin preloading the next question in the background. We do
+    // not await this promise; network requests happen concurrently
+    // while the player reads the current question.
+    preloadNextQuestion();
   }
 
   /**
@@ -609,6 +662,11 @@
    * @param {boolean} choice Whether the player chose True.
    */
   function handleAnswer(choice) {
+    // If the answer has already been handled for this question, ignore
+    if (answeredThisQuestion) {
+      return;
+    }
+    answeredThisQuestion = true;
     // Disable buttons to prevent multiple clicks
     trueBtn.disabled = true;
     falseBtn.disabled = true;
@@ -636,6 +694,8 @@
       }
       totalPoints += pointsEarned;
       feedbackEl.textContent = `Correct! ${correctExplanation} (+${pointsEarned} pts)`;
+      // Update scoreboard immediately to reflect the new score and points
+      scoreDisplayEl.textContent = `Score: ${score} | Points: ${totalPoints}`;
     } else {
       feedbackEl.textContent = 'Wrong! ' + correctExplanation;
     }
