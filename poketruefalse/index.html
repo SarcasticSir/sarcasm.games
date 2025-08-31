@@ -1,1 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pokémon True or False</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Global header with title and dark mode toggle -->
+  <header class="site-header">
+    <h1>Pokémon True or False</h1>
+    <button id="darkModeToggle" class="dark-mode-toggle" aria-label="Toggle dark mode">🌙</button>
+  </header>
 
+  <!-- Start screen for selecting generations and number of questions -->
+  <div id="startScreen" class="start-screen">
+    <h2>Configure Game</h2>
+    <p class="intro-text">Select the Pokémon generations you want to play with:</p>
+    <div id="generationSelection" class="gen-selection">
+      <!-- Generation boxes rendered with checkboxes and roman numerals. The input is hidden and styled via CSS. -->
+      <label class="gen-box"><input type="checkbox" value="1"><span>I</span></label>
+      <label class="gen-box"><input type="checkbox" value="2"><span>II</span></label>
+      <label class="gen-box"><input type="checkbox" value="3"><span>III</span></label>
+      <label class="gen-box"><input type="checkbox" value="4"><span>IV</span></label>
+      <label class="gen-box"><input type="checkbox" value="5"><span>V</span></label>
+      <label class="gen-box"><input type="checkbox" value="6"><span>VI</span></label>
+      <label class="gen-box"><input type="checkbox" value="7"><span>VII</span></label>
+      <label class="gen-box"><input type="checkbox" value="8"><span>VIII</span></label>
+      <label class="gen-box"><input type="checkbox" value="9"><span>IX</span></label>
+    </div>
+    <div class="form-row">
+      <label for="numQuestions">Number of questions:</label>
+      <input id="numQuestions" type="number" min="1" max="99" value="5">
+    </div>
+    <button id="startGameBtn" class="control-button">Start Game</button>
+  </div>
+
+  <!-- Game screen for presenting questions -->
+  <div id="gameScreen" class="game-container" style="display:none;">
+    <div id="questionHeader" class="question-header">
+      <h2 id="questionCount">Question 1 of 5</h2>
+      <p id="scoreDisplay" class="score-display">Score: 0 | Points: 0</p>
+    </div>
+    <div id="pokemonInfo" class="pokemon-info">
+      <img id="pokemonImage" src="" alt="Pokémon sprite" class="pokemon-image">
+      <h3 id="pokemonName" class="pokemon-name"></h3>
+    </div>
+    <p id="statement" class="statement">Statement goes here.</p>
+    <div class="answer-buttons">
+      <button id="trueBtn" class="answer-button">True</button>
+      <button id="falseBtn" class="answer-button">False</button>
+    </div>
+    <div id="feedback" class="feedback"></div>
+  </div>
+
+  <!-- End screen shown after all questions have been answered -->
+  <div id="endScreen" class="end-screen" style="display:none;">
+    <h2 id="finalMessage">You got 0 out of 0 correct!</h2>
+    <button id="newGameBtn" class="control-button">New Game</button>
+  </div>
+
+  <!-- Home menu button at bottom right -->
+  <a id="homeLink" class="home-link" href="https://sarcasm.games/">
+    <button class="home-button">Back to Main Menu</button>
+  </a>
+
+  <script src="script.js"></script>
+</body>
+</html>
