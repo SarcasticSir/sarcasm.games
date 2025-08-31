@@ -572,9 +572,9 @@ function endRound(winner) {
     fastestTime = { time: timeTaken, name: playerNames[winner] };
     localStorage.setItem(FASTEST_TIME_KEY, JSON.stringify(fastestTime));
     updateFastestTimeDisplay();
-    messageEl.textContent = `${playerNames[winner]} fanget Pokémonen med NY REKORD! Tid: ${timeTaken.toFixed(2)}s`;
+    messageEl.textContent = `${playerNames[winner]} caught the Pokémon with a NEW RECORD REACTION TIME! Time: ${timeTaken.toFixed(2)}s`;
   } else {
-    messageEl.textContent = `${playerNames[winner]} fanget Pokémonen! Tid: ${timeTaken.toFixed(2)}s`;
+    messageEl.textContent = `${playerNames[winner]} caught the Pokémon! Time: ${timeTaken.toFixed(2)}s`;
   }
 
   // Update score for the winner
