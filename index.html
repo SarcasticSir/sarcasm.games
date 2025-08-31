@@ -12,18 +12,51 @@
   h1{margin:0 0 8px;font-size:32px}
   p{opacity:.8;margin:0 0 24px}
   .grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
-  a{display:block;text-decoration:none;padding:18px 20px;border-radius:12px;background:var(--card);color:inherit;border:1px solid var(--bd);transition:.15s}
-  a:hover{transform:translateY(-1px); border-color:#767a88}
+  a{display:block;text-decoration:none;padding:18px 20px;border-radius:12px;background:var(--card);color:inherit;border:1px solid var(--bd);transition:.15s; position: relative; }
+
+  /* New CSS for the tooltip */
+  .tooltip-text {
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0.3s;
+    position: absolute;
+    bottom: -35px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: var(--bd);
+    color: var(--txt);
+    text-align: center;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  a:hover {
+    transform: translateY(-1px);
+    border-color: #767a88;
+  }
+
+  a:hover .tooltip-text {
+    visibility: visible;
+    opacity: 1;
+  }
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>sarcasm.games</h1>
   <p>Where do you wanna go?</p>
-  <div class="grid">
-    <a href="/tiermaker/">Tier-maker</a>
-    <a href="/monstercatch/">Monster catcher</a>
-  </div>
+<div class="grid">
+  <a href="/tiermaker/">
+    Tier-maker
+    <span class="tooltip-text">Make your own tier list. </span>
+  </a>
+  <a href="/monstercatch/">
+    Monster catcher
+    <span class="tooltip-text">A local game for up to four players. Who can catch the monster first?!</span>
+  </a>
+</div>
 </div>
 
 </body>
