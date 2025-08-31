@@ -1,0 +1,616 @@
+/*
+  Styles for Monster Catch Duel. The theme evokes classic monster‑catching games
+  through a Poké Ball motif and playful colours. The layout is responsive and
+  readable on desktop and mobile browsers.
+*/
+
+body {
+  /* Provide a light base colour for the page. The swirling pattern
+     itself is layered behind the content via a pseudo‑element so
+     its opacity can be adjusted independently. */
+  background-color: #f7f7f7;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  /* Use a column layout to stack the header and the main game/start container
+     vertically while centring them horizontally. Avoid vertical centring so
+     the header remains near the top of the viewport. */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 100vh;
+  margin: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+@keyframes moveBG {
+  0%   { background-position: 0% 0%; }
+  50%  { background-position: 100% 100%; }
+  100% { background-position: 0% 0%; }
+}
+
+/* Animated background layer. A pseudo‑element on the body carries the
+   colourful Pokémon‑inspired pattern. By separating it from the main
+   content we can control its opacity independently, creating a more
+   subdued backdrop. */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url('background.png');
+  background-size: 400% 400%;
+  background-repeat: repeat;
+  animation: moveBG 60s linear infinite;
+  opacity: 0.35;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.game-container {
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  padding: 24px;
+  width: 90%;
+  max-width: 700px;
+  text-align: center;
+  /* vertical spacing below the header */
+  margin: 24px auto;
+}
+
+h1 {
+  margin-top: 0;
+  font-size: 2rem;
+  color: #333;
+}
+
+.scoreboard {
+  /* Arrange four players in a responsive two‑column grid */
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.player {
+  flex: 1;
+  margin: 0;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  background-color: #fafafa;
+}
+
+.player1 {
+  background-color: #ffecec;
+  border-color: #ffb5b5;
+}
+
+.player2 {
+  background-color: #e6f3ff;
+  border-color: #b3d6ff;
+}
+
+/* Player 3 and Player 4 colour schemes */
+.player3 {
+  background-color: #e8f8ef;
+  border-color: #b6e2c5;
+}
+
+.player4 {
+  background-color: #fff7e5;
+  border-color: #ffe1a6;
+}
+
+/* Hide player cards or progress bars when fewer than four players are chosen */
+.player.hidden,
+.progress.hidden {
+  display: none !important;
+}
+
+.player h2 {
+  margin: 0 0 4px;
+  font-size: 1.2rem;
+}
+
+/* Name input fields replace the traditional h2 elements. Style them
+   to look like headings while remaining editable. */
+.name-input {
+  width: 100%;
+  padding: 4px;
+  border: none;
+  background: transparent;
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #333;
+  text-align: center;
+}
+
+.name-input::placeholder {
+  color: #777;
+}
+
+/* Player name display on scoreboard. Replaces the editable input on the
+   start screen. */
+.player-name {
+  font-size: 1.2rem;
+  font-weight: bold;
+  margin-bottom: 4px;
+  color: #333;
+}
+
+/* Start screen styling */
+.start-screen {
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  padding: 24px;
+  width: 90%;
+  max-width: 500px;
+  text-align: center;
+  /* centre horizontally and provide spacing from the header via margin‑top */
+  margin: 24px auto;
+}
+
+.setup-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.start-name-input {
+  width: 100%;
+  padding: 6px 8px;
+  font-size: 0.9rem;
+  border: 1px solid #bbb;
+  border-radius: 6px;
+  background-color: #ffffff;
+  color: #333;
+  /* Improve cursor visibility by ensuring a solid background behind the text */
+}
+
+/* Hide the game container until the user starts a game. The class
+   'hidden' may also be applied via JavaScript. */
+.game-container {
+  display: none;
+}
+
+/* Show hidden game container when active */
+.game-container.active {
+  display: block;
+}
+
+.key-hint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #555;
+}
+
+.score {
+  display: block;
+  margin-top: 4px;
+  font-size: 2rem;
+  color: #222;
+}
+
+/* Monster and Pokéball area */
+.monster-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.monster-img {
+  width: 120px;
+  height: 120px;
+  object-fit: contain;
+  margin-bottom: 8px;
+}
+
+/* Pokéball created with CSS gradients */
+.pokeball {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: linear-gradient(to bottom, #d72d2d 50%, #ffffff 50%);
+  border: 8px solid #000;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.pokeball::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 6px solid #000;
+}
+
+/* Sequence display */
+.sequence-container {
+  margin-bottom: 12px;
+}
+
+#sequenceLabel {
+  margin: 0 0 4px;
+  font-size: 1rem;
+  color: #333;
+}
+
+.sequence-display {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
+
+.sequence-step {
+  width: 32px;
+  height: 32px;
+  border: 2px solid #888;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  color: #444;
+  background-color: #f9f9f9;
+}
+
+/* Inverted steps (hard difficulty): show in red to signal that players
+   must input the opposite direction. */
+.sequence-step.invert {
+  background-color: #ffeded;
+  border-color: #d72d2d;
+  color: #d72d2d;
+}
+
+/* Progress bars for players */
+.progress-container {
+  /* Display four progress bars in two columns */
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.progress {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+}
+
+.progress-step {
+  width: 20px;
+  height: 20px;
+  border: 2px solid;
+  border-radius: 3px;
+  background-color: #f1f1f1;
+}
+
+.player1-progress .progress-step {
+  border-color: #d72d2d;
+}
+
+.player2-progress .progress-step {
+  border-color: #2d6ed7;
+}
+
+.progress-step.active.player1 {
+  background-color: #d72d2d;
+}
+
+.progress-step.active.player2 {
+  background-color: #2d6ed7;
+}
+
+/* Styles for Player 3 and Player 4 progress colours */
+.player3-progress .progress-step {
+  border-color: #4caf50;
+}
+
+.player4-progress .progress-step {
+  border-color: #f4a100;
+}
+
+.progress-step.active.player3 {
+  background-color: #4caf50;
+}
+
+.progress-step.active.player4 {
+  background-color: #f4a100;
+}
+
+.message {
+  font-size: 1rem;
+  margin-bottom: 8px;
+  min-height: 24px;
+  color: #444;
+}
+
+.controls {
+  margin-bottom: 12px;
+}
+
+.control-button {
+  padding: 8px 16px;
+  margin: 0 6px;
+  font-size: 1rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  background-color: #0078d4;
+  color: #ffffff;
+  transition: background-color 0.2s ease;
+}
+
+.control-button:hover {
+  background-color: #005ea6;
+}
+
+.history {
+  text-align: left;
+  max-height: 180px;
+  overflow-y: auto;
+  font-size: 0.9rem;
+  border-top: 1px solid #e0e0e0;
+  padding-top: 8px;
+}
+
+.history div {
+  margin-bottom: 4px;
+  color: #555;
+}
+
+/* Information about inverted steps in hard difficulty. Display this
+   text beneath the message area to remind players what red boxes
+   mean. */
+.invert-info {
+  font-size: 0.85rem;
+  color: #666;
+  margin-bottom: 8px;
+}
+
+/* Dark mode toggle button styling */
+/* Header bar containing the title and dark mode toggle */
+.site-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 90%;
+  max-width: 700px;
+  margin: 20px auto 0;
+  padding: 0 24px;
+}
+
+.site-header h1 {
+  margin: 0;
+  font-size: 2rem;
+  color: #333;
+}
+
+/* Dark mode toggle icon inside the header.  It uses an emoji to represent
+   the current theme (moon for light mode, sun for dark mode). */
+.dark-mode-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.5rem;
+  line-height: 1;
+  padding: 4px;
+  color: #333;
+  transition: color 0.2s ease;
+}
+
+.dark-mode-toggle:hover {
+  color: #0078d4;
+}
+
+/* Adjust header and toggle colours in dark mode */
+body.dark-mode .site-header h1 {
+  color: #e0e0e0;
+}
+
+body.dark-mode .dark-mode-toggle {
+  color: #e0e0e0;
+}
+
+body.dark-mode .dark-mode-toggle:hover {
+  color: #66aaff;
+}
+
+/* Dark mode styles */
+body.dark-mode {
+  background-color: #121212;
+  color: #e0e0e0;
+}
+
+body.dark-mode .game-container,
+body.dark-mode .start-screen {
+  background-color: #1e1e1e;
+  color: #e0e0e0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+}
+
+/* Adjust scoreboard colours in dark mode */
+body.dark-mode .player1 {
+  background-color: #5a2e2e;
+  border-color: #b04c4c;
+}
+body.dark-mode .player2 {
+  background-color: #2e4c5a;
+  border-color: #4c78b0;
+}
+body.dark-mode .player3 {
+  background-color: #2e5a44;
+  border-color: #4cb067;
+}
+body.dark-mode .player4 {
+  background-color: #5a4a2e;
+  border-color: #b0884c;
+}
+
+/* Adjust progress bar colours in dark mode */
+body.dark-mode .player1-progress .progress-step {
+  border-color: #b04c4c;
+}
+body.dark-mode .player2-progress .progress-step {
+  border-color: #4c78b0;
+}
+body.dark-mode .player3-progress .progress-step {
+  border-color: #4cb067;
+}
+body.dark-mode .player4-progress .progress-step {
+  border-color: #b0884c;
+}
+body.dark-mode .progress-step.active.player1 {
+  background-color: #b04c4c;
+}
+body.dark-mode .progress-step.active.player2 {
+  background-color: #4c78b0;
+}
+body.dark-mode .progress-step.active.player3 {
+  background-color: #4cb067;
+}
+body.dark-mode .progress-step.active.player4 {
+  background-color: #b0884c;
+}
+
+/* Control buttons in dark mode */
+body.dark-mode .control-button {
+  background-color: #333333;
+  color: #ffffff;
+}
+body.dark-mode .control-button:hover {
+  background-color: #555555;
+}
+
+/* Inputs on start screen in dark mode */
+body.dark-mode .start-name-input {
+  background-color: #2e2e2e;
+  border-color: #555555;
+  color: #e0e0e0;
+}
+body.dark-mode .start-name-input::placeholder {
+  color: #888888;
+}
+
+/* Key hints and scores colouring in dark mode */
+body.dark-mode .key-hint {
+  color: #bbbbbb;
+}
+body.dark-mode .score {
+  color: #ffffff;
+}
+body.dark-mode .message {
+  color: #dddddd;
+}
+body.dark-mode .invert-info {
+  color: #aaaaaa;
+}
+
+/*-------------------------------------------------------------
+ * Home link styling
+ *
+ * A persistent link in the bottom‑right corner of the page that
+ * directs players back to the main menu on sarcasm.games. Its
+ * appearance is distinct from other control buttons and adapts
+ * automatically when dark mode is toggled.
+ */
+/* Position the home link in the bottom‑right corner of the viewport. The link wraps
+   a button element so users can click a standard button to return to the
+   main menu. */
+.home-link {
+  position: fixed;
+  bottom: 12px;
+  right: 12px;
+  z-index: 100;
+  text-decoration: none;
+}
+
+/* Style the button inside the home link. Choose a neutral tone that
+   differentiates it from the primary game controls. */
+.home-button {
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  background-color: #6c757d;
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  transition: background-color 0.2s ease;
+}
+
+.home-button:hover {
+  background-color: #5a6268;
+}
+
+/* Dark mode adjustments for the home button */
+body.dark-mode .home-button {
+  background-color: #4a4a4a;
+  color: #ffffff;
+}
+
+body.dark-mode .home-button:hover {
+  background-color: #383838;
+}
+
+/* Countdown animation for the Poké Ball. When the 'countdown' class is
+   applied, the ball gently pulses to build anticipation before the sequence
+   appears. */
+.pokeball.countdown {
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+
+/* Catch animation for the Poké Ball. When the 'caught' class is added,
+   the ball briefly enlarges and wiggles to signal that a monster has
+   been successfully caught. */
+.pokeball.caught {
+  animation: catch 0.6s ease;
+}
+
+@keyframes catch {
+  0% { transform: scale(1) rotate(0deg); }
+  25% { transform: scale(1.1) rotate(10deg); }
+  50% { transform: scale(1.2) rotate(-10deg); }
+  75% { transform: scale(1.1) rotate(5deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+
+/* Shake animation for wrong input. Adding the 'wrong' class to a
+   player's progress container will cause it to shake horizontally,
+   drawing attention to the mistake. */
+.progress.wrong {
+  animation: shake 0.4s;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  50% { transform: translateX(5px); }
+  75% { transform: translateX(-5px); }
+}

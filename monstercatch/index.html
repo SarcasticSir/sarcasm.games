@@ -1,1 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Monster Catch Duel</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Site header containing the title and dark mode toggle icon -->
+  <header class="site-header">
+    <h1>Monster Catch Duel</h1>
+    <!-- Dark mode toggle icon: shows a moon in light mode and a sun in dark mode -->
+    <button id="darkModeToggle" class="dark-mode-toggle" aria-label="Toggle dark mode">🌙</button>
+  </header>
 
+  <!-- Start screen for selecting players, names, points and difficulty -->
+  <div id="startScreen" class="start-screen">
+    <div class="setup-form">
+      <div class="form-row">
+        <label for="numPlayers">Number of players:</label>
+        <select id="numPlayers">
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4" selected>4</option>
+        </select>
+      </div>
+      <!-- Name inputs for players; these will be used only on the start screen -->
+      <div id="nameFields" class="form-row">
+        <input id="startName1" class="start-name-input" placeholder="Player 1 Name (blank for random)" />
+        <input id="startName2" class="start-name-input" placeholder="Player 2 Name (blank for random)" />
+        <input id="startName3" class="start-name-input" placeholder="Player 3 Name (blank for random)" />
+        <input id="startName4" class="start-name-input" placeholder="Player 4 Name (blank for random)" />
+      </div>
+      <div class="form-row">
+        <label for="pointsToWin">Points to win:</label>
+        <input id="pointsToWin" type="number" min="1" max="99" value="3" />
+      </div>
+      <div class="form-row">
+        <label for="difficulty">Difficulty:</label>
+        <select id="difficulty">
+          <option value="easy">Easy (3–5)</option>
+          <option value="medium">Medium (5–10)</option>
+          <option value="hard">Hard (5–10 with inversions)</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <button id="startGameBtn" class="control-button">Start Game</button>
+      </div>
+    </div>
+  </div>
+  <div class="game-container">
+    
+    <!-- Scoreboard -->
+    <div class="scoreboard">
+      <!-- Player 1: uses WASD -->
+      <div class="player player1" id="playerCard1">
+        <div id="nameDisplay1" class="player-name">Player 1</div>
+        <p class="key-hint">Keys: W A S D</p>
+        <span id="score1" class="score">0</span>
+      </div>
+      <!-- Player 2: uses Arrow keys -->
+      <div class="player player2" id="playerCard2">
+        <div id="nameDisplay2" class="player-name">Player 2</div>
+        <p class="key-hint">Keys: Arrow Keys (↑ ← ↓ →)</p>
+        <span id="score2" class="score">0</span>
+      </div>
+      <!-- Player 3: uses TFGH -->
+      <div class="player player3" id="playerCard3">
+        <div id="nameDisplay3" class="player-name">Player 3</div>
+        <p class="key-hint">Keys: T F G H</p>
+        <span id="score3" class="score">0</span>
+      </div>
+      <!-- Player 4: uses IJKL -->
+      <div class="player player4" id="playerCard4">
+        <div id="nameDisplay4" class="player-name">Player 4</div>
+        <p class="key-hint">Keys: I J K L</p>
+        <span id="score4" class="score">0</span>
+      </div>
+    </div>
+    <!-- Monster and Pokéball area -->
+    <div class="monster-area">
+      <img id="monsterImg" src="monster.png" alt="Monster silhouette" class="monster-img">
+      <div class="pokeball"></div>
+    </div>
+    <!-- Sequence to replicate -->
+    <div class="sequence-container">
+      <p id="sequenceLabel">Sequence:</p>
+      <div id="sequenceDisplay" class="sequence-display"></div>
+    </div>
+    <!-- Player progress indicators -->
+    <div class="progress-container">
+      <div id="progress1" class="progress player1-progress"></div>
+      <div id="progress2" class="progress player2-progress"></div>
+      <div id="progress3" class="progress player3-progress"></div>
+      <div id="progress4" class="progress player4-progress"></div>
+    </div>
+    <!-- Message area -->
+    <div id="message" class="message">Press “Start Round” to begin.</div>
+    <!-- Invert info: explain what red boxes mean -->
+    <div id="invertInfo" class="invert-info">A red box means press the opposite direction.</div>
+    <!-- Control buttons -->
+    <div class="controls">
+      <button id="startBtn" class="control-button">Start Round</button>
+      <button id="resetBtn" class="control-button">Reset Game</button>
+      <button id="backBtn" class="control-button" style="display: none;">Back to Start</button>
+    </div>
+    <!-- History log -->
+    <div id="history" class="history"></div>
+  </div>
+  <script src="script.js"></script>
+  <!-- Link to return to the main menu. Wrapped in an anchor so clicking
+       the button navigates back to the site. Placed in the
+       bottom‑right corner of the viewport. -->
+  <a id="homeLink" class="home-link" href="https://sarcasm.games/">
+    <button class="home-button">Back to Main Menu</button>
+  </a>
+</body>
+</html>
