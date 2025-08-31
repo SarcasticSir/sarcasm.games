@@ -413,9 +413,9 @@ function flashWrong(player) {
  */
 function updateFastestTimeDisplay() {
   if (fastestTime) {
-    fastestTimeEl.textContent = `Raskeste reaksjon: ${fastestTime.time.toFixed(2)}s (${fastestTime.name})`;
+    fastestTimeEl.textContent = `Fastest reaction time: ${fastestTime.time.toFixed(2)}s (${fastestTime.name})`;
   } else {
-    fastestTimeEl.textContent = 'Ingen raskeste reaksjon satt ennå.';
+    fastestTimeEl.textContent = 'No fastest reaction time yet';
   }
 }
 
@@ -428,7 +428,7 @@ function loadFastestTime() {
     try {
       fastestTime = JSON.parse(storedTime);
     } catch (e) {
-      console.error('Kunne ikke hente raskeste tid fra localStorage:', e);
+      console.error('Could not fetch reaction time from localstorage:', e);
       fastestTime = null;
     }
   }
