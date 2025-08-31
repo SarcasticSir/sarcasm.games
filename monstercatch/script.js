@@ -522,7 +522,7 @@ function endRound(winner) {
   // Remove key listener
   document.removeEventListener('keydown', keyListener);
   const timeTaken = (Date.now() - roundStartTime) / 1000;
-  messageEl.textContent = `${playerNames[winner]} caught the monster! Time: ${timeTaken.toFixed(2)}s`;
+  messageEl.textContent = `${playerNames[winner]} caught the pokémon! Time: ${timeTaken.toFixed(2)}s`;
   // Update score for the winner
   switch (winner) {
     case 1:
