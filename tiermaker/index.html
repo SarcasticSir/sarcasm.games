@@ -1,913 +1,1700 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="nb">
 <head>
-  <meta charset="UTF-8">
-  <title>Simple Tier List</title>
-  <style>
-    /*
-      Simple style sheet for a local tier list.
+  <meta charset="UTF-8">
+  <title>Enkel Tier‑liste</title>
+  <style>
+    /*
+      Enkel stilsett for en lokal tier‑liste.
 
-      Tiers consist of a colored header and an area where items
-      can be moved around with drag-and-drop. The colors and names can
-      be changed for each tier, and new items can be added via the controls
-      at the top. Finally, the layout can be saved to the browser's localStorage.
-    */
-    :root {
-      /* Tier header width. Adjusted to make the boxes a bit narrower */
-      --header-width: 110px;
-      --tier-gap: 8px;
-      /* Color variables for light mode */
-      --background: #f8f9fa;
-      --foreground: #333333;
-      --item-bg: #ffffff;
-      --tier-items-bg: #fafafa;
-      --control-bg: #007bff;
-      --control-hover-bg: #0056b3;
-      --button-text-color: #ffffff;
-    }
+      Rekkene (tier) består av en farget overskrift og et område hvor elementer
+      (titler) kan flyttes rundt med drag‑and‑drop. Fargene og navnene kan
+      endres for hver tier, og nye titler kan legges til via kontrollene
+      øverst. Til slutt kan oppsettet lagres til nettleserens localStorage.
+    */
+    :root {
+      /* Bredde på tier‑headeren. Justert ned for å gjøre boksene litt smalere */
+      --header-width: 110px;
+      --tier-gap: 8px;
+      /* Fargevariabler for lys modus */
+      --background: #f8f9fa;
+      --foreground: #333333;
+      --item-bg: #ffffff;
+      --tier-items-bg: #fafafa;
+      --control-bg: #007bff;
+      --control-hover-bg: #0056b3;
+      --button-text-color: #ffffff;
+    }
 
-    /* When data-theme=dark is set on documentElement (html), the variables for dark mode are overridden */
-    [data-theme="dark"] {
-      --background: #121212;
-      --foreground: #e0e0e0;
-      --item-bg: #1e1e1e;
-      --tier-items-bg: #2a2a2a;
-      --control-bg: #0d6efd;
-      --control-hover-bg: #0a58ca;
-      --button-text-color: #ffffff;
-    }
+    /* Når data-theme=dark settes på documentElement (html), overskrives variablene for mørk modus */
+    [data-theme="dark"] {
+      --background: #121212;
+      --foreground: #e0e0e0;
+      --item-bg: #1e1e1e;
+      --tier-items-bg: #2a2a2a;
+      --control-bg: #0d6efd;
+      --control-hover-bg: #0a58ca;
+      --button-text-color: #ffffff;
+    }
 
-    body {
-      font-family: Arial, sans-serif;
-      background-color: var(--background);
-      margin: 0;
-      padding: 20px;
-      color: var(--foreground);
-    }
+    body {
+      font-family: Arial, sans-serif;
+      background-color: var(--background);
+      margin: 0;
+      padding: 20px;
+      color: var(--foreground);
+    }
 
-    h1 {
-      text-align: center;
-      margin-bottom: 15px;
-      color: var(--foreground);
-    }
+    h1 {
+      text-align: center;
+      margin-bottom: 15px;
+      color: var(--foreground);
+    }
 
-    /* Allow editing of page title without showing an ugly border.
-        Instead, show a discrete dashed border when the field is in focus. */
-    #pageTitle[contenteditable] {
-      border: none;
-      outline: none;
-      cursor: text;
-      display: inline-block;
-      padding: 2px 4px;
-      border-radius: 4px;
-    }
-    #pageTitle[contenteditable]:focus {
-      outline: 2px dashed #007bff;
-    }
+    /* Tillat redigering av sidetittel uten å vise en stygg kant. 
+       Vis heller en diskret stiplet ramme når feltet er i fokus. */
+    #pageTitle[contenteditable] {
+      border: none;
+      outline: none;
+      cursor: text;
+      display: inline-block;
+      padding: 2px 4px;
+      border-radius: 4px;
+    }
+    #pageTitle[contenteditable]:focus {
+      outline: 2px dashed #007bff;
+    }
 
-    .container {
-      max-width: 900px;
-      margin: 0 auto;
-    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
 
-    .controls {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-bottom: 15px;
-      align-items: center;
-    }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 15px;
+      align-items: center;
+    }
 
-    .controls input[type="text"] {
-      flex-grow: 1;
-      padding: 8px 10px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-    }
+    .controls input[type="text"] {
+      flex-grow: 1;
+      padding: 8px 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
 
-    .controls button {
-      padding: 8px 12px;
-      border: none;
-      background-color: var(--control-bg);
-      color: var(--button-text-color);
-      border-radius: 4px;
-      cursor: pointer;
-      transition: background-color 0.2s ease;
-    }
+    .controls button {
+      padding: 8px 12px;
+      border: none;
+      background-color: var(--control-bg);
+      color: var(--button-text-color);
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
 
-    .controls button:hover {
-      background-color: var(--control-hover-bg);
-    }
+    .controls button:hover {
+      background-color: var(--control-hover-bg);
+    }
 
-    /* Special styling for the theme toggle button to make it small and distinct. */
-    #themeToggle {
-      width: 2.1rem;
-      height: 2.1rem;
-      padding: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.1rem;
-      border-radius: 50%;
-      background-color: transparent;
-      border: 2px solid var(--control-bg);
-      color: var(--control-bg);
-      margin-left: auto;
-    }
-    #themeToggle:hover {
-      background-color: var(--control-bg);
-      color: var(--button-text-color);
-    }
+    /* Spesiell styling for temaveksler-knappen for å gjøre den liten og avvikende. */
+    #themeToggle {
+      width: 2.1rem;
+      height: 2.1rem;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      border-radius: 50%;
+      background-color: transparent;
+      border: 2px solid var(--control-bg);
+      color: var(--control-bg);
+      margin-left: auto;
+    }
+    #themeToggle:hover {
+      background-color: var(--control-bg);
+      color: var(--button-text-color);
+    }
 
-    /* Tier layout */
-    .tier {
-      display: flex;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      overflow: hidden;
-      margin-bottom: var(--tier-gap);
-      background-color: #fff;
-    }
+    /* Tier layout */
+    .tier {
+      display: flex;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: var(--tier-gap);
+      background-color: #fff;
+    }
 
-    .tier-header {
-      width: var(--header-width);
-      padding: 5px;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      gap: 3px;
-      box-sizing: border-box;
-    }
+    .tier-header {
+      width: var(--header-width);
+      padding: 5px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 3px;
+      box-sizing: border-box;
+    }
 
-    .tier-header input[type="text"] {
-      width: 100%;
-      border: none;
-      font-weight: bold;
-      font-size: 1rem;
-      background-color: transparent;
-      padding: 4px;
-      outline: none;
-      /* allow automatic line breaks for long category names */
-      white-space: normal;
-      overflow-wrap: anywhere;
-      /* inherit color from the header for good contrast */
-      color: inherit;
-    }
+    .tier-header input[type="text"] {
+      width: 100%;
+      border: none;
+      font-weight: bold;
+      font-size: 1rem;
+      background-color: transparent;
+      padding: 4px;
+      outline: none;
+      /* tillat automatisk linjebryting av lange kategorinavn */
+      white-space: normal;
+      overflow-wrap: anywhere;
+      /* arve fargen fra headeren for god kontrast */
+      color: inherit;
+    }
 
-    /* Progress bar inside the tier header */
-    .progress-container {
-      width: 100%;
-      height: 6px;
-      background-color: rgba(255, 255, 255, 0.3);
-      border-radius: 3px;
-      overflow: hidden;
-    }
-    .progress-bar {
-      height: 100%;
-      width: 0%;
-      background-color: currentColor;
-    }
+    /* Progress bar inne i tier-headeren */
+    .progress-container {
+      width: 100%;
+      height: 6px;
+      background-color: rgba(255, 255, 255, 0.3);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background-color: currentColor;
+    }
 
-    /* Footer with count, percentage, color picker and remove button */
-    .tier-footer {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 4px;
-      font-size: 0.8rem;
-    }
-    /* Specific classes to easily find count and percentage in JS */
-    .count-info {
-      /* no specific styles yet */
-    }
-    .percent-info {
-      /* no specific styles yet */
-    }
+    /* Footer med telling, prosent, fargevelger og fjernknapp */
+    .tier-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.8rem;
+    }
+    /* Spesifikke klasser for å enklere finne telling og prosent i JS */
+    .count-info {
+      /* no specific styles yet */
+    }
+    .percent-info {
+      /* no specific styles yet */
+    }
 
-    /* Trash bin for removing items */
-    #trashBin {
-      width: 100px;
-      height: 50px;
-      border: 2px dashed #999;
-      border-radius: 4px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1rem;
-      margin-top: 10px;
-      cursor: pointer;
-      color: var(--foreground);
-      background-color: var(--tier-items-bg);
-      transition: background-color 0.2s ease, border-color 0.2s ease;
-    }
-    #trashBin.drag-over {
-      background-color: #ffe6e6;
-      border-color: #ff6b6b;
-    }
-    .tier-footer input[type="color"] {
-      width: 1.3rem;
-      height: 1.3rem;
-      border: none;
-      padding: 0;
-      cursor: pointer;
-    }
+    /* Søppelbøtte for å fjerne elementer */
+    #trashBin {
+      width: 100px;
+      height: 50px;
+      border: 2px dashed #999;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      margin-top: 10px;
+      cursor: pointer;
+      color: var(--foreground);
+      background-color: var(--tier-items-bg);
+      transition: background-color 0.2s ease, border-color 0.2s ease;
+    }
+    #trashBin.drag-over {
+      background-color: #ffe6e6;
+      border-color: #ff6b6b;
+    }
+    .tier-footer input[type="color"] {
+      width: 1.3rem;
+      height: 1.3rem;
+      border: none;
+      padding: 0;
+      cursor: pointer;
+    }
 
-    .tier-items {
-      flex-grow: 1;
-      /* Reduce min-height so boxes don't get so tall */
-      min-height: 50px;
-      padding: 8px;
-      display: flex;
-      flex-wrap: wrap;
-      align-items: flex-start;
-      gap: 8px;
-      background-color: var(--tier-items-bg);
-      transition: background-color 0.2s ease;
-    }
+    .tier-items {
+      flex-grow: 1;
+      /* Reduser min-høyden slik at boksene ikke blir så høye */
+      min-height: 50px;
+      padding: 8px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      gap: 8px;
+      background-color: var(--tier-items-bg);
+      transition: background-color 0.2s ease;
+    }
 
-    .tier-items.drag-over {
-      background-color: #e6f7ff;
-      border: 2px dashed #007bff;
-    }
+    .tier-items.drag-over {
+      background-color: #e6f7ff;
+      border: 2px dashed #007bff;
+    }
 
-    .item {
-      padding: 6px 10px;
-      background-color: var(--item-bg);
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      cursor: move;
-      user-select: none;
-      font-size: 0.85rem;
-      /* allow line wraps when extra fields are shown */
-      white-space: normal;
-      /* Stack rows for text and extra fields */
-      display: flex;
-      flex-direction: column;
-      align-items: flex-start;
-      color: var(--foreground);
-    }
+    .item {
+      padding: 6px 10px;
+      background-color: var(--item-bg);
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      cursor: move;
+      user-select: none;
+      font-size: 0.85rem;
+      /* tillat line wraps når ekstra felt vises */
+      white-space: normal;
+      /* Stable rader for tekst og ekstra felt */
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      color: var(--foreground);
+    }
 
-    .item.dragging {
-      opacity: 0.6;
-    }
+    .item.dragging {
+      opacity: 0.6;
+    }
 
-    /* Small extra fields that are permanently displayed on the items */
-    .extra-fields {
-      font-size: 0.7rem;
-      opacity: 0.8;
-      margin-top: 2px;
-      color: var(--foreground);
-    }
+    /* Små ekstra felt som vises permanent på elementene */
+    .extra-fields {
+      font-size: 0.7rem;
+      opacity: 0.8;
+      margin-top: 2px;
+      color: var(--foreground);
+    }
 
-    /* Settings panel for column view */
-    #settingsOverlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(0, 0, 0, 0.5);
-      z-index: 1000;
-      display: none;
-    }
+    /* Innstillingspanel for kolonne-visning */
+    #settingsOverlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      display: none;
+    }
 
-    #settingsPanel {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background-color: var(--item-bg);
-      color: var(--foreground);
-      border: 2px solid #ccc;
-      border-radius: 6px;
-      padding: 20px;
-      z-index: 1001;
-      min-width: 320px;
-      display: none;
-    }
-    #settingsPanel h2 {
-      margin-top: 0;
-      margin-bottom: 10px;
-      font-size: 1.2rem;
-    }
-    .column-setting {
-      margin-bottom: 10px;
-      display: flex;
-      flex-direction: column;
-    }
-    .column-setting label {
-      font-size: 0.8rem;
-      margin-bottom: 3px;
-    }
-    .settings-actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 10px;
-      margin-top: 15px;
-    }
-    #settingsBtn {
-      width: 2.1rem;
-      height: 2.1rem;
-      padding: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.1rem;
-      border-radius: 50%;
-      background-color: transparent;
-      border: 2px solid var(--control-bg);
-      color: var(--control-bg);
-      margin-left: 5px;
-    }
-    #settingsBtn:hover {
-      background-color: var(--control-bg);
-      color: var(--button-text-color);
-    }
+    #settingsPanel {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: var(--item-bg);
+      color: var(--foreground);
+      border: 2px solid #ccc;
+      border-radius: 6px;
+      padding: 20px;
+      z-index: 1001;
+      min-width: 320px;
+      display: none;
+    }
+    #settingsPanel h2 {
+      margin-top: 0;
+      margin-bottom: 10px;
+      font-size: 1.2rem;
+    }
+    .column-setting {
+      margin-bottom: 10px;
+      display: flex;
+      flex-direction: column;
+    }
+    .column-setting label {
+      font-size: 0.8rem;
+      margin-bottom: 3px;
+    }
+    .settings-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 15px;
+    }
+    #settingsBtn {
+      width: 2.1rem;
+      height: 2.1rem;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      border-radius: 50%;
+      background-color: transparent;
+      border: 2px solid var(--control-bg);
+      color: var(--control-bg);
+      margin-left: 5px;
+    }
+    #settingsBtn:hover {
+      background-color: var(--control-bg);
+      color: var(--button-text-color);
+    }
 
-    /* Count information in the tier header */
-    .counts {
-      font-size: 0.8rem;
-      opacity: 0.8;
-    }
+    /* Tellingsinformasjon i tier-headeren */
+    .counts {
+      font-size: 0.8rem;
+      opacity: 0.8;
+    }
 
-    /* Button to remove a tier */
-    .remove-tier {
-      background: none;
-      border: none;
-      color: inherit;
-      font-weight: bold;
-      cursor: pointer;
-      align-self: flex-end;
-      padding: 0;
-    }
+    /* Knapp for å fjerne en tier */
+    .remove-tier {
+      background: none;
+      border: none;
+      color: inherit;
+      font-weight: bold;
+      cursor: pointer;
+      align-self: flex-end;
+      padding: 0;
+    }
 
-    /* Duplicate warning */
-    #duplicateMsg {
-      background-color: #f8d7da;
-      color: #721c24;
-      border: 1px solid #f5c6cb;
-      padding: 4px 8px;
-      border-radius: 4px;
-      white-space: nowrap;
-      font-size: 0.85rem;
-      pointer-events: none;
-      z-index: 1000;
-    }
+    /* Duplikat-varsel */
+    #duplicateMsg {
+      background-color: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+      padding: 4px 8px;
+      border-radius: 4px;
+      white-space: nowrap;
+      font-size: 0.85rem;
+      pointer-events: none;
+      z-index: 1000;
+    }
 
-    /* Responsive adjustments */
-    @media (max-width: 600px) {
-      :root {
-        --header-width: 100px;
-      }
-      .controls input[type="text"] {
-        flex-basis: 100%;
-      }
-    }
+    /* Responsive adjustments */
+    @media (max-width: 600px) {
+      :root {
+        --header-width: 100px;
+      }
+      .controls input[type="text"] {
+        flex-basis: 100%;
+      }
+    }
 
-    /* Print-friendly style: hide controls and trash bin */
-    @media print {
-      .controls,
-      #trashBin,
-      #settingsOverlay,
-      #settingsPanel,
-      #duplicateMsg {
-        display: none !important;
-      }
-      body {
-        margin: 0;
-        padding: 0;
-      }
-    }
-  </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    /* Utskriftsvennlig stil: skjul kontroller og søppelbøtte */
+    @media print {
+      .controls,
+      #trashBin,
+      #settingsOverlay,
+      #settingsPanel,
+      #duplicateMsg {
+        display: none !important;
+      }
+      body {
+        margin: 0;
+        padding: 0;
+      }
+    }
+  </style>
+  <!--
+    Legg til eksternt XLSX‑bibliotek for å kunne lese Excel‑filer. Denne filen
+    lastes fra CDN når du har nettforbindelse. Dersom du skal bruke verktøyet
+    offline, kan du laste ned xlsx.full.min.js fra https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js
+    og plassere den i samme mappe som denne HTML‑filen. Endre deretter src til
+    den lokale filen (f.eks. src="xlsx.full.min.js").
+  -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <!-- Bibliotek for å eksportere som bilde -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
-    <div class="container">
-        <h1 id="pageTitle" contenteditable="true" spellcheck="false">Simple Tier List</h1>
-    <div class="controls">
-            <input type="text" id="bulkTitles" placeholder="Add title(s) … (separate with | or ;)" style="flex-grow:1;" />
-      <button id="addBulkBtn">Add</button>
-      
-            <input type="file" id="fileInput" accept=".txt,.csv,.xls,.xlsx" style="display:none" />
-      <button id="importBtn">Import file</button>
+    <div class="container">
+    <!-- Gjør sidetittelen direkte redigerbar ved å sette contenteditable. 
+         Bruker en id for å kunne hente elementet i JavaScript. -->
+    <h1 id="pageTitle" contenteditable="true" spellcheck="false">Enkel Tier‑liste</h1>
+    <div class="controls">
+      <!-- Felt for å legge til titler. Skill med | eller ; hvis du legger til flere -->
+      <input type="text" id="bulkTitles" placeholder="Legg til tittel(er) … (skill med | eller ;)" style="flex-grow:1;" />
+      <button id="addBulkBtn">Legg til</button>
+      
+      <!-- Filopplasting for å importere titler fra tekst/CSV/Excel. 
+           Vi aksepterer .txt, .csv og .xlsx/.xls. Hvis en Excel-fil velges og XLSX-biblioteket er lastet (via CDN eller lokal fil),
+           vil første kolonne i første ark bli importert. -->
+      <input type="file" id="fileInput" accept=".txt,.csv,.xls,.xlsx" style="display:none" />
+      <button id="importBtn">Importer fil</button>
 
-      <button id="addTierBtn">Add tier</button>
-            <button id="themeToggle" title="Toggle theme">🌙</button>
-            <button id="settingsBtn" title="Settings">⚙</button>
-    </div>
+      <button id="addTierBtn">Legg til tier</button>
+      <!-- Temaveksler: smått ikon for å bytte mellom lys/mørk modus -->
+      <button id="themeToggle" title="Bytt tema">🌙</button>
+      <!-- Innstillinger-knapp (gir tilgang til kolonnevalg) -->
+      <button id="settingsBtn" title="Innstillinger">⚙</button>
+    </div>
 
-        <div id="duplicateMsg" style="display:none; position: absolute;"></div>
+    <!-- Meldingsboks for duplikater. Skjules som standard og posisjoneres ved behov via JS -->
+    <div id="duplicateMsg" style="display:none; position: absolute;"></div>
 
-        <div class="controls" style="margin-top: 5px;">
-      <button id="sortUnrankedBtn">Sort unranked (A–Z)</button>
-      <button id="shuffleUnrankedBtn">Shuffle unranked</button>
-    </div>
-    <div id="tiers">
-          </div>
-        <div class="controls" id="bottomControls" style="margin-top: 10px;">
-      <button id="saveBtn">Save layout</button>
-      <button id="resetBtn">Reset</button>
-      <button id="exportJsonBtn">Export JSON</button>
-      <input type="file" id="importJsonInput" accept=".json" style="display:none" />
-      <button id="importJsonBtn">Import JSON</button>
-            <button id="exportImageBtn">Export image</button>
-    </div>
+    <!-- Sorteringsknapper for urankerte titler -->
+    <div class="controls" style="margin-top: 5px;">
+      <button id="sortUnrankedBtn">Sorter urangerte (A–Å)</button>
+      <button id="shuffleUnrankedBtn">Miks urangerte</button>
+    </div>
+    <div id="tiers">
+      <!-- Tiers settes inn her via JavaScript -->
+    </div>
+    <!-- Kontroller nederst: lagre, tilbakestill og eksport/import JSON -->
+    <div class="controls" id="bottomControls" style="margin-top: 10px;">
+      <button id="saveBtn">Lagre oppsett</button>
+      <button id="resetBtn">Tilbakestill</button>
+      <button id="exportJsonBtn">Eksporter JSON</button>
+      <input type="file" id="importJsonInput" accept=".json" style="display:none" />
+      <button id="importJsonBtn">Importer JSON</button>
+      <!-- Ny knapp for å eksportere som bilde (PNG) -->
+      <button id="exportImageBtn">Eksporter bilde</button>
+    </div>
 
-        <div id="trashBin" title="Drag items here to delete">🗑 Delete</div>
+    <!-- Søppelbøtte for å dra og slippe elementer som skal slettes -->
+    <div id="trashBin" title="Dra elementer hit for å slette">🗑 Slett</div>
 
-        <div id="settingsOverlay"></div>
-    <div id="settingsPanel">
-      <h2>Column Settings</h2>
-            <div id="columnSettingsContainer"></div>
-      <div class="settings-actions">
-        <button id="cancelSettingsBtn">Cancel</button>
-        <button id="saveSettingsBtn">Save</button>
-      </div>
-    </div>
-  </div>
+    <!-- Overlegg og panel for kolonneinnstillinger -->
+    <div id="settingsOverlay"></div>
+    <div id="settingsPanel">
+      <h2>Kolonneinnstillinger</h2>
+      <!-- Dynamisk innhold settes inn via JS -->
+      <div id="columnSettingsContainer"></div>
+      <div class="settings-actions">
+        <button id="cancelSettingsBtn">Avbryt</button>
+        <button id="saveSettingsBtn">Lagre</button>
+      </div>
+    </div>
+  </div>
 
-  <script>
-    /*
-      JavaScript for controlling the tier list. The following functions are supported:
-        – Create default tiers (S, A, B, C, D, Unranked) with color.
-        – Dynamically edit the name and color for each tier.
-        – Add new items that can be dragged and dropped between tiers.
-        – Drag-and-drop with HTML5 API for both reordering within the same tier and moving between tiers.
-        – Save and load layout from the browser's localStorage.
-        – Reset to default.
-    */
+  <script>
+    /*
+      JavaScript for å styre tier‑listen. Følgende funksjoner støttes:
+        – Opprett standard tierer (S, A, B, C, D, Unranked) med farge.
+        – Rediger navn og farge for hver tier dynamisk.
+        – Legg til nye titler som kan dras og slippes mellom tiers.
+        – Drag‑and‑drop med HTML5 API for både rekkeflyt innen samme tier og flytting mellom tiers.
+        – Lagre og laste oppsett fra browserens localStorage.
+        – Tilbakestille til standard.
+    */
 
-    // Define default tiers. Use a list of objects containing name, color, and an empty list for items.
-    const defaultTiers = [
-      { name: 'S', color: '#f94144', items: [] },
-      { name: 'A', color: '#f3722c', items: [] },
-      { name: 'B', color: '#f9844a', items: [] },
-      { name: 'C', color: '#f8961e', items: [] },
-      { name: 'D', color: '#f9c74f', items: [] },
-      { name: 'Unranked', color: '#90be6d', items: [] }
-    ];
+    // Definer standard tiers. Bruk en liste med objekter som inneholder navn, farge og tom liste for elementer.
+    const defaultTiers = [
+      { name: 'S', color: '#f94144', items: [] },
+      { name: 'A', color: '#f3722c', items: [] },
+      { name: 'B', color: '#f9844a', items: [] },
+      { name: 'C', color: '#f8961e', items: [] },
+      { name: 'D', color: '#f9c74f', items: [] },
+      { name: 'Urangerte', color: '#90be6d', items: [] }
+    ];
 
-    // Global state for tiers and next item ID
-    let tiers = [];
-    let nextItemId = 1;
+    // Global state for tiers og neste id for elementer
+    let tiers = [];
+    let nextItemId = 1;
 
-    // Column settings: an array of up to 6 objects { label, showHover, showPermanent }.
-    // These are used to determine how extra columns are displayed in tooltips and permanently on the items.
-    let columnSettings = [];
-    // Maximum number of extra columns (from Excel column B to G)
-    const MAX_EXTRA_COLS = 6;
+    // Kolonneinnstillinger: et array med opptil 6 objekter { label, showHover, showPermanent }.
+    // Disse brukes til å bestemme hvordan ekstra kolonner vises i verktøytips og permanent på elementene.
+    let columnSettings = [];
+    // Maksimalt antall ekstra kolonner (fra Excel kolonne B til G)
+    const MAX_EXTRA_COLS = 6;
 
-    // Global variables for drag-and-drop. Used to move items between tiers.
-    // When an item begins to be dragged, currentDraggedEl is set to the element.
-    // This means we don't have to rely on dataTransfer to retrieve the ID on drop.
-    let currentDraggedEl = null;
+    // Globale variabler for drag‑and‑drop. Brukes for å flytte elementer mellom tiers.
+    // Når et item begynner å dras, settes currentDraggedEl til elementet.
+    // Dette gjør at vi ikke er avhengige av dataTransfer for å hente id ved drop.
+    let currentDraggedEl = null;
 
-    // Flag indicating if an element was deleted in the trash-drop handler. Used to prevent reversal in dragend.
-    let wasDeleted = false;
+    // Flag som indikerer om et element ble slettet i trash-drop handler. Brukes for å forhindre tilbakeføring i dragend.
+    let wasDeleted = false;
 
-    /**
-     * Calculate contrast color (black or white) based on background color.
-     * @param {string} hex – Color in the format #rrggbb
-     * @returns {string} '#000000' or '#ffffff'
-     */
-    function getContrastColor(hex) {
-      // Remove # if present
-      hex = hex.replace('#', '');
-      if (hex.length === 3) {
-        hex = hex.split('').map(c => c + c).join('');
-      }
-      const r = parseInt(hex.substr(0, 2), 16);
-      const g = parseInt(hex.substr(2, 2), 16);
-      const b = parseInt(hex.substr(4, 2), 16);
-      // Calculate luminance according to the YIQ formula
-      const yiq = (r * 299 + g * 587 + b * 114) / 1000;
-      return yiq >= 128 ? '#000000' : '#ffffff';
-    }
+    /**
+     * Beregn kontrastfarge (sort eller hvit) basert på bakgrunnsfarge.
+     * @param {string} hex – Farge i formatet #rrggbb
+     * @returns {string} '#000000' eller '#ffffff'
+     */
+    function getContrastColor(hex) {
+      // Fjern # hvis tilstede
+      hex = hex.replace('#', '');
+      if (hex.length === 3) {
+        hex = hex.split('').map(c => c + c).join('');
+      }
+      const r = parseInt(hex.substr(0, 2), 16);
+      const g = parseInt(hex.substr(2, 2), 16);
+      const b = parseInt(hex.substr(4, 2), 16);
+      // Beregn luminans iht. YIQ-formelen
+      const yiq = (r * 299 + g * 587 + b * 114) / 1000;
+      return yiq >= 128 ? '#000000' : '#ffffff';
+    }
 
-    /**
-     * Lighten a hex color by a percentage. Used for the progress bar.
-     * @param {string} hex Color in format #rrggbb
-     * @param {number} percent Percentage to lighten (0–1)
-     * @returns {string} New hex color
-     */
-    function lightenColor(hex, percent) {
-      hex = hex.replace('#', '');
-      if (hex.length === 3) {
-        hex = hex.split('').map(c => c + c).join('');
-      }
-      let r = parseInt(hex.substr(0, 2), 16);
-      let g = parseInt(hex.substr(2, 2), 16);
-      let b = parseInt(hex.substr(4, 2), 16);
-      r = Math.round(r + (255 - r) * percent);
-      g = Math.round(g + (255 - g) * percent);
-      b = Math.round(b + (255 - b) * percent);
-      return '#' + r.toString(16).padStart(2, '0') +
-                   g.toString(16).padStart(2, '0') +
-                   b.toString(16).padStart(2, '0');
-    }
+    /**
+     * Lysne en hex-farge med en prosentandel. Brukes til progresjonslinjen.
+     * @param {string} hex Farge i format #rrggbb
+     * @param {number} percent Prosent å lysne (0–1)
+     * @returns {string} Ny hex-farge
+     */
+    function lightenColor(hex, percent) {
+      hex = hex.replace('#', '');
+      if (hex.length === 3) {
+        hex = hex.split('').map(c => c + c).join('');
+      }
+      let r = parseInt(hex.substr(0, 2), 16);
+      let g = parseInt(hex.substr(2, 2), 16);
+      let b = parseInt(hex.substr(4, 2), 16);
+      r = Math.round(r + (255 - r) * percent);
+      g = Math.round(g + (255 - g) * percent);
+      b = Math.round(b + (255 - b) * percent);
+      return '#' + r.toString(16).padStart(2, '0') +
+                   g.toString(16).padStart(2, '0') +
+                   b.toString(16).padStart(2, '0');
+    }
 
-    /**
-     * Convert a text to title case (first letter of each word is capitalized).
-     * Words are separated by spaces. If the text contains hyphens or other
-     * separators, each part is treated separately. If you want to keep existing
-     * capital letters within words, you must adjust this function.
-     * @param {string} str
-     * @returns {string}
-     */
-    function toTitleCase(str) {
-      return str.trim()
-        .split(/\s+/)
-        .map(word => {
-          if (!word) return '';
-          const first = word[0].toUpperCase();
-          const rest = word.slice(1).toLowerCase();
-          return first + rest;
-        })
-        .join(' ');
-    }
+    /**
+     * Konverter en tekst til tittelkasus (første bokstav i hvert ord stor).
+     * Ord skilles på mellomrom. Hvis teksten inneholder bindestrek eller andre
+     * skilletegn, behandles hver del separat. Ønsker du å beholde eksisterende
+     * store bokstaver inne i ord, må du justere denne funksjonen.
+     * @param {string} str
+     * @returns {string}
+     */
+    function toTitleCase(str) {
+      return str.trim()
+        .split(/\s+/)
+        .map(word => {
+          if (!word) return '';
+          const first = word[0].toUpperCase();
+          const rest = word.slice(1).toLowerCase();
+          return first + rest;
+        })
+        .join(' ');
+    }
 
-    // Page title is also saved in localStorage
-    let pageTitle = 'Simple Tier List';
+    // Sidetittel lagres også i localStorage
+    let pageTitle = 'Enkel Tier‑liste';
 
-    /**
-     * Load column settings from localStorage or use default values.
-     */
-    function loadColumnSettings() {
-      try {
-        const saved = localStorage.getItem('tierColumnSettings');
-        if (saved) {
-          const arr = JSON.parse(saved);
-          if (Array.isArray(arr) && arr.length === MAX_EXTRA_COLS) {
-            columnSettings = arr;
-            return;
-          }
-        }
-      } catch (e) {
-        console.warn('Could not read column settings from localStorage', e);
-      }
-      // If no saved settings, set defaults
-      columnSettings = [];
-      for (let i = 0; i < MAX_EXTRA_COLS; i++) {
-        // Default name based on the alphabet (B, C, D, E, F, G)
-        const colName = String.fromCharCode(66 + i);
-        columnSettings.push({ label: `Col ${colName}`, showHover: true, showPermanent: false });
-      }
-    }
+    /**
+     * Last inn kolonneinnstillinger fra localStorage eller bruk standardverdier.
+     */
+    function loadColumnSettings() {
+      try {
+        const saved = localStorage.getItem('tierColumnSettings');
+        if (saved) {
+          const arr = JSON.parse(saved);
+          if (Array.isArray(arr) && arr.length === MAX_EXTRA_COLS) {
+            columnSettings = arr;
+            return;
+          }
+        }
+      } catch (e) {
+        console.warn('Kunne ikke lese kolonneinnstillinger fra localStorage', e);
+      }
+      // Hvis ingen lagrede innstillinger, sett standard
+      columnSettings = [];
+      for (let i = 0; i < MAX_EXTRA_COLS; i++) {
+        // Standardnavn basert på alfabetet (B, C, D, E, F, G)
+        const colName = String.fromCharCode(66 + i);
+        columnSettings.push({ label: `Kol ${colName}`, showHover: true, showPermanent: false });
+      }
+    }
 
-    /**
-     * Save column settings to localStorage
-     */
-    function saveColumnSettings() {
-      try {
-        localStorage.setItem('tierColumnSettings', JSON.stringify(columnSettings));
-      } catch (e) {
-        console.warn('Could not save column settings', e);
-      }
-    }
+    /**
+     * Lagre kolonneinnstillinger til localStorage
+     */
+    function saveColumnSettings() {
+      try {
+        localStorage.setItem('tierColumnSettings', JSON.stringify(columnSettings));
+      } catch (e) {
+        console.warn('Kunne ikke lagre kolonneinnstillinger', e);
+      }
+    }
 
-    /**
-     * Apply column settings to all existing items.
-     */
-    function applySettingsToAllItems() {
-      const itemEls = document.querySelectorAll('.item');
-      itemEls.forEach(el => {
-        const obj = findItemById(el.id);
-        if (obj) {
-          applySettingsToItem(el, obj);
-        }
-      });
-    }
+    /**
+     * Påfør kolonneinnstillinger til alle eksisterende elementer.
+     */
+    function applySettingsToAllItems() {
+      const itemEls = document.querySelectorAll('.item');
+      itemEls.forEach(el => {
+        const obj = findItemById(el.id);
+        if (obj) {
+          applySettingsToItem(el, obj);
+        }
+      });
+    }
 
-    /**
-     * Apply column settings to a single item.
-     * @param {HTMLElement} el – DOM element for the item
-     * @param {Object} item – Object with text and extra fields
-     */
-    function applySettingsToItem(el, item) {
-      // Get extra fields as an array (can be undefined)
-      const extraArr = Array.isArray(item.extra) ? item.extra : [];
-      // Build tooltip
-      const hoverParts = [];
-      // Title (always included first)
-      hoverParts.push(item.text);
-      for (let i = 0; i < MAX_EXTRA_COLS; i++) {
-        const value = extraArr[i];
-        if (value !== undefined && value !== null && String(value).trim()) {
-          const cfg = columnSettings[i] || { label: `Col ${String.fromCharCode(66 + i)}`, showHover: true, showPermanent: false };
-          if (cfg.showHover) {
-            hoverParts.push(`${cfg.label} - ${String(value).trim()}`);
-          }
-        }
-      }
-      el.title = hoverParts.join(', ');
-      // Remove existing permanent extra fields container if it exists
-      const existing = el.querySelector('.extra-fields');
-      if (existing) existing.remove();
-      const permanentParts = [];
-      for (let i = 0; i < MAX_EXTRA_COLS; i++) {
-        const value = extraArr[i];
-        if (value !== undefined && value !== null && String(value).trim()) {
-          const cfg = columnSettings[i] || { label: `Col ${String.fromCharCode(66 + i)}`, showHover: true, showPermanent: false };
-          if (cfg.showPermanent) {
-            permanentParts.push({ label: cfg.label, value: String(value).trim() });
-          }
-        }
-      }
-      if (permanentParts.length > 0) {
-        const container = document.createElement('div');
-        container.className = 'extra-fields';
-        permanentParts.forEach(part => {
-          const span = document.createElement('span');
-          span.textContent = `${part.label} - ${part.value}`;
-          container.appendChild(span);
-        });
-        el.appendChild(container);
-      }
-    }
+    /**
+     * Påfør kolonneinnstillinger til et enkelt element.
+     * @param {HTMLElement} el – DOM-element for item
+     * @param {Object} item – Objekt med tekst og ekstra felter
+     */
+    function applySettingsToItem(el, item) {
+      // Hent ekstra felt som array (kan være undefined)
+      const extraArr = Array.isArray(item.extra) ? item.extra : [];
+      // Bygg verktøytips
+      const hoverParts = [];
+      // Tittel (alltid inkludert først)
+      hoverParts.push(item.text);
+      for (let i = 0; i < MAX_EXTRA_COLS; i++) {
+        const value = extraArr[i];
+        if (value !== undefined && value !== null && String(value).trim()) {
+          const cfg = columnSettings[i] || { label: `Kol ${String.fromCharCode(66 + i)}`, showHover: true, showPermanent: false };
+          if (cfg.showHover) {
+            hoverParts.push(`${cfg.label} - ${String(value).trim()}`);
+          }
+        }
+      }
+      el.title = hoverParts.join(', ');
+      // Fjern eksisterende permanente ekstra-felts container hvis finnes
+      const existing = el.querySelector('.extra-fields');
+      if (existing) existing.remove();
+      const permanentParts = [];
+      for (let i = 0; i < MAX_EXTRA_COLS; i++) {
+        const value = extraArr[i];
+        if (value !== undefined && value !== null && String(value).trim()) {
+          const cfg = columnSettings[i] || { label: `Kol ${String.fromCharCode(66 + i)}`, showHover: true, showPermanent: false };
+          if (cfg.showPermanent) {
+            permanentParts.push({ label: cfg.label, value: String(value).trim() });
+          }
+        }
+      }
+      if (permanentParts.length > 0) {
+        const container = document.createElement('div');
+        container.className = 'extra-fields';
+        permanentParts.forEach(part => {
+          const span = document.createElement('span');
+          span.textContent = `${part.label} - ${part.value}`;
+          container.appendChild(span);
+        });
+        el.appendChild(container);
+      }
+    }
 
-    /**
-     * Generate a unique ID for a new item.
-     */
-    function generateItemId() {
-      return 'item-' + nextItemId++;
-    }
+    /**
+     * Generer et unikt id for et nytt element.
+     */
+    function generateItemId() {
+      return 'item-' + nextItemId++;
+    }
 
-    /**
-     * Create the DOM for a tier and its items. Returns a DOM element.
-     * @param {Object} tierObj – The tier to be displayed.
-     * @param {number} tierIndex – The index in the tiers array.
-     */
-    function createTierElement(tierObj, tierIndex, totalCount) {
-      const tier = document.createElement('div');
-      tier.className = 'tier';
+    /**
+     * Lag DOM for en tier og dens elementer. Returnerer et DOM‑element.
+     * @param {Object} tierObj – Tieren som skal vises.
+     * @param {number} tierIndex – Indeksen i tiers‑arrayet.
+     */
+    function createTierElement(tierObj, tierIndex, totalCount) {
+      const tier = document.createElement('div');
+      tier.className = 'tier';
 
-      // Header for tier (name, progress and footer)
-      const header = document.createElement('div');
-      header.className = 'tier-header';
-      header.style.backgroundColor = tierObj.color;
-      const contrastColor = getContrastColor(tierObj.color);
-      header.style.color = contrastColor;
+      // Header for tier (navn, progress og footer)
+      const header = document.createElement('div');
+      header.className = 'tier-header';
+      header.style.backgroundColor = tierObj.color;
+      const contrastColor = getContrastColor(tierObj.color);
+      header.style.color = contrastColor;
 
-      // Prevent drop on header and name field
-      header.addEventListener('dragover', (ev) => {
-        ev.preventDefault();
-      });
-      header.addEventListener('drop', (ev) => {
-        ev.preventDefault();
-      });
+      // Hindre dropp på header og navnefelt
+      header.addEventListener('dragover', (ev) => {
+        ev.preventDefault();
+      });
+      header.addEventListener('drop', (ev) => {
+        ev.preventDefault();
+      });
 
-      // Top: name field
-      const nameInput = document.createElement('input');
-      nameInput.type = 'text';
-      nameInput.value = tierObj.name;
-      nameInput.title = 'Change tier name';
-      nameInput.addEventListener('input', () => {
-        tierObj.name = nameInput.value;
-      });
-      // Prevent drag/drop from putting data into the name field
-      ['dragover', 'drop'].forEach(evtName => {
-        nameInput.addEventListener(evtName, (ev) => {
-          ev.preventDefault();
-        });
-      });
-      header.appendChild(nameInput);
+      // Toppen: navnefelt
+      const nameInput = document.createElement('input');
+      nameInput.type = 'text';
+      nameInput.value = tierObj.name;
+      nameInput.title = 'Endre navn på tier';
+      nameInput.addEventListener('input', () => {
+        tierObj.name = nameInput.value;
+      });
+      // Unngå at drag/slipp putter data inn i navnefeltet
+      ['dragover', 'drop'].forEach(evtName => {
+        nameInput.addEventListener(evtName, (ev) => {
+          ev.preventDefault();
+        });
+      });
+      header.appendChild(nameInput);
 
-      // Middle: progress bar
-      const progressContainer = document.createElement('div');
-      progressContainer.className = 'progress-container';
-      const progressBar = document.createElement('div');
-      progressBar.className = 'progress-bar';
-      // Calculate percentage of items in this tier
-      const tierCount = tierObj.items.length;
-      const denom = totalCount || 0;
-      let percent = 0;
-      if (denom > 0) percent = Math.round((tierCount / denom) * 100);
-      progressBar.style.width = `${percent}%`;
-      // Lighten the color slightly for the progress bar
-      // Use a stronger lightening to make the progress more visible
-      progressBar.style.backgroundColor = lightenColor(tierObj.color, 0.7);
-      progressContainer.appendChild(progressBar);
-      header.appendChild(progressContainer);
+      // Midten: progressbar
+      const progressContainer = document.createElement('div');
+      progressContainer.className = 'progress-container';
+      const progressBar = document.createElement('div');
+      progressBar.className = 'progress-bar';
+      // Beregn prosentandel av elementer i denne tieren
+      const tierCount = tierObj.items.length;
+      const denom = totalCount || 0;
+      let percent = 0;
+      if (denom > 0) percent = Math.round((tierCount / denom) * 100);
+      progressBar.style.width = `${percent}%`;
+      // Lysne fargen litt for progressbar
+      // Bruk en sterkere lysning for å tydeliggjøre progresjonen
+      progressBar.style.backgroundColor = lightenColor(tierObj.color, 0.7);
+      progressContainer.appendChild(progressBar);
+      header.appendChild(progressContainer);
 
-      // Bottom: footer with counts, percentage, color picker, and remove button
-      const footer = document.createElement('div');
-      footer.className = 'tier-footer';
-      // Count info (displayed in parentheses)
-      const countSpan = document.createElement('span');
-      countSpan.className = 'count-info';
-      countSpan.textContent = `(${tierCount}/${denom}),`;
-      // Percentage info
-      const percentSpan = document.createElement('span');
-      percentSpan.className = 'percent-info';
-      percentSpan.textContent = denom > 0 ? `${percent}%` : '0%';
-      // Color picker (small)
-      const colorInput = document.createElement('input');
-      colorInput.type = 'color';
-      colorInput.value = tierObj.color;
-      colorInput.title = 'Select tier color';
-      // On color change: update background, contrast, progress bar, and text colors
-      colorInput.addEventListener('input', () => {
-        tierObj.color = colorInput.value;
-        // Update background color
-        header.style.backgroundColor = tierObj.color;
-        // Update progress bar color with lightening
-        progressBar.style.backgroundColor = lightenColor(tierObj.color, 0.7);
-        // Update contrast color
-        const newContrast = getContrastColor(tierObj.color);
-        header.style.color = newContrast;
-        countSpan.style.color = newContrast;
-        percentSpan.style.color = newContrast;
-        removeBtn && (removeBtn.style.color = newContrast);
-      });
-      // Prevent drag from being dropped on the color picker
-      ['dragover', 'drop'].forEach(evtName => {
-        colorInput.addEventListener(evtName, (ev) => {
-          ev.preventDefault();
-        });
-      });
+      // Bunnen: footer med tellinger, prosent, fargevelger og fjernknapp
+      const footer = document.createElement('div');
+      footer.className = 'tier-footer';
+      // Tellingsinfo (vises i parentes)
+      const countSpan = document.createElement('span');
+      countSpan.className = 'count-info';
+      countSpan.textContent = `(${tierCount}/${denom}),`;
+      // Prosentinfo
+      const percentSpan = document.createElement('span');
+      percentSpan.className = 'percent-info';
+      percentSpan.textContent = denom > 0 ? `${percent}%` : '0%';
+      // Fargevelger (lite)
+      const colorInput = document.createElement('input');
+      colorInput.type = 'color';
+      colorInput.value = tierObj.color;
+      colorInput.title = 'Velg farge for tier';
+      // Ved fargeendring: oppdater bakgrunn, kontrast, progressbar og tekstfarger
+      colorInput.addEventListener('input', () => {
+        tierObj.color = colorInput.value;
+        // Oppdater bakgrunnsfarge
+        header.style.backgroundColor = tierObj.color;
+        // Oppdater progressbar farge med lysning
+        progressBar.style.backgroundColor = lightenColor(tierObj.color, 0.7);
+        // Oppdater kontrastfarge
+        const newContrast = getContrastColor(tierObj.color);
+        header.style.color = newContrast;
+        countSpan.style.color = newContrast;
+        percentSpan.style.color = newContrast;
+        removeBtn && (removeBtn.style.color = newContrast);
+      });
+      // Unngå at drag droppes på fargevelger
+      ['dragover', 'drop'].forEach(evtName => {
+        colorInput.addEventListener(evtName, (ev) => {
+          ev.preventDefault();
+        });
+      });
 
-      // Remove button (only if not unranked)
-      let removeBtn = null;
-      if (tierIndex < tiers.length - 1) {
-        removeBtn = document.createElement('button');
-        removeBtn.className = 'remove-tier';
-        removeBtn.textContent = '×';
-        removeBtn.title = 'Remove this tier';
-        removeBtn.addEventListener('click', () => {
-          removeTier(tierIndex);
-        });
-      }
-      // Set text colors in the footer for contrast
-      countSpan.style.color = contrastColor;
-      percentSpan.style.color = contrastColor;
-      // Add elements to footer
-      footer.appendChild(countSpan);
-      footer.appendChild(percentSpan);
-      footer.appendChild(colorInput);
-      if (removeBtn) footer.appendChild(removeBtn);
+      // Fjern-knapp (kun hvis ikke unranket)
+      let removeBtn = null;
+      if (tierIndex < tiers.length - 1) {
+        removeBtn = document.createElement('button');
+        removeBtn.className = 'remove-tier';
+        removeBtn.textContent = '×';
+        removeBtn.title = 'Fjern denne tier';
+        removeBtn.addEventListener('click', () => {
+          removeTier(tierIndex);
+        });
+      }
+      // Sett tekstfarger i footer for kontrast
+      countSpan.style.color = contrastColor;
+      percentSpan.style.color = contrastColor;
+      // Legg til elementer i footer
+      footer.appendChild(countSpan);
+      footer.appendChild(percentSpan);
+      footer.appendChild(colorInput);
+      if (removeBtn) footer.appendChild(removeBtn);
 
-      header.appendChild(footer);
+      header.appendChild(footer);
 
-      // Item container
-      const itemsContainer = document.createElement('div');
-      itemsContainer.className = 'tier-items';
-      itemsContainer.dataset.tierIndex = tierIndex;
-      // Dragover event allows drop
-      itemsContainer.addEventListener('dragover', (ev) => {
-        ev.preventDefault();
-        // Show that we allow moving
-        if (ev.dataTransfer) {
-          ev.dataTransfer.dropEffect = 'move';
-        }
-      });
-      itemsContainer.addEventListener('dragenter', (ev) => {
-        ev.preventDefault();
-        itemsContainer.classList.add('drag-over');
-      });
-      itemsContainer.addEventListener('dragleave', () => {
-        itemsContainer.classList.remove('drag-over');
-      });
-      itemsContainer.addEventListener('drop', (ev) => {
-        ev.preventDefault();
-        // Stop bubbling to prevent other drop handlers from running
-        ev.stopPropagation();
-        const draggedEl = currentDraggedEl;
-        if (draggedEl) {
-          // Remove highlighting class from all containers
-          const allContainers = document.querySelectorAll('.tier-items');
-          allContainers.forEach(c => c.classList.remove('drag-over'));
-          // Add the element to this container (automatically moves from its previous container)
-          itemsContainer.appendChild(draggedEl);
-          // Do not update the data model here; it is done in dragend to avoid duplication.
-        }
-      });
+      // Element‑container
+      const itemsContainer = document.createElement('div');
+      itemsContainer.className = 'tier-items';
+      itemsContainer.dataset.tierIndex = tierIndex;
+      // Dragover event lar drop
+      itemsContainer.addEventListener('dragover', (ev) => {
+        ev.preventDefault();
+        // Vis at vi tillater flytting
+        if (ev.dataTransfer) {
+          ev.dataTransfer.dropEffect = 'move';
+        }
+      });
+      itemsContainer.addEventListener('dragenter', (ev) => {
+        ev.preventDefault();
+        itemsContainer.classList.add('drag-over');
+      });
+      itemsContainer.addEventListener('dragleave', () => {
+        itemsContainer.classList.remove('drag-over');
+      });
+      itemsContainer.addEventListener('drop', (ev) => {
+        ev.preventDefault();
+        // Stopp bobling for å unngå at andre drop-hendere kjøres
+        ev.stopPropagation();
+        const draggedEl = currentDraggedEl;
+        if (draggedEl) {
+          // Fjern markeringsklasse fra alle containere
+          const allContainers = document.querySelectorAll('.tier-items');
+          allContainers.forEach(c => c.classList.remove('drag-over'));
+          // Legg elementet til i denne containeren (flytter automatisk fra tidligere container)
+          itemsContainer.appendChild(draggedEl);
+          // Ikke oppdater datamodellen her; det gjøres i dragend for å unngå duplisering.
+        }
+      });
 
-      // Add existing items to itemsContainer
-      tierObj.items.forEach(item => {
-        const itemEl = createItemElement(item);
-        itemsContainer.appendChild(itemEl);
-      });
+      // Legg til eksisterende elementer i itemsContainer
+      tierObj.items.forEach(item => {
+        const itemEl = createItemElement(item);
+        itemsContainer.appendChild(itemEl);
+      });
 
-      tier.appendChild(header);
-      tier.appendChild(itemsContainer);
-      return tier;
-    }
+      tier.appendChild(header);
+      tier.appendChild(itemsContainer);
+      return tier;
+    }
 
-    /**
-     * Create a DOM element for an item.
-     * @param {Object} item – Object with ID and text.
-     */
-    function createItemElement(item) {
-      const el = document.createElement('div');
-      el.className = 'item';
-      el.id = item.id;
-      // Store a reference to the item object on the DOM element for later use when reordering
-      el._item = item;
-      el.textContent = item.text;
-      // Tooltip and extra fields are handled via applySettingsToItem
-      el.draggable = true;
-      el.addEventListener('dragstart', (ev) => {
-        // Store reference to the dragged element globally
-        currentDraggedEl = el;
-        // Also set dataTransfer for compatibility, but do not rely on it
-        ev.dataTransfer.setData('text/plain', el.id);
-        ev.dataTransfer.effectAllowed = 'move';
-        setTimeout(() => {
-          el.classList.add('dragging');
-        }, 0);
-        // Store original parent to be able to move back if dropped in an invalid area
-        el._originalParent = el.parentElement;
-      });
-      el.addEventListener('dragend', () => {
-        el.classList.remove('dragging');
-        // After dragging ends, update the data model and the counts/progress.
-        // This also captures cases where the drop occurs outside a valid container.
-        // If the element was deleted in the trash-drop handler, prevent reversal and reset the flag
-        if (!wasDeleted) {
-          // If the element is no longer in a tier-items container or the trash bin, move it back to the original container
-          const parent = el.parentElement;
-          const trash = document.getElementById('trashBin');
-          if (!parent || (!parent.classList.contains('tier-items') && parent !== trash)) {
-            if (el._originalParent) {
-              el._originalParent.appendChild(el);
-            }
-          }
-        }
-        // In any case, update data model and counts/progress
-        updateDataFromDOM();
-        updateCountsAndProgress();
-        // Reset flag and global variable
-        wasDeleted = false;
-        currentDraggedEl = null;
-      });
-      // Allow reordering by dropping on another element
-      el.addEventListener('dragover', (ev) => {
-        ev.preventDefault();
-        if (ev.dataTransfer) {
-          ev.dataTransfer.dropEffect = 'move';
-        }
-      });
-      el.addEventListener('drop', (ev) => {
-        ev.preventDefault();
-        // Stop bubbling so the container does not also handle the drop (prevents the element from being moved twice)
-        ev.stopPropagation();
-        // Get the dragged element from the global variable
-        const draggedEl = currentDraggedEl;
-        if (!draggedEl || draggedEl === el) return;
-        // Move the element before this element
-        el.parentElement.insertBefore(draggedEl, el);
-        // Do not update the data model here; it is done in dragend.
-      });
-      // Apply column settings to this element
-      applySettingsToItem(el, item);
-      return el;
-    }
+    /**
+     * Lag DOM‑element for et item.
+     * @param {Object} item – Objekt med id og tekst.
+     */
+    function createItemElement(item) {
+      const el = document.createElement('div');
+      el.className = 'item';
+      el.id = item.id;
+      // Lagre en referanse til item-objektet på DOM-elementet for å bruke det senere ved reordering
+      el._item = item;
+      el.textContent = item.text;
+      // Verktøytips og ekstra felter håndteres via applySettingsToItem
+      el.draggable = true;
+      el.addEventListener('dragstart', (ev) => {
+        // Lagre referanse til elementet som dras globalt
+        currentDraggedEl = el;
+        // Sett også dataTransfer for kompatibilitet, men avhenger ikke av det
+        ev.dataTransfer.setData('text/plain', el.id);
+        ev.dataTransfer.effectAllowed = 'move';
+        setTimeout(() => {
+          el.classList.add('dragging');
+        }, 0);
+        // Lagre original forelder for å kunne flytte tilbake hvis sluppet i et ugyldig område
+        el._originalParent = el.parentElement;
+      });
+      el.addEventListener('dragend', () => {
+        el.classList.remove('dragging');
+        // Etter at dragging avsluttes, oppdater datamodellen og teller/progresjon.
+        // Dette fanger også tilfeller der slipp skjer utenfor en gyldig container.
+        // Hvis elementet ble slettet i trash-drop handler, unngå å reversere og nullstill flagget
+        if (!wasDeleted) {
+          // Hvis elementet ikke lenger er i en tier-items container eller søppelbøtten, flytt det tilbake til original container
+          const parent = el.parentElement;
+          const trash = document.getElementById('trashBin');
+          if (!parent || (!parent.classList.contains('tier-items') && parent !== trash)) {
+            if (el._originalParent) {
+              el._originalParent.appendChild(el);
+            }
+          }
+        }
+        // Uansett, oppdater datamodell og teller/progresjon
+        updateDataFromDOM();
+        updateCountsAndProgress();
+        // Nullstill flagg og global variabel
+        wasDeleted = false;
+        currentDraggedEl = null;
+      });
+      // Tillat rekkefølge-endring ved å slippe på et annet element
+      el.addEventListener('dragover', (ev) => {
+        ev.preventDefault();
+        if (ev.dataTransfer) {
+          ev.dataTransfer.dropEffect = 'move';
+        }
+      });
+      el.addEventListener('drop', (ev) => {
+        ev.preventDefault();
+        // Stopp bobling slik at containeren ikke også håndterer droppet (forhindrer at elementet flyttes to ganger)
+        ev.stopPropagation();
+        // Hent elementet som dras fra global variabel
+        const draggedEl = currentDraggedEl;
+        if (!draggedEl || draggedEl === el) return;
+        // Flytt elementet før dette elementet
+        el.parentElement.insertBefore(draggedEl, el);
+        // Ikke oppdater datamodellen her; det gjøres i dragend.
+      });
+      // Påfør kolonneinnstillinger til dette elementet
+      applySettingsToItem(el, item);
+      return el;
+    }
 
-    /**
-     * Render all tiers in the DOM based on the global "tiers" variable.
-     */
-    function renderTiers() {
-      const tiersContainer = document.getElementById('tiers');
-      tiersContainer.innerHTML = '';
-      // Calculate the total number of items across all tiers
-      const totalCount = tiers.reduce((sum, t) => sum + t.items.length, 0);
-      tiers.forEach((tierObj, index) => {
-        const tierEl = createTierElement(tierObj, index, totalCount);
-        tiersContainer.appendChild(tierEl);
-      });
+    /**
+     * Tegn alle tiers i DOM basert på global variabel "tiers".
+     */
+    function renderTiers() {
+      const tiersContainer = document.getElementById('tiers');
+      tiersContainer.innerHTML = '';
+      // Beregn totalt antall elementer på tvers av alle tiers
+      const totalCount = tiers.reduce((sum, t) => sum + t.items.length, 0);
+      tiers.forEach((tierObj, index) => {
+        const tierEl = createTierElement(tierObj, index, totalCount);
+        tiersContainer.appendChild(tierEl);
+      });
 
-      // Do not update the page title here; it is controlled by the contenteditable h1
-    }
+      // Ikke oppdater sidetittelen her; den styres av contenteditable h1
+    }
 
-    /**
-     * Add a new item to the Unranked tier (last tier). Creates item object and DOM element.
-     * @param {string} text – The item text.
-     */
-    function addNewItem(text, extra = null) {
-      if (!text.trim()) return;
-      const id = generateItemId();
-      const itemObj = { id, text };
-      if (extra) {
-        itemObj.extra = extra;
-      }
-      // Add to the last tier (Unranked) in the data
-      tiers[tiers.length - 1].items.push(itemObj);
-      // Create DOM and add to the last tier
-      const itemEl = createItemElement(itemObj);
-      const containers = document.querySelectorAll('.tier-items');
-      const unrankedContainer = containers[containers.length - 1];
-      unrankedContainer.appendChild(itemEl);
-      // Update counts/progress without a full re-render
-      updateCountsAndProgress();
-    }
+    /**
+     * Legg til en ny tittel i Urangerte tier (siste tier). Oppretter item‑objekt og DOM‑element.
+     * @param {string} text – Tittelteksten.
+     */
+    function addNewItem(text, extra = null) {
+      if (!text.trim()) return;
+      const id = generateItemId();
+      const itemObj = { id, text };
+      if (extra) {
+        itemObj.extra = extra;
+      }
+      // Legg til i siste tier (Urangerte) i data
+      tiers[tiers.length - 1].items.push(itemObj);
+      // Opprett DOM og legg til i siste tier
+      const itemEl = createItemElement(itemObj);
+      const containers = document.querySelectorAll('.tier-items');
+      const unrankedContainer = containers[containers.length - 1];
+      unrankedContainer.appendChild(itemEl);
+      // Oppdater counts/progress uten full re-render
+      updateCountsAndProgress();
+    }
 
-    /**
-     * Fetch data from the DOM to update the global "tiers" (names, colors, item order).
-     */
-    function updateDataFromDOM() {
-      tiers.forEach((tierObj, tierIndex) => {
-        // Update name and color
-        const tierEl = document.querySelectorAll('.tier')[tierIndex];
-        const nameInput = tierEl.querySelector('.tier-header input[type="text"]');
-        const colorInput = tierEl.querySelector('.tier-header input[type="color"]')
+    /**
+     * Hent data fra DOM for å oppdatere global "tiers" (navn, farger, elementrekkefølge).
+     */
+    function updateDataFromDOM() {
+      tiers.forEach((tierObj, tierIndex) => {
+        // Oppdater navn og farge
+        const tierEl = document.querySelectorAll('.tier')[tierIndex];
+        const nameInput = tierEl.querySelector('.tier-header input[type="text"]');
+        const colorInput = tierEl.querySelector('.tier-header input[type="color"]');
+        tierObj.name = nameInput.value;
+        tierObj.color = colorInput.value;
+        // Oppdater items
+        const itemsContainer = tierEl.querySelector('.tier-items');
+        const newItems = [];
+        itemsContainer.querySelectorAll('.item').forEach(itemEl => {
+          // Hent objektet fra elementets interne referanse dersom mulig
+          const obj = itemEl._item || findItemById(itemEl.id);
+          if (obj) {
+            newItems.push(obj);
+          }
+        });
+        tierObj.items = newItems;
+      });
+    }
+
+    /**
+     * Finn et item‑objekt i alle tiers basert på id.
+     * @param {string} id – Id til elementet.
+     * @returns {Object|null} Elementet hvis funnet, ellers null.
+     */
+    function findItemById(id) {
+      for (const tier of tiers) {
+        for (const item of tier.items) {
+          if (item.id === id) return item;
+        }
+      }
+      return null;
+    }
+
+    /**
+     * Oppdater teller, prosent og fremdriftsstang for alle tiers basert på global state.
+     * Dette kalles etter at items har blitt flyttet eller lagt til uten å bygge DOM på nytt.
+     */
+    function updateCountsAndProgress() {
+      const totalCount = tiers.reduce((sum, t) => sum + t.items.length, 0);
+      // Hent alle tier-elementene i DOM
+      const tierEls = document.querySelectorAll('.tier');
+      tiers.forEach((tierObj, idx) => {
+        const tierEl = tierEls[idx];
+        if (!tierEl) return;
+        const count = tierObj.items.length;
+        const percent = totalCount > 0 ? Math.round((count / totalCount) * 100) : 0;
+        // Oppdater progress bar bredde og farge
+        const progressBar = tierEl.querySelector('.progress-bar');
+        if (progressBar) {
+          progressBar.style.width = `${percent}%`;
+          // Lysne fargen for progressbar mer for tydelig kontrast
+          progressBar.style.backgroundColor = lightenColor(tierObj.color, 0.7);
+        }
+        // Oppdater telling og prosent tekst
+        const countSpan = tierEl.querySelector('.count-info');
+        const percentSpan = tierEl.querySelector('.percent-info');
+        if (countSpan) countSpan.textContent = `(${count}/${totalCount}),`;
+        if (percentSpan) percentSpan.textContent = `${percent}%`;
+        // Oppdater tekstfarger for kontrast
+        const contrastColor = getContrastColor(tierObj.color);
+        if (countSpan) countSpan.style.color = contrastColor;
+        if (percentSpan) percentSpan.style.color = contrastColor;
+        const removeBtn = tierEl.querySelector('.remove-tier');
+        if (removeBtn) removeBtn.style.color = contrastColor;
+      });
+    }
+
+    /**
+     * Påfør et tema ("light" eller "dark"). Oppdaterer data-theme-attributt på html, lagrer i localStorage
+     * og endrer ikon på temaveksleren.
+     * @param {string} theme
+     */
+    function applyTheme(theme) {
+      const htmlEl = document.documentElement;
+      htmlEl.setAttribute('data-theme', theme);
+      try {
+        localStorage.setItem('tierTheme', theme);
+      } catch (e) {
+        // localStorage kan være utilgjengelig (f.eks. private browsing)
+      }
+      const btn = document.getElementById('themeToggle');
+      if (btn) {
+        btn.textContent = theme === 'dark' ? '☀️' : '🌙';
+        btn.title = theme === 'dark' ? 'Bytt til lyst tema' : 'Bytt til mørkt tema';
+      }
+    }
+    /**
+     * Sjekk om en tittel allerede finnes i noen tier. Sammenligner case-insensitivt.
+     * @param {string} text – Titteltekst å sjekke
+     * @returns {boolean} true hvis den finnes, ellers false
+     */
+    function isDuplicateTitle(text) {
+      const val = text.trim().toLowerCase();
+      for (const t of tiers) {
+        for (const item of t.items) {
+          if (item.text.trim().toLowerCase() === val) {
+            return true;
+          }
+        }
+      }
+      return false;
+    }
+
+    /**
+     * Forsøk å legge til et nytt element hvis det ikke er duplikat. Returnerer true hvis lagt til.
+     * @param {string} text
+     * @returns {boolean}
+     */
+    function attemptAddItem(text, extra = null) {
+      const trimmed = text.trim();
+      if (!trimmed) return false;
+      // Konverter til tittelkasus slik at alle elementer vises konsistent
+      const normalized = toTitleCase(trimmed);
+      // Sjekk duplikat basert på tekst (uavhengig av ekstra informasjon)
+      if (isDuplicateTitle(normalized)) {
+        return false;
+      }
+      addNewItem(normalized, extra);
+      return true;
+    }
+
+    /**
+     * Vis en kortvarig duplikatmelding over legg til-knappen.
+     * @param {string} msg
+     */
+    function showDuplicateMessage(msg) {
+      const msgDiv = document.getElementById('duplicateMsg');
+      if (!msgDiv) return;
+      msgDiv.textContent = msg;
+      const btn = document.getElementById('addBulkBtn');
+      const rect = btn.getBoundingClientRect();
+      // Plasser meldingen like over knappen
+      msgDiv.style.left = rect.left + 'px';
+      // ta hensyn til scroll-posisjon for body
+      msgDiv.style.top = (rect.top - 30 + window.scrollY) + 'px';
+      msgDiv.style.display = 'block';
+      clearTimeout(msgDiv._timeout);
+      msgDiv._timeout = setTimeout(() => {
+        msgDiv.style.display = 'none';
+      }, 3000);
+    }
+
+    /**
+     * Legg til en ny tier før den urankede (siste). Flytter ingen elementer.
+     */
+    function addTier() {
+      // Bruk et generert standardnavn basert på antall tiers
+      const newName = `Tier ${tiers.length}`;
+      const defaultColor = '#577590';
+      const newTier = { name: newName, color: defaultColor, items: [] };
+      // Sett inn før uranket (siste indeks)
+      tiers.splice(tiers.length - 1, 0, newTier);
+      renderTiers();
+    }
+
+    /**
+     * Fjern en tier ved gitt indeks. Elementene flyttes til uranket tier.
+     * @param {number} index
+     */
+    function removeTier(index) {
+      if (index < 0 || index >= tiers.length - 1) return;
+      const removed = tiers.splice(index, 1)[0];
+      const unranked = tiers[tiers.length - 1];
+      // Flytt elementer til uranket
+      unranked.items = unranked.items.concat(removed.items);
+      renderTiers();
+    }
+
+    /**
+     * Sorter eller miks elementene i urankert tier (siste tier).
+     * @param {boolean} shuffle – true for tilfeldig rekkefølge, false for alfabetisk.
+     */
+    function sortUnranked(shuffle = false) {
+      const unrankedIndex = tiers.length - 1;
+      const unrankedTier = tiers[unrankedIndex];
+      const container = document.querySelectorAll('.tier-items')[unrankedIndex];
+      // Lag en kopi av DOM-elementene
+      const items = Array.from(container.querySelectorAll('.item'));
+      if (items.length === 0) return;
+      // Funksjon for å hente tekstinnhold for sortering
+      const getText = (el) => el.textContent.toLowerCase();
+      if (shuffle) {
+        // Fisher–Yates shuffle
+        for (let i = items.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [items[i], items[j]] = [items[j], items[i]];
+        }
+      } else {
+        items.sort((a, b) => getText(a).localeCompare(getText(b)));
+      }
+      // Tøm container og legg til i ny rekkefølge
+      container.innerHTML = '';
+      const newItemObjs = [];
+      items.forEach(itemEl => {
+        container.appendChild(itemEl);
+        const obj = findItemById(itemEl.id);
+        if (obj) newItemObjs.push(obj);
+      });
+      // Oppdater data for urankert tier
+      unrankedTier.items = newItemObjs;
+      // Oppdater teller og progresjonsbar
+      updateCountsAndProgress();
+    }
+
+    /**
+     * Lagre gjeldende oppsett til localStorage.
+     */
+    function saveLayout() {
+      updateDataFromDOM();
+      try {
+        localStorage.setItem('tierLayout', JSON.stringify({ tiers, nextItemId, pageTitle, columnSettings }));
+        alert('Oppsett lagret!');
+      } catch (e) {
+        alert('Kunne ikke lagre oppsettet.');
+        console.error(e);
+      }
+    }
+
+    /**
+     * Last oppsett fra localStorage hvis tilstede, ellers bruk standard.
+     */
+    function loadLayout() {
+      const saved = localStorage.getItem('tierLayout');
+      if (saved) {
+        try {
+          const data = JSON.parse(saved);
+          if (Array.isArray(data.tiers)) {
+            tiers = data.tiers;
+            nextItemId = data.nextItemId || 1;
+            pageTitle = data.pageTitle || pageTitle;
+            // Les kolonneinnstillinger hvis inkludert
+            if (Array.isArray(data.columnSettings) && data.columnSettings.length === MAX_EXTRA_COLS) {
+              columnSettings = data.columnSettings;
+              // lagre til localStorage for konsistens med andre lagringsmekanismer
+              saveColumnSettings();
+            }
+            renderTiers();
+            // Etter å ha tegnet tiers, påfør kolonneinnstillinger til alle elementer
+            applySettingsToAllItems();
+            // Oppdater sidetittel i DOM når vi laster fra lagret oppsett
+            const pageTitleEl = document.getElementById('pageTitle');
+            if (pageTitleEl) pageTitleEl.textContent = pageTitle;
+            return;
+          }
+        } catch (e) {
+          console.error('Feil ved lesing av lagret oppsett', e);
+        }
+      }
+      // Fall back til standard
+      tiers = JSON.parse(JSON.stringify(defaultTiers));
+      nextItemId = 1;
+      renderTiers();
+      // Sett sidetittel til standard
+      const titleEl = document.getElementById('pageTitle');
+      if (titleEl) titleEl.textContent = pageTitle;
+      // Påfør kolonneinnstillinger til elementer
+      applySettingsToAllItems();
+    }
+
+    /**
+     * Tilbakestill til standardoppsett og fjern lagret data.
+     */
+    function resetLayout() {
+      if (confirm('Er du sikker på at du vil tilbakestille? Alle endringer går tapt.')) {
+        localStorage.removeItem('tierLayout');
+        tiers = JSON.parse(JSON.stringify(defaultTiers));
+        nextItemId = 1;
+        pageTitle = 'Enkel Tier‑liste';
+        renderTiers();
+      }
+    }
+
+    // Knytt opp hendelser til kontroller
+    document.getElementById('saveBtn').addEventListener('click', saveLayout);
+    document.getElementById('resetBtn').addEventListener('click', resetLayout);
+
+    // Gjør overskriften redigerbar: oppdater pageTitle når h1 innholdet endres
+    const pageTitleEl = document.getElementById('pageTitle');
+    if (pageTitleEl) {
+      // Når brukeren skriver eller limer inn i tittelen, oppdater pageTitle
+      pageTitleEl.addEventListener('input', () => {
+        const text = pageTitleEl.textContent.trim();
+        pageTitle = text || 'Enkel Tier‑liste';
+      });
+      // Når brukeren forlater feltet (blur), normaliser tom tekst
+      pageTitleEl.addEventListener('blur', () => {
+        if (!pageTitleEl.textContent.trim()) {
+          pageTitle = 'Enkel Tier‑liste';
+          pageTitleEl.textContent = pageTitle;
+        }
+      });
+    }
+
+    /**
+     * Legg til flere titler fra tekstfeltet. Bruker | eller ; som separator.
+     * Duplikater (eksisterende eller innen samme input) blir ikke lagt til og gir melding.
+     */
+    function handleAddBulk() {
+      const field = document.getElementById('bulkTitles');
+      const raw = field.value;
+      if (!raw || !raw.trim()) return;
+      // Splitt tekst på separatorer | eller ;
+      const parts = raw.split(/\||;/).map(p => p.trim()).filter(p => p);
+      if (parts.length === 0) {
+        field.value = '';
+        return;
+      }
+      const duplicates = [];
+      const addedTitlesThisBatch = new Set();
+      parts.forEach(origTitle => {
+        // Konverter til tittelkasus for konsistent visning
+        const title = toTitleCase(origTitle);
+        const lower = title.toLowerCase();
+        // Hvis duplikat i denne batchen, registrer og hopp over
+        if (addedTitlesThisBatch.has(lower)) {
+          duplicates.push(title);
+          return;
+        }
+        // Forsøk å legge til. attemptAddItem returnerer true hvis unikt.
+        if (attemptAddItem(title)) {
+          addedTitlesThisBatch.add(lower);
+        } else {
+          duplicates.push(title);
+        }
+      });
+      // Tøm feltet
+      field.value = '';
+      // Hvis duplikater ble funnet, vis melding
+      if (duplicates.length > 0) {
+        const uniq = Array.from(new Set(duplicates.map(d => d.toLowerCase())));
+        const names = uniq.join(', ');
+        showDuplicateMessage(`Ikke lagt til (duplikat): ${names}`);
+      }
+      // Oppdater counts og progresjonsbar for å reflektere nye elementer
+      updateCountsAndProgress();
+    }
+    // Hendelse for å legge til flere titler via knapp
+    document.getElementById('addBulkBtn').addEventListener('click', handleAddBulk);
+    // Legg til ved Enter i inputfeltet
+    document.getElementById('bulkTitles').addEventListener('keypress', (ev) => {
+      if (ev.key === 'Enter') {
+        ev.preventDefault();
+        handleAddBulk();
+      }
+    });
+
+    // Filopplasting (tekst/csv). Leser filen linje for linje og henter første kolonne.
+    document.getElementById('importBtn').addEventListener('click', () => {
+      document.getElementById('fileInput').click();
+    });
+    document.getElementById('fileInput').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const fileName = file.name || '';
+      const ext = fileName.split('.').pop().toLowerCase();
+      // Hvis Excel‑fil og XLSX‑bibliotek er tilgjengelig, bruk det til å lese første ark
+      if ((ext === 'xlsx' || ext === 'xls') && typeof XLSX !== 'undefined') {
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          try {
+            const data = new Uint8Array(evt.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const sheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[sheetName];
+            // Konverter arket til et 2D‑array
+            const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+            // Hvis det ser ut til å være en overskriftsrad (f.eks. hvis første celle ikke er en ren tekst eller tall), hopp over den.
+            let startIndex = 0;
+            if (rows.length > 1) {
+              const firstCell = rows[0][0];
+              // Hvis første celle er en streng som ikke bare består av tall, kan den være overskrift
+              if (typeof firstCell === 'string' && firstCell.trim().length > 0) {
+                // Sjekk om den er unik i resten av kolonnen – hvis vi finner samme tekst senere anses det som data
+                const lower = firstCell.toLowerCase();
+                let foundElsewhere = false;
+                for (let i = 1; i < rows.length; i++) {
+                  const v = rows[i][0];
+                  if (String(v || '').toLowerCase() === lower) {
+                    foundElsewhere = true;
+                    break;
+                  }
+                }
+                if (!foundElsewhere) {
+                  startIndex = 1;
+                }
+              }
+            }
+            const duplicates = [];
+            for (let i = startIndex; i < rows.length; i++) {
+              const row = rows[i];
+              if (Array.isArray(row) && row.length > 0) {
+                const cell = row[0];
+                const raw = cell !== undefined && cell !== null ? String(cell).trim() : '';
+                if (raw) {
+                  // Konverter til tittelkasus
+                  const title = toTitleCase(raw);
+                  // Hent ekstra kolonner opptil MAX_EXTRA_COLS
+                  let extraArr = null;
+                  for (let j = 1; j <= MAX_EXTRA_COLS; j++) {
+                    const val = row.length > j ? row[j] : null;
+                    if (val !== undefined && val !== null && String(val).trim()) {
+                      if (!extraArr) extraArr = new Array(MAX_EXTRA_COLS).fill(null);
+                      extraArr[j - 1] = String(val).trim();
+                    }
+                  }
+                  if (!attemptAddItem(title, extraArr)) {
+                    duplicates.push(title);
+                  }
+                }
+              }
+            }
+            if (duplicates.length > 0) {
+              // vis duplikater
+              const uniq = Array.from(new Set(duplicates.map(d => d.toLowerCase())));
+              const names = uniq.join(', ');
+              showDuplicateMessage(`Ikke lagt til (duplikat): ${names}`);
+            }
+            // Oppdater counts/progresjon etter import
+            updateCountsAndProgress();
+          } catch (err) {
+            console.error('Kunne ikke lese Excel‑filen', err);
+            alert('Kunne ikke lese Excel‑filen. Sørg for at filen kun har én kolonne med titler.');
+          }
+        };
+        reader.readAsArrayBuffer(file);
+      } else {
+        // Behandle som tekst/csv
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          const text = evt.target.result;
+          // Del opp i linjer og kolonner (komma/semikolon eller tab)
+        const lines = text.split(/\r?\n/);
+        const duplicatesCsv = [];
+        lines.forEach(line => {
+          if (!line.trim()) return;
+          // Splitt på semikolon, komma eller tab
+          const cols = line.split(/[;,\t]/);
+          const firstRaw = cols[0] ? cols[0].trim() : '';
+          if (firstRaw) {
+            const title = toTitleCase(firstRaw);
+            // Hent ekstra kolonner opptil MAX_EXTRA_COLS
+            let extraArr = null;
+            for (let j = 1; j <= MAX_EXTRA_COLS; j++) {
+              const val = cols.length > j ? cols[j] : null;
+              if (val !== undefined && val !== null && String(val).trim()) {
+                if (!extraArr) extraArr = new Array(MAX_EXTRA_COLS).fill(null);
+                extraArr[j - 1] = String(val).trim();
+              }
+            }
+            if (!attemptAddItem(title, extraArr)) {
+              duplicatesCsv.push(title);
+            }
+          }
+        });
+        if (duplicatesCsv.length > 0) {
+          const uniq = Array.from(new Set(duplicatesCsv.map(d => d.toLowerCase())));
+          const names = uniq.join(', ');
+          showDuplicateMessage(`Ikke lagt til (duplikat): ${names}`);
+        }
+        // Oppdater teller/progresjon etter import
+        updateCountsAndProgress();
+        };
+        reader.readAsText(file);
+      }
+      // Tilbakestill input slik at man kan laste samme fil igjen
+      e.target.value = '';
+    });
+
+    // Sortering av urankerte titler alfabetisk
+    document.getElementById('sortUnrankedBtn').addEventListener('click', () => {
+      sortUnranked(false);
+    });
+    // Tilfeldig miks av urankerte titler
+    document.getElementById('shuffleUnrankedBtn').addEventListener('click', () => {
+      sortUnranked(true);
+    });
+
+    // Legg til en ny tier når knappen klikkes
+    document.getElementById('addTierBtn').addEventListener('click', () => {
+      addTier();
+    });
+
+    // Eksporter gjeldende layout som JSON
+    document.getElementById('exportJsonBtn').addEventListener('click', () => {
+      updateDataFromDOM();
+      const data = { tiers, nextItemId, pageTitle, columnSettings };
+      const json = JSON.stringify(data, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const timestamp = new Date().toISOString().split('T')[0];
+      a.download = `tier_list_${timestamp}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+
+    // Eksporter som bilde (PNG). Vi bruker html2canvas til å tegne .container
+    document.getElementById('exportImageBtn').addEventListener('click', () => {
+      // Oppdater data og counts før eksport for å sikre at alt er korrekt
+      updateDataFromDOM();
+      updateCountsAndProgress();
+      const containerEl = document.querySelector('.container');
+      if (!containerEl || typeof html2canvas === 'undefined') {
+        alert('Kunne ikke eksportere bilde: html2canvas er ikke tilgjengelig.');
+        return;
+      }
+      // Elementer vi vil skjule under eksport (kontroller og søppelbøtte)
+      const toHide = Array.from(document.querySelectorAll('.controls, #trashBin, #settingsOverlay, #settingsPanel, #duplicateMsg'));
+      const originalDisplays = new Map();
+      toHide.forEach(el => {
+        originalDisplays.set(el, el.style.visibility);
+        el.style.visibility = 'hidden';
+      });
+      // Scroll til toppen for å sikre at alt er synlig
+      const previousScroll = { x: window.scrollX, y: window.scrollY };
+      window.scrollTo(0, 0);
+      // Bruk html2canvas til å fange containeren
+      html2canvas(containerEl, { backgroundColor: null }).then(canvas => {
+        canvas.toBlob(blob => {
+          if (blob) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const ts = new Date().toISOString().replace(/[:.]/g, '-');
+            a.download = `tier_list_${ts}.png`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+          } else {
+            alert('Kunne ikke generere bilde.');
+          }
+          // Gjenopprett synlighet
+          toHide.forEach(el => {
+            el.style.visibility = originalDisplays.get(el) || '';
+          });
+          // Gjenopprett scrollposisjon
+          window.scrollTo(previousScroll.x, previousScroll.y);
+        });
+      }).catch(err => {
+        console.error(err);
+        alert('Kunne ikke eksportere bilde.');
+        toHide.forEach(el => {
+          el.style.visibility = originalDisplays.get(el) || '';
+        });
+        window.scrollTo(previousScroll.x, previousScroll.y);
+      });
+    });
+
+    // Klikk på importknappen åpner filvelgeren
+    document.getElementById('importJsonBtn').addEventListener('click', () => {
+      document.getElementById('importJsonInput').click();
+    });
+    // Les inn en JSON-fil og oppdater layout
+    document.getElementById('importJsonInput').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        try {
+          const obj = JSON.parse(evt.target.result);
+          if (Array.isArray(obj.tiers)) {
+            tiers = obj.tiers;
+            nextItemId = obj.nextItemId || 1;
+            pageTitle = obj.pageTitle || pageTitle;
+            // Oppdater kolonneinnstillinger hvis tilstede
+            if (Array.isArray(obj.columnSettings) && obj.columnSettings.length === MAX_EXTRA_COLS) {
+              columnSettings = obj.columnSettings;
+              saveColumnSettings();
+            }
+            renderTiers();
+            // Etter rendering, påfør kolonneinnstillinger
+            applySettingsToAllItems();
+          } else {
+            alert('Ugyldig JSON: fant ingen tiers-array.');
+          }
+        } catch (err) {
+          console.error('Feil ved import av JSON', err);
+          alert('Kunne ikke lese JSON-filen.');
+        }
+      };
+      reader.readAsText(file);
+      // nullstill slik at man kan laste inn samme fil igjen
+      e.target.value = '';
+    });
+
+    // Søppelbøtte: dragover, dragenter, dragleave og drop
+    const trashBin = document.getElementById('trashBin');
+    if (trashBin) {
+      trashBin.addEventListener('dragover', (ev) => {
+        ev.preventDefault();
+        if (ev.dataTransfer) {
+          ev.dataTransfer.dropEffect = 'move';
+        }
+      });
+      trashBin.addEventListener('dragenter', (ev) => {
+        ev.preventDefault();
+        trashBin.classList.add('drag-over');
+      });
+      trashBin.addEventListener('dragleave', () => {
+        trashBin.classList.remove('drag-over');
+      });
+      trashBin.addEventListener('drop', (ev) => {
+        ev.preventDefault();
+        trashBin.classList.remove('drag-over');
+        const draggedEl = currentDraggedEl;
+        if (draggedEl) {
+          // Angi at elementet ble slettet, slik at dragend ikke reverserer slettingen
+          wasDeleted = true;
+          // Fjern fra DOM
+          if (draggedEl.parentElement) {
+            draggedEl.parentElement.removeChild(draggedEl);
+          }
+          // Fjern fra datamodell
+          const obj = findItemById(draggedEl.id);
+          if (obj) {
+            for (const tier of tiers) {
+              const idx = tier.items.indexOf(obj);
+              if (idx >= 0) {
+                tier.items.splice(idx, 1);
+                break;
+              }
+            }
+          }
+          updateCountsAndProgress();
+          // Nullstill global variabel for dragged element
+          currentDraggedEl = null;
+        }
+      });
+    }
+
+    // Temaveksler: bytt mellom lys og mørk modus
+    document.getElementById('themeToggle').addEventListener('click', () => {
+      const htmlEl = document.documentElement;
+      const current = htmlEl.getAttribute('data-theme') || 'light';
+      const newTheme = current === 'dark' ? 'light' : 'dark';
+      applyTheme(newTheme);
+    });
+
+    // Innstillinger-knapp: åpne panel for kolonneinnstillinger
+    document.getElementById('settingsBtn').addEventListener('click', () => {
+      showSettingsPanel();
+    });
+
+    /**
+     * Vis innstillingspanelet og fyll inn feltene med gjeldende kolonneinnstillinger.
+     */
+    function showSettingsPanel() {
+      const overlay = document.getElementById('settingsOverlay');
+      const panel = document.getElementById('settingsPanel');
+      const container = document.getElementById('columnSettingsContainer');
+      if (!overlay || !panel || !container) return;
+      // Tøm containeren
+      container.innerHTML = '';
+      // Legg til en beskrivelse
+      const desc = document.createElement('p');
+      desc.textContent = 'Angi etiketter for hver kolonne og velg hvordan de skal vises.';
+      desc.style.fontSize = '0.85rem';
+      container.appendChild(desc);
+      // Generer felter for hver ekstra kolonne
+      for (let i = 0; i < MAX_EXTRA_COLS; i++) {
+        const cfg = columnSettings[i] || { label: `Kol ${String.fromCharCode(66 + i)}`, showHover: true, showPermanent: false };
+        const row = document.createElement('div');
+        row.className = 'column-setting';
+        // Label for ruten
+        const title = document.createElement('label');
+        title.textContent = `Kolonne ${String.fromCharCode(66 + i)}:`;
+        row.appendChild(title);
+        // Input for etikett
+        const labelInput = document.createElement('input');
+        labelInput.type = 'text';
+        labelInput.value = cfg.label;
+        labelInput.style.marginBottom = '4px';
+        labelInput.dataset.colIndex = i;
+        // Opprett en container for visningsvalg
+        const optionsDiv = document.createElement('div');
+        optionsDiv.style.display = 'flex';
+        optionsDiv.style.alignItems = 'center';
+        optionsDiv.style.gap = '8px';
+        // Vis ved hover
+        const hoverLabel = document.createElement('label');
+        const hoverCheckbox = document.createElement('input');
+        hoverCheckbox.type = 'checkbox';
+        hoverCheckbox.checked = cfg.showHover;
+        hoverCheckbox.dataset.colIndex = i;
+        hoverCheckbox.dataset.type = 'hover';
+        hoverLabel.appendChild(hoverCheckbox);
+        hoverLabel.appendChild(document.createTextNode('Vis ved hover'));
+        // Vis permanent
+        const permLabel = document.createElement('label');
+        const permCheckbox = document.createElement('input');
+        permCheckbox.type = 'checkbox';
+        permCheckbox.checked = cfg.showPermanent;
+        permCheckbox.dataset.colIndex = i;
+        permCheckbox.dataset.type = 'permanent';
+        permLabel.appendChild(permCheckbox);
+        permLabel.appendChild(document.createTextNode('Vis permanent'));
+        optionsDiv.appendChild(hoverLabel);
+        optionsDiv.appendChild(permLabel);
+        row.appendChild(labelInput);
+        row.appendChild(optionsDiv);
+        container.appendChild(row);
+      }
+      overlay.style.display = 'block';
+      panel.style.display = 'block';
+    }
+
+    /**
+     * Skjul innstillingspanelet.
+     */
+    function hideSettingsPanel() {
+      const overlay = document.getElementById('settingsOverlay');
+      const panel = document.getElementById('settingsPanel');
+      if (overlay) overlay.style.display = 'none';
+      if (panel) panel.style.display = 'none';
+    }
+
+    // Lytt til lagre-/avbryt-knapper i innstillingspanelet
+    document.getElementById('saveSettingsBtn').addEventListener('click', () => {
+      // Hent felter og oppdater kolonneinnstillinger
+      const container = document.getElementById('columnSettingsContainer');
+      if (!container) return;
+      for (let i = 0; i < MAX_EXTRA_COLS; i++) {
+        const labelInput = container.querySelector(`input[type="text"][data-col-index="${i}"]`);
+        const hoverCheckbox = container.querySelector(`input[type="checkbox"][data-col-index="${i}"][data-type="hover"]`);
+        const permCheckbox = container.querySelector(`input[type="checkbox"][data-col-index="${i}"][data-type="permanent"]`);
+        if (!columnSettings[i]) columnSettings[i] = { label: '', showHover: true, showPermanent: false };
+        columnSettings[i].label = labelInput ? labelInput.value || `Kol ${String.fromCharCode(66 + i)}` : `Kol ${String.fromCharCode(66 + i)}`;
+        columnSettings[i].showHover = hoverCheckbox ? hoverCheckbox.checked : true;
+        columnSettings[i].showPermanent = permCheckbox ? permCheckbox.checked : false;
+      }
+      saveColumnSettings();
+      applySettingsToAllItems();
+      hideSettingsPanel();
+    });
+    document.getElementById('cancelSettingsBtn').addEventListener('click', () => {
+      hideSettingsPanel();
+    });
+    // Lukk panelet hvis overlayen klikkes
+    document.getElementById('settingsOverlay').addEventListener('click', () => {
+      hideSettingsPanel();
+    });
+
+    // Last oppsett når siden lastes
+    window.addEventListener('DOMContentLoaded', () => {
+      // Sett tema fra lagring eller systempreferanse
+      try {
+        const savedTheme = localStorage.getItem('tierTheme');
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const initialTheme = savedTheme || (prefersDark ? 'dark' : 'light');
+        applyTheme(initialTheme);
+      } catch (e) {
+        // Faller tilbake til lys modus hvis localStorage ikke er tilgjengelig
+        applyTheme('light');
+      }
+
+      // Last inn kolonneinnstillinger
+      loadColumnSettings();
+      loadLayout();
+    });
+  </script>
+</body>
+</html>
