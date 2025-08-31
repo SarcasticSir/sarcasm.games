@@ -2,7 +2,7 @@
 <html lang="nb">
 <head>
   <meta charset="UTF-8">
-  <title>Enkel Tier‑liste</title>
+  <title>Sarcasm's simple tier list</title>
   <style>
     /*
       Enkel stilsett for en lokal tier‑liste.
@@ -394,19 +394,19 @@
     <div class="container">
     <!-- Gjør sidetittelen direkte redigerbar ved å sette contenteditable. 
          Bruker en id for å kunne hente elementet i JavaScript. -->
-    <h1 id="pageTitle" contenteditable="true" spellcheck="false">Enkel Tier‑liste</h1>
+    <h1 id="pageTitle" contenteditable="true" spellcheck="false">Click to edit title</h1>
     <div class="controls">
       <!-- Felt for å legge til titler. Skill med | eller ; hvis du legger til flere -->
-      <input type="text" id="bulkTitles" placeholder="Legg til tittel(er) … (skill med | eller ;)" style="flex-grow:1;" />
-      <button id="addBulkBtn">Legg til</button>
+      <input type="text" id="bulkTitles" placeholder="Add title(s) ... (separate with | or ;)" style="flex-grow:1;" />
+      <button id="addBulkBtn">Add title</button>
       
       <!-- Filopplasting for å importere titler fra tekst/CSV/Excel. 
            Vi aksepterer .txt, .csv og .xlsx/.xls. Hvis en Excel-fil velges og XLSX-biblioteket er lastet (via CDN eller lokal fil),
            vil første kolonne i første ark bli importert. -->
       <input type="file" id="fileInput" accept=".txt,.csv,.xls,.xlsx" style="display:none" />
-      <button id="importBtn">Importer fil</button>
+      <button id="importBtn">Import file</button>
 
-      <button id="addTierBtn">Legg til tier</button>
+      <button id="addTierBtn">Add another tier</button>
       <!-- Temaveksler: smått ikon for å bytte mellom lys/mørk modus -->
       <button id="themeToggle" title="Bytt tema">🌙</button>
       <!-- Innstillinger-knapp (gir tilgang til kolonnevalg) -->
@@ -418,38 +418,38 @@
 
     <!-- Sorteringsknapper for urankerte titler -->
     <div class="controls" style="margin-top: 5px;">
-      <button id="sortUnrankedBtn">Sorter urangerte (A–Å)</button>
-      <button id="shuffleUnrankedBtn">Miks urangerte</button>
+      <button id="sortUnrankedBtn">Sort unranked (A–Z)</button>
+      <button id="shuffleUnrankedBtn">Shuffle unranked</button>
     </div>
     <div id="tiers">
       <!-- Tiers settes inn her via JavaScript -->
     </div>
     <!-- Kontroller nederst: lagre, tilbakestill og eksport/import JSON -->
     <div class="controls" id="bottomControls" style="margin-top: 10px;">
-      <button id="saveBtn">Lagre oppsett</button>
-      <button id="resetBtn">Tilbakestill</button>
-      <button id="exportJsonBtn">Eksporter JSON</button>
+      <button id="saveBtn">Save template</button>
+      <button id="resetBtn">Reset template</button>
+      <button id="exportJsonBtn">Export JSON</button>
       <input type="file" id="importJsonInput" accept=".json" style="display:none" />
-      <button id="importJsonBtn">Importer JSON</button>
+      <button id="importJsonBtn">Import JSON</button>
       <!-- Ny knapp for å eksportere som bilde (PNG) -->
-      <button id="exportImageBtn">Eksporter bilde</button>
+      <button id="exportImageBtn">Export image</button>
       <a href="https://sarcasm.games/">
-    <button>Tilbake til hovedmeny</button>
+    <button>Back to main</button>
 </a>
     </div>
 
     <!-- Søppelbøtte for å dra og slippe elementer som skal slettes -->
-    <div id="trashBin" title="Dra elementer hit for å slette">🗑 Slett</div>
+    <div id="trashBin" title="Dra elementer hit for å slette">🗑 Erase</div>
 
     <!-- Overlegg og panel for kolonneinnstillinger -->
     <div id="settingsOverlay"></div>
     <div id="settingsPanel">
-      <h2>Kolonneinnstillinger</h2>
+      <h2>Column settings</h2>
       <!-- Dynamisk innhold settes inn via JS -->
       <div id="columnSettingsContainer"></div>
       <div class="settings-actions">
-        <button id="cancelSettingsBtn">Avbryt</button>
-        <button id="saveSettingsBtn">Lagre</button>
+        <button id="cancelSettingsBtn">Abort</button>
+        <button id="saveSettingsBtn">Save</button>
       </div>
     </div>
   </div>
@@ -472,7 +472,7 @@
       { name: 'B', color: '#f9844a', items: [] },
       { name: 'C', color: '#f8961e', items: [] },
       { name: 'D', color: '#f9c74f', items: [] },
-      { name: 'Urangerte', color: '#90be6d', items: [] }
+      { name: 'Unranked', color: '#90be6d', items: [] }
     ];
 
     // Global state for tiers og neste id for elementer
@@ -555,7 +555,7 @@
     }
 
     // Sidetittel lagres også i localStorage
-    let pageTitle = 'Enkel Tier‑liste';
+    let pageTitle = 'Simple Tier - list';
 
     /**
      * Last inn kolonneinnstillinger fra localStorage eller bruk standardverdier.
@@ -1198,11 +1198,11 @@
      * Tilbakestill til standardoppsett og fjern lagret data.
      */
     function resetLayout() {
-      if (confirm('Er du sikker på at du vil tilbakestille? Alle endringer går tapt.')) {
+      if (confirm('Are you sure you want to reset? All your changes will be lost, including added titles!')) {
         localStorage.removeItem('tierLayout');
         tiers = JSON.parse(JSON.stringify(defaultTiers));
         nextItemId = 1;
-        pageTitle = 'Enkel Tier‑liste';
+        pageTitle = 'Simple Tier - list';
         renderTiers();
       }
     }
@@ -1217,12 +1217,12 @@
       // Når brukeren skriver eller limer inn i tittelen, oppdater pageTitle
       pageTitleEl.addEventListener('input', () => {
         const text = pageTitleEl.textContent.trim();
-        pageTitle = text || 'Enkel Tier‑liste';
+        pageTitle = text || 'Simple Tier - list';
       });
       // Når brukeren forlater feltet (blur), normaliser tom tekst
       pageTitleEl.addEventListener('blur', () => {
         if (!pageTitleEl.textContent.trim()) {
-          pageTitle = 'Enkel Tier‑liste';
+          pageTitle = 'Simple Tier - list';
           pageTitleEl.textContent = pageTitle;
         }
       });
@@ -1266,7 +1266,7 @@
       if (duplicates.length > 0) {
         const uniq = Array.from(new Set(duplicates.map(d => d.toLowerCase())));
         const names = uniq.join(', ');
-        showDuplicateMessage(`Ikke lagt til (duplikat): ${names}`);
+        showDuplicateMessage(`Duplicates not added: ${names}`);
       }
       // Oppdater counts og progresjonsbar for å reflektere nye elementer
       updateCountsAndProgress();
@@ -1350,13 +1350,13 @@
               // vis duplikater
               const uniq = Array.from(new Set(duplicates.map(d => d.toLowerCase())));
               const names = uniq.join(', ');
-              showDuplicateMessage(`Ikke lagt til (duplikat): ${names}`);
+              showDuplicateMessage(`Duplicates not added: ${names}`);
             }
             // Oppdater counts/progresjon etter import
             updateCountsAndProgress();
           } catch (err) {
-            console.error('Kunne ikke lese Excel‑filen', err);
-            alert('Kunne ikke lese Excel‑filen. Sørg for at filen kun har én kolonne med titler.');
+            console.error("Couldn't read uploaded file", err);
+            alert("Wasn't able to read file. Make sure there's only one column with titles.");
           }
         };
         reader.readAsArrayBuffer(file);
@@ -1392,7 +1392,7 @@
         if (duplicatesCsv.length > 0) {
           const uniq = Array.from(new Set(duplicatesCsv.map(d => d.toLowerCase())));
           const names = uniq.join(', ');
-          showDuplicateMessage(`Ikke lagt til (duplikat): ${names}`);
+          showDuplicateMessage(`Duplicates not added: ${names}`);
         }
         // Oppdater teller/progresjon etter import
         updateCountsAndProgress();
@@ -1441,7 +1441,7 @@
       updateCountsAndProgress();
       const containerEl = document.querySelector('.container');
       if (!containerEl || typeof html2canvas === 'undefined') {
-        alert('Kunne ikke eksportere bilde: html2canvas er ikke tilgjengelig.');
+        alert('Cannot export. html2canvas unavailable.');
         return;
       }
       // Elementer vi vil skjule under eksport (kontroller og søppelbøtte)
@@ -1468,7 +1468,7 @@
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
           } else {
-            alert('Kunne ikke generere bilde.');
+            alert('Failed to generate image');
           }
           // Gjenopprett synlighet
           toHide.forEach(el => {
@@ -1479,7 +1479,7 @@
         });
       }).catch(err => {
         console.error(err);
-        alert('Kunne ikke eksportere bilde.');
+        alert('Failed to export image.');
         toHide.forEach(el => {
           el.style.visibility = originalDisplays.get(el) || '';
         });
@@ -1512,11 +1512,11 @@
             // Etter rendering, påfør kolonneinnstillinger
             applySettingsToAllItems();
           } else {
-            alert('Ugyldig JSON: fant ingen tiers-array.');
+            alert('Invalid JSON: no tier-arrays.');
           }
         } catch (err) {
-          console.error('Feil ved import av JSON', err);
-          alert('Kunne ikke lese JSON-filen.');
+          console.error('Error import JSON', err);
+          alert('Unable to read JSON.');
         }
       };
       reader.readAsText(file);
@@ -1594,7 +1594,7 @@
       container.innerHTML = '';
       // Legg til en beskrivelse
       const desc = document.createElement('p');
-      desc.textContent = 'Angi etiketter for hver kolonne og velg hvordan de skal vises.';
+      desc.textContent = 'Assign labels for each column and choose when to show them.';
       desc.style.fontSize = '0.85rem';
       container.appendChild(desc);
       // Generer felter for hver ekstra kolonne
@@ -1604,7 +1604,7 @@
         row.className = 'column-setting';
         // Label for ruten
         const title = document.createElement('label');
-        title.textContent = `Kolonne ${String.fromCharCode(66 + i)}:`;
+        title.textContent = `Column ${String.fromCharCode(66 + i)}:`;
         row.appendChild(title);
         // Input for etikett
         const labelInput = document.createElement('input');
@@ -1625,7 +1625,7 @@
         hoverCheckbox.dataset.colIndex = i;
         hoverCheckbox.dataset.type = 'hover';
         hoverLabel.appendChild(hoverCheckbox);
-        hoverLabel.appendChild(document.createTextNode('Vis ved hover'));
+        hoverLabel.appendChild(document.createTextNode('Show when hover'));
         // Vis permanent
         const permLabel = document.createElement('label');
         const permCheckbox = document.createElement('input');
@@ -1634,7 +1634,7 @@
         permCheckbox.dataset.colIndex = i;
         permCheckbox.dataset.type = 'permanent';
         permLabel.appendChild(permCheckbox);
-        permLabel.appendChild(document.createTextNode('Vis permanent'));
+        permLabel.appendChild(document.createTextNode('Show in tier list'));
         optionsDiv.appendChild(hoverLabel);
         optionsDiv.appendChild(permLabel);
         row.appendChild(labelInput);
