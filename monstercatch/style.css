@@ -467,6 +467,11 @@ body.dark-mode .player4 {
   border-color: #b0884c;
 }
 
+/* Adjust player name colour in dark mode */
+body.dark-mode .player-name {
+  color: #ffffff;
+}
+
 /* Adjust progress bar colours in dark mode */
 body.dark-mode .player1-progress .progress-step {
   border-color: #b04c4c;
