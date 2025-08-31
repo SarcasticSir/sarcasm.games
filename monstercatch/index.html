@@ -30,7 +30,7 @@
       </div>
       <div class="form-row">
         <label for="pointsToWin">Points to win:</label>
-        <input id="pointsToWin" type="number" min="1" max="20" value="3" />
+        <input id="pointsToWin" type="number" min="1" max="99" value="3" />
       </div>
       <div class="form-row">
         <label for="difficulty">Difficulty:</label>
@@ -105,5 +105,11 @@
     <div id="history" class="history"></div>
   </div>
   <script src="script.js"></script>
-<iframe id='kofiframe' src='https://ko-fi.com/sarcasticsir/?hidefeed=true&widget=true&embed=true&preview=true' style='border:none;width:100%;padding:4px;background:#f9f9f9;' height='712' title='sarcasticsir'></iframe></body>
+  <!-- Dark mode toggle button -->
+  <button id="darkModeToggle" class="dark-mode-toggle">Dark Mode</button>
+
+  <!-- Link to return to the main menu. This button stays fixed in the bottom‑right corner
+       of the page regardless of whether you're on the start screen or in a game round. -->
+  <a id="homeLink" class="home-link" href="https://sarcasm.games" target="_blank">Main Menu</a>
+</body>
 </html>
