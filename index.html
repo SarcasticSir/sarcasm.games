@@ -5,71 +5,111 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>sarcasm.games</title>
 <style>
-  :root{--bg:#0b0c10;--card:#1e1f25;--txt:#eaeaea;--bd:#2f313a}
-  @media (prefers-color-scheme: light){:root{--bg:#f7f7fb;--card:#ffffff;--txt:#111;--bd:#e7e7ef}}
-  body{margin:0;font:16px/1.4 system-ui,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--txt);display:grid;place-items:center;min-height:100dvh}
-  .wrap{max-width:860px;width:100%;padding:28px}
-  h1{margin:0 0 8px;font-size:32px}
-  p{opacity:.8;margin:0 0 24px}
-  .grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
-  a{display:block;text-decoration:none;padding:18px 20px;border-radius:12px;background:var(--card);color:inherit;border:1px solid var(--bd);transition:.15s; position: relative; }
+  :root{--bg:#0b0c10;--card:#1e1f25;--txt:#eaeaea;--bd:#2f313a}
+  @media (prefers-color-scheme: light){:root{--bg:#f7f7fb;--card:#ffffff;--txt:#111;--bd:#e7e7ef}}
+  body{margin:0;font:16px/1.4 system-ui,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--txt);display:grid;place-items:center;min-height:100dvh}
+  .wrap{max-width:860px;width:100%;padding:28px}
+  h1{margin:0 0 8px;font-size:32px}
+  p{opacity:.8;margin:0 0 24px}
+  .grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+  a{display:block;text-decoration:none;padding:18px 20px;border-radius:12px;background:var(--card);color:inherit;border:1px solid var(--bd);transition:.15s; position: relative; }
 
-  /* New CSS for the tooltip */
+  /* New CSS for the tooltip */
 .tooltip-text {
-  visibility: hidden;
-  opacity: 0;
-  transition: opacity 0.3s;
-  position: absolute;
-  top: -35px; /* Adjust this value to position the tooltip above the link */
-  left: 50%;
-  transform: translateX(-50%);
-  background-color: var(--bd);
-  color: var(--txt);
-  text-align: center;
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 12px;
-  white-space: nowrap;
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 0.3s;
+  position: absolute;
+  top: -35px; /* Adjust this value to position the tooltip above the link */
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: var(--bd);
+  color: var(--txt);
+  text-align: center;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  white-space: nowrap;
 }
 
 a:hover {
-  transform: translateY(-1px);
-  border-color: #767a88;
+  transform: translateY(-1px);
+  border-color: #767a88;
 }
 
 a:hover .tooltip-text {
-  visibility: visible;
-  opacity: 1;
+  visibility: visible;
+  opacity: 1;
+}
+
+/* Style for the video button */
+#video-button {
+    cursor: pointer;
+}
+
+/* CSS for the video container */
+.video-container {
+    display: none; /* Initially hide the video container */
+    margin-top: 24px;
+    width: 100%;
+    max-width: 560px;
+    aspect-ratio: 16/9;
+}
+
+.video-container iframe {
+    width: 100%;
+    height: 100%;
 }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>sarcasm.games</h1>
-  <p>Where do you wanna go?</p>
+  <h1>sarcasm.games</h1>
+  <p>Where do you wanna go?</p>
 <div class="grid">
-  <a href="/tiermaker/">
-    Tier-maker
-    <span class="tooltip-text">Make your own tier list. </span>
-  </a>
-  <a href="/monstercatch/">
-    Monster catcher
-    <span class="tooltip-text">A local game for up to four players. Who can catch the monster first?!</span>
-  </a>
-  <a href="/poketruefalse/">
-    Pokemon True or False
-    <span class="tooltip-text">A simple true or false game with pokémon facts! 
-      How many points can you score?</span>
-  </a>
-   <a href="/quizapp/">
-Quiz!
-     <span class="tooltip-text">Generate a quiz depending on the categories of your choice</span>
-  </a>
-      <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ">
-Nautsubica        <span class="tooltip-text">Cool upcoming game from sarcasm games</span>
+  <a href="/tiermaker/">
+    Tier-maker
+    <span class="tooltip-text">Make your own tier list. </span>
+  </a>
+  <a href="/monstercatch/">
+    Monster catcher
+    <span class="tooltip-text">A local game for up to four players. Who can catch the monster first?!</span>
+  </a>
+  <a href="/poketruefalse/">
+    Pokemon True or False
+    <span class="tooltip-text">A simple true or false game with pokémon facts! 
+      How many points can you score?</span>
+  </a>
+   <a href="/quizapp/">
+        Quiz!
+        <span class="tooltip-text">Generate a quiz depending on the categories of your choice</span>
+  </a>
+    <a href="#" id="video-button">
+        Ny funksjon
+        <span class="tooltip-text">Klikk for å se en kul video</span>
     </a>
 </div>
+
+<div id="video-wrapper" class="video-container">
+    <iframe width="560" height="315" src="https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
 </div>
+
+</div>
+
+<script>
+    // Get the button and the video wrapper elements
+    const videoButton = document.getElementById('video-button');
+    const videoWrapper = document.getElementById('video-wrapper');
+    const iframe = videoWrapper.querySelector('iframe');
+
+    // Add a click event listener to the button
+    videoButton.addEventListener('click', function(event) {
+        event.preventDefault(); // Prevents the link from navigating away from the page
+        
+        // Show the video container
+        videoWrapper.style.display = 'block';
+    });
+</script>
 
 </body>
 </html>
