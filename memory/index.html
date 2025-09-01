@@ -1,1 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pokémon Guessing Game</title>
+  <!-- Link to external CSS for styling -->
+  <link rel="stylesheet" href="sarcasm_pokemon_game.css" />
+</head>
+<body>
+  <!-- Back button linking to sarcasm.games.com -->
+  <button class="back-button" id="back-button" onclick="location.href='https://sarcasm.games.com'">Back to main menu</button>
 
+  <div id="start-screen" class="start-screen">
+    <h1>Pokémon Guessing Game</h1>
+    <div class="section">
+      <label>Select Generations:</label>
+      <div class="gen-selection" id="generation-options">
+        <!-- Generation checkboxes inserted by script -->
+      </div>
+    </div>
+    <div class="section">
+      <label>Select Difficulty:</label>
+      <div class="difficulty">
+        <label><input type="radio" name="difficulty" value="easy" checked> Easy</label>
+        <label><input type="radio" name="difficulty" value="medium"> Medium</label>
+        <label><input type="radio" name="difficulty" value="hard"> Hard</label>
+        <label><input type="radio" name="difficulty" value="expert"> Expert</label>
+      </div>
+    </div>
+    <div class="section">
+      <label>Number of Images (1-99):</label>
+      <input type="number" id="num-images" class="num-images" min="1" max="99" value="5" />
+    </div>
+    <button id="start-button" class="control-button">Start Game</button>
+  </div>
+
+  <div id="game-area" class="game-container">
+    <div id="scoreboard">
+      <div id="lives-display">Lives: 3</div>
+      <div id="score-display">Score: 0</div>
+      <div id="progress-display">0 / 0</div>
+    </div>
+    <div id="pokemon-container">
+      <!-- Pokémon sprite will be set as background image -->
+      <div class="overlay-grid" id="overlay-grid"></div>
+    </div>
+    <div id="guess-section" class="guess-section">
+      <input type="text" id="guess-input" placeholder="Enter Pokémon name" autocomplete="off" />
+      <button id="guess-button" class="control-button">Guess</button>
+    </div>
+    <div id="message"></div>
+  </div>
+
+  <div id="summary-screen" class="end-screen">
+    <h2>Game Summary</h2>
+    <p id="summary-text"></p>
+    <p>Thanks for playing!</p>
+  </div>
+
+  <script>
+    // JavaScript for the Pokémon guessing game
+    (function() {
+      // Map difficulty to grid size and score multiplier
+      const difficultySettings = {
+        easy: { grid: 3, multiplier: 1 },
+        medium: { grid: 4, multiplier: 2 },
+        hard: { grid: 5, multiplier: 3 },
+        expert: { grid: 7, multiplier: 5 },
+      };
+
+      // Insert generation checkboxes (I to IX)
+      const generationOptions = document.getElementById('generation-options');
+      const romanNumerals = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX'];
+      romanNumerals.forEach((roman, index) => {
+        // Create a labelled box for each generation.  The input is hidden via CSS and
+        // the span displays the Roman numeral.  When the checkbox is checked the
+        // adjacent span will be styled as selected.
+        const label = document.createElement('label');
+        label.className = 'gen-box';
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.value = index + 1; // generation numbers start at 1
+        checkbox.checked = index === 0; // default select gen I
+        const span = document.createElement('span');
+        span.textContent = roman;
+        label.appendChild(checkbox);
+        label.appendChild(span);
+        generationOptions.appendChild(label);
+      });
+
+      // Game variables
+      let selectedGenerations = [];
+      let difficultyKey = 'easy';
+      let numImages = 5;
+      let gameData = [];
+      let currentIndex = 0;
+      let currentPokemonName = '';
+      let totalScore = 0;
+      let livesLeft = 3;
+      let flippedCount = 0;
+      let maxPoints = 0;
+      let maxTiles = 0;
+      let scorePotential = 0;
+      let correctCount = 0;
+
+      const startScreen = document.getElementById('start-screen');
+      const gameArea = document.getElementById('game-area');
+      const summaryScreen = document.getElementById('summary-screen');
+      const summaryText = document.getElementById('summary-text');
+      const livesDisplay = document.getElementById('lives-display');
+      const scoreDisplay = document.getElementById('score-display');
+      const progressDisplay = document.getElementById('progress-display');
+      const pokemonContainer = document.getElementById('pokemon-container');
+      const overlayGrid = document.getElementById('overlay-grid');
+      const guessInput = document.getElementById('guess-input');
+      const guessButton = document.getElementById('guess-button');
+      const messageDiv = document.getElementById('message');
+
+      // Utility: fetch JSON with caching to respect fair use
+      const cache = {};
+      async function fetchJSON(url) {
+        if (cache[url]) {
+          return cache[url];
+        }
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        const data = await response.json();
+        cache[url] = data;
+        return data;
+      }
+
+      // Generate a pool of Pokémon species from selected generations
+      async function buildPokemonPool(gens) {
+        let species = [];
+        for (const gen of gens) {
+          try {
+            const genData = await fetchJSON(`https://pokeapi.co/api/v2/generation/${gen}/`);
+            // The generation endpoint contains a list of pokemon_species
+            // Each item has name and url; we extract name
+            const speciesList = genData.pokemon_species || genData.species || [];
+            for (const item of speciesList) {
+              species.push(item.name);
+            }
+          } catch (err) {
+            console.error('Error fetching generation ' + gen + ':', err);
+          }
+        }
+        return species;
+      }
+
+      // Fetch sprite URL for a given Pokémon name
+      async function fetchSprite(name) {
+        const data = await fetchJSON(`https://pokeapi.co/api/v2/pokemon/${name.toLowerCase()}`);
+        // Prefer official artwork if available
+        let spriteUrl = null;
+        if (data.sprites) {
+          if (data.sprites.other && data.sprites.other['official-artwork'] && data.sprites.other['official-artwork'].front_default) {
+            spriteUrl = data.sprites.other['official-artwork'].front_default;
+          } else if (data.sprites.front_default) {
+            spriteUrl = data.sprites.front_default;
+          }
+        }
+        return spriteUrl;
+      }
+
+      // Set up a new round with a Pokémon
+      async function setupPokemonRound() {
+        messageDiv.textContent = '';
+        guessInput.value = '';
+        // Reset counts and disable guessing until at least one tile is flipped
+        flippedCount = 0;
+        livesLeft = 3;
+        // Total tiles in the grid and scoring multiplier
+        const difficulty = difficultySettings[difficultyKey];
+        maxTiles = difficulty.grid * difficulty.grid;
+        maxPoints = 1000 * difficulty.multiplier;
+        // Start potential score at max.  Guessing will be ignored until the first flip.
+        scorePotential = maxPoints;
+        livesDisplay.textContent = `Lives: ${livesLeft}`;
+
+        // Pick random Pokémon from gameData
+        currentPokemonName = gameData[currentIndex];
+        // Fetch sprite for this Pokémon
+        const spriteUrl = await fetchSprite(currentPokemonName);
+        if (!spriteUrl) {
+          console.error('Sprite not found for', currentPokemonName);
+        }
+        // Set background image
+        pokemonContainer.style.backgroundImage = `url('${spriteUrl}')`;
+        // Build overlay grid
+        overlayGrid.innerHTML = '';
+        overlayGrid.style.gridTemplateColumns = `repeat(${difficulty.grid}, 1fr)`;
+        overlayGrid.style.gridTemplateRows = `repeat(${difficulty.grid}, 1fr)`;
+        for (let i = 0; i < maxTiles; i++) {
+          const cell = document.createElement('div');
+          cell.className = 'overlay-cell';
+          cell.addEventListener('click', () => {
+            if (cell.classList.contains('revealed')) return;
+            revealCell(cell);
+          });
+          overlayGrid.appendChild(cell);
+        }
+        updateScoreboard();
+      }
+
+      function revealCell(cell) {
+        // Reveal this cell and increment flip count
+        cell.classList.add('revealed');
+        flippedCount++;
+        // Enable guessing when at least one tile has been flipped
+        if (flippedCount === 1) {
+          // Keep maximum points on the first flip
+          scorePotential = maxPoints;
+        } else {
+          // Calculate score reduction relative to the remaining available tiles (excluding the first tile)
+          const remainingTiles = maxTiles - flippedCount;
+          const denominator = maxTiles - 1;
+          // Protect against division by zero
+          const ratio = denominator > 0 ? remainingTiles / denominator : 0;
+          scorePotential = Math.ceil(ratio * maxPoints);
+          if (scorePotential < 1) scorePotential = 1;
+        }
+        updateScoreboard();
+      }
+
+      // Reveal all grid cells to show the entire image
+      function revealAllTiles() {
+        const cells = overlayGrid.querySelectorAll('.overlay-cell');
+        cells.forEach(c => {
+          c.classList.add('revealed');
+        });
+      }
+
+      function updateScoreboard() {
+        livesDisplay.textContent = `Lives: ${livesLeft}`;
+        scoreDisplay.textContent = `Score: ${totalScore}`;
+        progressDisplay.textContent = `${currentIndex + 1} / ${numImages}`;
+      }
+
+      function handleGuess() {
+        const guess = guessInput.value.trim().toLowerCase();
+        // Do not allow guesses until at least one tile has been flipped
+        if (flippedCount === 0) {
+          messageDiv.style.color = '#d9534f';
+          messageDiv.textContent = 'Flip at least one tile before guessing.';
+          return;
+        }
+        if (!guess) return;
+        if (guess === currentPokemonName.toLowerCase()) {
+          // Correct guess: reveal the entire image and award the current potential score
+          revealAllTiles();
+          messageDiv.style.color = '#28a745';
+          messageDiv.textContent = 'Correct!';
+          totalScore += scorePotential;
+          correctCount++;
+          updateScoreboard();
+          // Move to next Pokémon after a short delay
+          setTimeout(nextRound, 1000);
+        } else {
+          // Wrong guess
+          livesLeft--;
+          // Reduce potential score by 10% of the maximum score for this difficulty
+          scorePotential = Math.max(1, scorePotential - Math.ceil(maxPoints * 0.1));
+          messageDiv.style.color = '#d9534f';
+          messageDiv.textContent = `Incorrect! Lives left: ${livesLeft}`;
+          updateScoreboard();
+          if (livesLeft <= 0) {
+            // Out of lives: reveal image, no points awarded
+            revealAllTiles();
+            messageDiv.textContent = `No lives left! The correct answer was ${currentPokemonName}.`;
+            setTimeout(nextRound, 1500);
+          }
+        }
+      }
+
+      async function nextRound() {
+        currentIndex++;
+        if (currentIndex >= numImages) {
+          // Game over -> show summary
+          showSummary();
+        } else {
+          await setupPokemonRound();
+        }
+      }
+
+      function showSummary() {
+        gameArea.style.display = 'none';
+        summaryScreen.style.display = 'block';
+        summaryText.textContent = `You guessed ${correctCount} out of ${numImages} Pokémon correctly and scored ${totalScore} points.`;
+      }
+
+      async function startGame() {
+        // Read selected generations
+        selectedGenerations = Array.from(generationOptions.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+        if (selectedGenerations.length === 0) {
+          alert('Please select at least one generation.');
+          return;
+        }
+        // Read difficulty
+        const selectedDifficulty = document.querySelector('input[name="difficulty"]:checked');
+        difficultyKey = selectedDifficulty ? selectedDifficulty.value : 'easy';
+        // Read number of images
+        const numInput = document.getElementById('num-images');
+        const parsedNum = parseInt(numInput.value, 10);
+        if (isNaN(parsedNum) || parsedNum < 1 || parsedNum > 99) {
+          alert('Please enter a number of images between 1 and 99.');
+          return;
+        }
+        numImages = parsedNum;
+
+        // Build Pokémon pool
+        try {
+          const species = await buildPokemonPool(selectedGenerations);
+          if (species.length === 0) {
+            alert('No Pokémon species found for selected generations.');
+            return;
+          }
+          // Shuffle and pick unique species if possible
+          const shuffled = species.sort(() => 0.5 - Math.random());
+          gameData = shuffled.slice(0, numImages);
+        } catch (err) {
+          console.error('Error building Pokémon pool:', err);
+          alert('Failed to fetch Pokémon data. Please try again later.');
+          return;
+        }
+
+        // Reset game state
+        totalScore = 0;
+        currentIndex = 0;
+        correctCount = 0;
+        summaryScreen.style.display = 'none';
+        startScreen.style.display = 'none';
+        gameArea.style.display = 'flex';
+
+        // Setup first round
+        await setupPokemonRound();
+      }
+
+      // Event listeners
+      document.getElementById('start-button').addEventListener('click', startGame);
+      guessButton.addEventListener('click', () => {
+        handleGuess();
+      });
+      guessInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          handleGuess();
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
