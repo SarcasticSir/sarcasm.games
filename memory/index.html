@@ -48,10 +48,10 @@
     <div id="guess-section" class="guess-section">
       <input type="text" id="guess-input" placeholder="Enter Pokémon name" autocomplete="off" />
       <button id="guess-button" class="control-button">Guess</button>
+      <!-- New button to return to the generation selector/start screen -->
+      <button id="back-to-start-button" class="control-button">Back to start</button>
     </div>
     <div id="message"></div>
-    <!-- Button to return to the settings/start screen -->
-    <button id="settings-button" class="control-button">Back to settings</button>
   </div>
 
   <div id="summary-screen" class="end-screen">
@@ -118,10 +118,15 @@
       const guessInput = document.getElementById('guess-input');
       const guessButton = document.getElementById('guess-button');
       const messageDiv = document.getElementById('message');
-      const settingsButton = document.getElementById('settings-button');
+      const backToStartButton = document.getElementById('back-to-start-button');
 
       // Utility: fetch JSON with caching to respect fair use
       const cache = {};
+      // Cache bounding box analysis for sprites to avoid reprocessing the same image
+      const spriteAnalysisCache = {};
+
+      // Cache sprite URLs so we don't repeatedly fetch the same sprite
+      const spriteUrlCache = {};
       async function fetchJSON(url) {
         if (cache[url]) {
           return cache[url];
@@ -156,15 +161,25 @@
 
       // Fetch sprite URL for a given Pokémon name
       async function fetchSprite(name) {
-        const data = await fetchJSON(`https://pokeapi.co/api/v2/pokemon/${name.toLowerCase()}`);
-        // Prefer official artwork if available
+        // Check cache first
+        const lowerName = name.toLowerCase();
+        if (spriteUrlCache[lowerName]) {
+          return spriteUrlCache[lowerName];
+        }
+        const data = await fetchJSON(`https://pokeapi.co/api/v2/pokemon/${lowerName}`);
+        // Prefer smaller sprites to reduce load time.  Use front_default if available,
+        // otherwise fall back to the higher resolution official artwork.
         let spriteUrl = null;
         if (data.sprites) {
-          if (data.sprites.other && data.sprites.other['official-artwork'] && data.sprites.other['official-artwork'].front_default) {
-            spriteUrl = data.sprites.other['official-artwork'].front_default;
-          } else if (data.sprites.front_default) {
+          if (data.sprites.front_default) {
             spriteUrl = data.sprites.front_default;
+          } else if (data.sprites.other && data.sprites.other['official-artwork'] && data.sprites.other['official-artwork'].front_default) {
+            spriteUrl = data.sprites.other['official-artwork'].front_default;
           }
+        }
+        // Store in cache
+        if (spriteUrl) {
+          spriteUrlCache[lowerName] = spriteUrl;
         }
         return spriteUrl;
       }
@@ -249,8 +264,15 @@
       // Fetch sprite image and compute blank overlay cells for a given grid size
       async function getBlankCellsForSprite(url, grid) {
         try {
+          // If we have previously analysed this sprite, reuse its bounding box
+          if (spriteAnalysisCache[url]) {
+            const { bbox, width, height } = spriteAnalysisCache[url];
+            return computeBlankCells(bbox, width, height, grid);
+          }
           const { imageData, width, height } = await getImageDataFromUrl(url);
           const bbox = computeBoundingBox(imageData, width, height);
+          // Store the analysis result for future grids
+          spriteAnalysisCache[url] = { bbox, width, height };
           return computeBlankCells(bbox, width, height, grid);
         } catch (err) {
           console.error('Error analyzing sprite', err);
@@ -451,6 +473,34 @@
           return;
         }
 
+        // Disable start button and show loading message while prefetching
+        const startBtn = document.getElementById('start-button');
+        startBtn.disabled = true;
+        const originalStartText = startBtn.textContent;
+        startBtn.textContent = 'Loading...';
+
+        // Prefetch sprites and compute bounding boxes before starting the game.
+        // This helps speed up each round by performing network and image analysis up front.
+        try {
+          const difficulty = difficultySettings[difficultyKey];
+          // Preload each selected Pokémon sprite in sequence to avoid overwhelming the network
+          let loadedCount = 0;
+          for (const name of gameData) {
+            // Fetch the sprite URL (will store in cache)
+            const url = await fetchSprite(name);
+            // Compute bounding box for the chosen grid (stores in spriteAnalysisCache)
+            if (url) {
+              await getBlankCellsForSprite(url, difficulty.grid);
+            }
+            loadedCount++;
+          }
+        } catch (err) {
+          console.warn('Error preloading sprites', err);
+        }
+        // Re-enable start button and reset text after prefetching
+        startBtn.disabled = false;
+        startBtn.textContent = originalStartText;
+
         // Reset game state
         totalScore = 0;
         currentIndex = 0;
@@ -465,6 +515,7 @@
 
       // Navigate back to the start screen for selecting generations and difficulty
       function backToSettings() {
+        // Reset UI: hide game and summary, show start screen
         startScreen.style.display = 'block';
         gameArea.style.display = 'none';
         summaryScreen.style.display = 'none';
@@ -480,8 +531,7 @@
           handleGuess();
         }
       });
-      settingsButton.addEventListener('click', backToSettings);
-      settingsButton.addEventListener('click', backToSettings);
+      backToStartButton.addEventListener('click', backToSettings);
     })();
   </script>
 </body>
