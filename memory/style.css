@@ -197,10 +197,6 @@ body::before {
   margin-bottom: 16px;
 }
 
-/* Settings button spacing */
-.game-container #settings-button {
-  margin-top: 8px;
-}
 
 #pokemon-container {
   position: relative;
