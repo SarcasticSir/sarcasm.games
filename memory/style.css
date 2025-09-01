@@ -1,0 +1,260 @@
+/*
+  Stylesheet for the Pokémon guessing game on sarcasm.games.  This file
+  borrows many visual cues from the existing Pokémon True or False game
+  (pastel backgrounds, card-like panels, and toggleable generation
+  selectors).  Buttons and inputs share a consistent colour palette
+  with smooth hover transitions.  Generation checkboxes are hidden and
+  replaced by clickable tags which highlight when selected.
+*/
+
+/* Basic page setup */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+  background-color: #f7f7f7;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+  color: #333;
+}
+
+/* Subtle animated background texture similar to other games on the site */
+@keyframes moveBG {
+  0% { background-position: 0% 0%; }
+  50% { background-position: 100% 100%; }
+  100% { background-position: 0% 0%; }
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  /* Fallback gradient if no texture is available */
+  background-image: linear-gradient(135deg, #fefefe 0%, #e5f0fb 25%, #f6f6f6 50%, #e3eef8 75%, #fefefe 100%);
+  background-size: 400% 400%;
+  animation: moveBG 60s linear infinite;
+  opacity: 0.35;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* Panels for start screen, game screen and end screen */
+.start-screen,
+.game-container,
+.end-screen {
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  padding: 24px;
+  width: 90%;
+  max-width: 600px;
+  text-align: center;
+  margin: 24px auto;
+}
+
+.start-screen h1,
+.end-screen h2 {
+  margin-top: 0;
+  font-size: 2rem;
+  color: #333;
+  margin-bottom: 16px;
+}
+
+.section {
+  margin-bottom: 16px;
+  text-align: left;
+}
+
+.section label {
+  font-weight: bold;
+  display: block;
+  margin-bottom: 4px;
+}
+
+/* Generation selection styling */
+.gen-selection {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 8px;
+  margin-bottom: 16px;
+}
+
+/* Hide the underlying checkbox */
+.gen-box input {
+  display: none;
+}
+
+/* Visual tag representing a generation */
+.gen-box span {
+  display: inline-block;
+  padding: 8px 14px;
+  border: 2px solid #ccc;
+  border-radius: 6px;
+  background-color: #fdfdfd;
+  color: #333;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+/* Highlight selected generation */
+.gen-box input:checked + span {
+  background-color: #0078d4;
+  border-color: #005ea6;
+  color: #ffffff;
+}
+
+/* Difficulty radio group */
+.difficulty {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 8px;
+  margin-bottom: 16px;
+}
+
+.difficulty label {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Number input */
+.num-images {
+  width: 100%;
+  padding: 6px 8px;
+  font-size: 0.9rem;
+  border: 1px solid #bbb;
+  border-radius: 6px;
+}
+
+/* General button styling */
+.control-button {
+  padding: 8px 16px;
+  font-size: 1rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  background-color: #0078d4;
+  color: #ffffff;
+  transition: background-color 0.2s ease;
+}
+
+.control-button:hover {
+  background-color: #005ea6;
+}
+
+/* Game-specific styles */
+#scoreboard {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  font-size: 1rem;
+  color: #555;
+}
+
+#pokemon-container {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+  height: 400px;
+  margin: 0 auto 16px;
+  border: 2px solid #ccc;
+  border-radius: 6px;
+  background-position: center;
+  background-size: contain;
+  background-repeat: no-repeat;
+  overflow: hidden;
+}
+
+.overlay-grid {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: grid;
+}
+
+.overlay-cell {
+  background-color: #dddddd;
+  border: 1px solid #ffffff;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.overlay-cell.revealed {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Guess section */
+.guess-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+#guess-input {
+  padding: 8px 10px;
+  font-size: 1rem;
+  border: 1px solid #bbb;
+  border-radius: 6px;
+  width: 100%;
+  max-width: 300px;
+}
+
+#message {
+  min-height: 24px;
+  font-size: 1rem;
+  font-weight: bold;
+  text-align: center;
+}
+
+/* Back button fixed to bottom right */
+.back-button {
+  position: fixed;
+  bottom: 12px;
+  right: 12px;
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  background-color: #6c757d;
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  transition: background-color 0.2s ease;
+  z-index: 100;
+}
+
+.back-button:hover {
+  background-color: #5a6268;
+}
+
+/* Hide game and summary screens until they are activated by the script */
+#game-area {
+  display: none;
+}
+
+#summary-screen {
+  display: none;
+}
