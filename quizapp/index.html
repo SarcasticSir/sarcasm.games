@@ -1,1 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>General Knowledge Quiz</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Site header with title and dark mode toggle -->
+  <header class="site-header">
+    <h1>General Knowledge Quiz</h1>
+    <button id="darkModeToggle" class="dark-mode-toggle" aria-label="Toggle dark mode">🌙</button>
+  </header>
 
+  <!-- Start screen: load questions file, select categories and number of questions -->
+  <div id="startScreen" class="start-screen">
+    <h2>Configure Game</h2>
+    <!-- Questions file input removed; questions are loaded from the bundled file. -->
+    <p class="intro-text">Select one or more categories:</p>
+    <div id="categorySelection" class="category-selection">
+      <!-- Category checkboxes will be inserted here -->
+    </div>
+    <div class="form-row">
+      <label for="numQuestions">Number of questions:</label>
+      <input id="numQuestions" type="number" min="1" max="99" value="5">
+    </div>
+    <button id="startGameBtn" class="control-button">Start Game</button>
+  </div>
+
+  <!-- Game screen: display questions and answer input -->
+  <div id="gameScreen" class="game-container" style="display:none;">
+    <div class="question-header">
+      <h2 id="questionCount">Question 1 of 1</h2>
+      <p id="scoreDisplay" class="score-display">Score: 0 | Points: 0</p>
+    </div>
+    <div id="questionText" class="question-text">Question text goes here.</div>
+    <div class="answer-section">
+      <input id="answerInput" type="text" class="answer-input" placeholder="Type your answer">
+      <button id="submitAnswerBtn" class="answer-submit">Submit</button>
+    </div>
+    <div id="feedback" class="feedback"></div>
+  </div>
+
+  <!-- End screen: display results -->
+  <div id="endScreen" class="end-screen" style="display:none;">
+    <h2 id="finalMessage">Results here</h2>
+    <button id="newGameBtn" class="control-button">New Game</button>
+  </div>
+
+  <!-- Home button -->
+  <a id="homeLink" class="home-link" href="https://sarcasm.games/">
+    <button class="home-button">Back to Main Menu</button>
+  </a>
+
+  <script src="script.js"></script>
+</body>
+</html>
