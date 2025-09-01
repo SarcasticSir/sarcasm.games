@@ -51,6 +51,7 @@ body::before {
 }
 
 /* Panels for start screen, game screen and end screen */
+/* Card styles for start, game, and end screens */
 .start-screen,
 .game-container,
 .end-screen {
@@ -62,6 +63,13 @@ body::before {
   max-width: 600px;
   text-align: center;
   margin: 24px auto;
+}
+
+/* Stack children vertically in the game container to avoid side-by-side layouts */
+.game-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .start-screen h1,
@@ -167,6 +175,31 @@ body::before {
   margin-bottom: 12px;
   font-size: 1rem;
   color: #555;
+}
+
+/* Ensure scoreboard spans full width when inside the game container */
+.game-container #scoreboard {
+  width: 100%;
+}
+
+/* Space below the pokemon container within the game container */
+.game-container #pokemon-container {
+  margin-bottom: 16px;
+}
+
+/* Guess section layout when inside the game container */
+.game-container .guess-section {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+/* Settings button spacing */
+.game-container #settings-button {
+  margin-top: 8px;
 }
 
 #pokemon-container {
