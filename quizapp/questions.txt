@@ -1,3 +1,99 @@
-Who was the drummer for the Beatles?|Music|Ringo Starr|Sir Richard Starkey|
-What is the capital of Norway?|Geography|Oslo||
-What planet is known as the Red Planet?|Space|Mars|The Red Planet|
+What is the name of the main protagonist in The Legend of Zelda series?|Zelda|Link
+What is the name of the recurring main antagonist in the Zelda series?|Zelda|Ganon
+What is the name of the mystical golden triangles that are a central theme in the series?|Zelda|The Triforce|triforce
+In Ocarina of Time, what is the name of Link's horse?|Zelda|Epona
+What tribe is Ganondorf the king of?|Zelda|The Gerudo|gerudo
+What is the name of the sacred sword that Link often wields?|Zelda|The Master Sword|master sword
+In which game does Link travel to the parallel world of Lorule?|Zelda|A Link Between Worlds
+What is the name of the fairy that accompanies Link in Ocarina of Time?|Zelda|Navi
+Which mask transforms Link into a fierce deity in Majora's Mask?|Zelda|Fierce Deity's Mask
+What race of bird-like people live in the sky in Skyward Sword and Breath of the Wild?|Zelda|The Rito|rito
+What is the name of Nintendo's iconic plumber mascot?|Nintendo|Mario
+Which Nintendo console introduced motion controls to the mainstream?|Nintendo|Wii
+What is the name of the pink, round character who can inhale enemies and copy their abilities?|Nintendo|Kirby
+What is the name of the space-faring bounty hunter in the Metroid series?|Nintendo|Samus Aran|samus
+Which game series is set in the Mushroom Kingdom?|Nintendo|Super Mario
+What is the name of Donkey Kong's nephew who wears a red cap?|Nintendo|Diddy Kong
+Which handheld console was the successor to the Game Boy Advance?|Nintendo|Nintendo DS
+What is the name of the home planet of Fox McCloud in the Star Fox series?|Nintendo|Corneria
+What company developed the Super Smash Bros. series?|Nintendo|HAL Laboratory
+Which Pokémon is known as the 'Electric Mouse Pokémon'?|Pokemon|Pikachu
+What type of Pokémon is Charizard?|Pokemon|Fire/Flying
+What is the main goal for a Pokémon trainer in the games?|Pokemon|To become the Pokémon League Champion
+What is the name of the criminal organization led by Giovanni in the Kanto region?|Pokemon|Team Rocket
+Which Pokémon is number one in the National Pokédex?|Pokemon|Bulbasaur
+What item do you use to catch wild Pokémon?|Pokemon|Poké Ball
+What is the collective name for the legendary bird trio of Kanto?|Pokemon|Articuno, Zapdos, and Moltres|zapdos, articuno, moltres
+What do you call the process of a Pokémon changing its form?|Pokemon|Evolution
+Which city is home to the first gym a player challenges in the Kanto region?|Pokemon|Pewter City
+What is the name of Ash Ketchum's hometown?|Pokemon|Pallet Town
+What is the name of the protagonist in the 'Halo' series?|Video games|Master Chief
+In 'Minecraft', what is the name of the green, explosive creature?|Video games|Creeper
+Which company developed the 'Grand Theft Auto' series?|Video games|Rockstar Games
+What is the name of the city where 'BioShock' is primarily set?|Video games|Rapture
+What weapon is the signature of Gordon Freeman in 'Half-Life'?|Video games|Crowbar
+Which game features a character named 'Lara Croft'?|Video games|Tomb Raider
+'The cake is a lie' is a famous phrase from which video game?|Video games|Portal
+What is the name of the main character in 'The Witcher' series?|Video games|Geralt of Rivia
+In the game 'Street Fighter', what is Ryu's signature move?|Video games|Hadouken
+Which game popularized the Battle Royale genre?|Video games|PlayerUnknown's Battlegrounds
+What company manufactures the PlayStation console?|Playstation|Sony
+What is the name of the protagonist in the 'God of War' series?|Playstation|Kratos
+Which PlayStation exclusive series features treasure hunter Nathan Drake?|Playstation|Uncharted
+What is the name of the main character in 'The Last of Us'?|Playstation|Joel Miller
+What was the codename for the original PlayStation console during development?|Playstation|PSX
+Which game by Sucker Punch Productions has you playing as a samurai on Tsushima Island?|Playstation|Ghost of Tsushima
+What is the name of the female protagonist in 'Horizon Zero Dawn'?|Playstation|Aloy
+Which racing simulation game is a flagship series for PlayStation?|Playstation|Gran Turismo
+What is the name of the long-running platforming duo that first appeared on the PS2, one being a 'lombax'?|Playstation|Ratchet & Clank
+Which PlayStation mascot is a bandicoot?|Playstation|Crash Bandicoot
+What company manufactures the Xbox console?|Xbox|Microsoft
+What is the name of the online gaming service for Xbox?|Xbox|Xbox Live
+Which racing game series is a flagship exclusive for the Xbox platform?|Xbox|Forza Motorsport
+What is the name of the main enemy alien covenant in the 'Halo' series?|Xbox|The Covenant
+What is the name of the protagonist in the 'Gears of War' series?|Xbox|Marcus Fenix
+Which game studio developed the original 'Halo: Combat Evolved'?|Xbox|Bungie
+What is the name of the subscription service that offers a large library of games for Xbox?|Xbox|Game Pass
+What was the name of the original Xbox's launch title featuring a green-armored super-soldier?|Xbox|Halo: Combat Evolved
+The 'Fable' series of games was created by which famous game designer?|Xbox|Peter Molyneux
+What is the name of the pirate-themed multiplayer adventure game from developer Rare?|Xbox|Sea of Thieves
+What is the hardest known natural substance?|General knowledge|Diamond
+What is the name of the largest ocean on Earth?|General knowledge|Pacific Ocean
+What gas do plants absorb from the atmosphere?|General knowledge|Carbon Dioxide
+What is the name of the galaxy that contains our Solar System?|General knowledge|The Milky Way
+Who wrote the play 'Romeo and Juliet'?|General knowledge|William Shakespeare
+What is the main ingredient in guacamole?|General knowledge|Avocado
+What is the name for the colored part of the human eye?|General knowledge|Iris
+Which planet is known as the Red Planet?|General knowledge|Mars
+In which country would you find the Great Pyramid of Giza?|General knowledge|Egypt
+What is the name of the force that pulls objects towards each other?|General knowledge|Gravity
+Who directed the 'Lord of the Rings' trilogy?|Movies|Peter Jackson
+What is the name of the fictional African country in the movie 'Black Panther'?|Movies|Wakanda
+What is the name of the spaceship in 'Star Wars: A New Hope' captained by Han Solo?|Movies|Millennium Falcon
+What is the highest-grossing film of all time (unadjusted for inflation)?|Movies|Avatar
+In 'The Matrix', what color pill does Neo take?|Movies|Red
+What is the name of the friendly ghost in the 1995 film of the same name?|Movies|Casper
+Which movie features a giant shark that terrorizes a beach community?|Movies|Jaws
+What is the name of the lion cub protagonist in 'The Lion King'?|Movies|Simba
+Who played the character of Jack Dawson in the movie 'Titanic'?|Movies|Leonardo DiCaprio
+What is the name of the school of witchcraft and wizardry in the 'Harry Potter' series?|Movies|Hogwarts
+What is the largest land animal in the world?|Animals|African Elephant
+What is a group of lions called?|Animals|A pride
+Which animal is known as the 'king of the jungle'?|Animals|Lion
+What is the only mammal capable of sustained flight?|Animals|Bat
+What is the fastest land animal?|Animals|Cheetah
+What black and white bear is native to China?|Animals|Giant Panda
+Which animal has the longest neck?|Animals|Giraffe
+What is a baby kangaroo called?|Animals|A joey|joey
+Which large aquatic mammal is known for its tusks?|Animals|Walrus
+What type of animal is a 'Sidewinder'?|Animals|Snake
+What is the capital city of Japan?|Capital cities|Tokyo
+What is the capital city of Australia?|Capital cities|Canberra
+What is the capital city of Canada?|Capital cities|Ottawa
+What is the capital city of Egypt?|Capital cities|Cairo
+What is the capital city of Italy?|Capital cities|Rome
+What is the capital city of Spain?|Capital cities|Madrid
+What is the capital city of Germany?|Capital cities|Berlin
+What is the capital city of Brazil?|Capital cities|Brasília
+What is the capital city of Norway?|Capital cities|Oslo
+What is the capital city of France?|Capital cities|Paris
