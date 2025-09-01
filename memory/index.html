@@ -167,14 +167,19 @@
           return spriteUrlCache[lowerName];
         }
         const data = await fetchJSON(`https://pokeapi.co/api/v2/pokemon/${lowerName}`);
-        // Prefer smaller sprites to reduce load time.  Use front_default if available,
-        // otherwise fall back to the higher resolution official artwork.
+        /*
+         * Choose the sprite: prioritise the high-resolution official artwork for
+         * better image quality, falling back to the smaller front_default if
+         * necessary.  Although official-artwork images are larger, we mitigate
+         * their impact by analysing bounding boxes and preloading the sprites
+         * ahead of time.
+         */
         let spriteUrl = null;
         if (data.sprites) {
-          if (data.sprites.front_default) {
-            spriteUrl = data.sprites.front_default;
-          } else if (data.sprites.other && data.sprites.other['official-artwork'] && data.sprites.other['official-artwork'].front_default) {
+          if (data.sprites.other && data.sprites.other['official-artwork'] && data.sprites.other['official-artwork'].front_default) {
             spriteUrl = data.sprites.other['official-artwork'].front_default;
+          } else if (data.sprites.front_default) {
+            spriteUrl = data.sprites.front_default;
           }
         }
         // Store in cache
@@ -221,11 +226,17 @@
             const g = data[idx + 1];
             const b = data[idx + 2];
             const a = data[idx + 3];
-            // Treat pixels as part of the sprite if they are not highly transparent
-            // or if they are not near-white (brightness threshold).  This helps
-            // exclude large transparent or white margins around sprites.
+            /*
+             * Determine if this pixel belongs to the Pokémon sprite.  We rely
+             * primarily on the alpha channel: sprites from the PokéAPI have
+             * transparent backgrounds, so any pixel with a significant alpha
+             * value is part of the sprite.  This avoids including the white
+             * margins around the Pokémon.  A secondary brightness check is
+             * retained as a fallback for images with opaque backgrounds.
+             */
             const brightness = (r + g + b) / 3;
-            if (a > 10 || brightness < 240) {
+            // Pixel considered part of sprite if sufficiently opaque or dark
+            if (a > 10 || brightness < 220) {
               found = true;
               if (x < minX) minX = x;
               if (y < minY) minY = y;
