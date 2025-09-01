@@ -224,6 +224,10 @@
     answeredFlag = false;
     // Record start time
     questionStartTime = Date.now();
+
+    // Automatically focus the answer input so the cursor is ready
+    // when the question appears.
+    answerInput.focus();
   }
 
   /**
