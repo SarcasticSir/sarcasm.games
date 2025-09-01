@@ -9,7 +9,7 @@
 </head>
 <body>
   <!-- Back button linking to sarcasm.games.com -->
-  <button class="back-button" id="back-button" onclick="location.href='https://sarcasm.games'">Back to main menu</button>
+  <button class="back-button" id="back-button" onclick="location.href='https://sarcasm.games.com'">Back to main menu</button>
 
   <div id="start-screen" class="start-screen">
     <h1>Pokémon Guessing Game</h1>
@@ -50,6 +50,8 @@
       <button id="guess-button" class="control-button">Guess</button>
     </div>
     <div id="message"></div>
+    <!-- Button to return to the settings/start screen -->
+    <button id="settings-button" class="control-button">Back to settings</button>
   </div>
 
   <div id="summary-screen" class="end-screen">
@@ -116,6 +118,7 @@
       const guessInput = document.getElementById('guess-input');
       const guessButton = document.getElementById('guess-button');
       const messageDiv = document.getElementById('message');
+      const settingsButton = document.getElementById('settings-button');
 
       // Utility: fetch JSON with caching to respect fair use
       const cache = {};
@@ -166,19 +169,104 @@
         return spriteUrl;
       }
 
+      // -----------------------------------------------------------------------------
+      // Image analysis helpers
+      // These functions fetch the sprite image, draw it to an offscreen canvas and
+      // compute a bounding box around the non-empty portion of the sprite.  Any
+      // overlay cells that fall completely outside this bounding box are marked
+      // blank and will be revealed from the start, reducing the number of flips
+      // required.
+
+      // Fetch image data from a URL and return ImageData along with dimensions
+      async function getImageDataFromUrl(url) {
+        const response = await fetch(url);
+        const blob = await response.blob();
+        const bitmap = await createImageBitmap(blob);
+        const canvas = document.createElement('canvas');
+        canvas.width = bitmap.width;
+        canvas.height = bitmap.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(bitmap, 0, 0);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        return { imageData, width: canvas.width, height: canvas.height };
+      }
+
+      // Compute a bounding box around all pixels that are not transparent or pure white
+      function computeBoundingBox(imageData, width, height) {
+        let minX = width;
+        let minY = height;
+        let maxX = 0;
+        let maxY = 0;
+        let found = false;
+        const data = imageData.data;
+        for (let y = 0; y < height; y++) {
+          for (let x = 0; x < width; x++) {
+            const idx = (y * width + x) * 4;
+            const r = data[idx];
+            const g = data[idx + 1];
+            const b = data[idx + 2];
+            const a = data[idx + 3];
+            // Treat pixels as part of the sprite if they are not highly transparent
+            // or if they are not near-white (brightness threshold).  This helps
+            // exclude large transparent or white margins around sprites.
+            const brightness = (r + g + b) / 3;
+            if (a > 10 || brightness < 240) {
+              found = true;
+              if (x < minX) minX = x;
+              if (y < minY) minY = y;
+              if (x > maxX) maxX = x;
+              if (y > maxY) maxY = y;
+            }
+          }
+        }
+        if (!found) {
+          // If no non-empty pixel is found, return the entire image
+          return { minX: 0, minY: 0, maxX: width - 1, maxY: height - 1 };
+        }
+        return { minX, minY, maxX, maxY };
+      }
+
+      // Determine which cells in the overlay grid fall entirely outside the bounding box
+      function computeBlankCells(bbox, imgW, imgH, grid) {
+        const blankIndices = [];
+        const cellWidth = imgW / grid;
+        const cellHeight = imgH / grid;
+        for (let row = 0; row < grid; row++) {
+          for (let col = 0; col < grid; col++) {
+            const cellX1 = col * cellWidth;
+            const cellY1 = row * cellHeight;
+            const cellX2 = cellX1 + cellWidth;
+            const cellY2 = cellY1 + cellHeight;
+            // A cell is blank if it does not intersect the bounding box at all
+            if (cellX2 < bbox.minX || cellX1 > bbox.maxX || cellY2 < bbox.minY || cellY1 > bbox.maxY) {
+              blankIndices.push(row * grid + col);
+            }
+          }
+        }
+        return blankIndices;
+      }
+
+      // Fetch sprite image and compute blank overlay cells for a given grid size
+      async function getBlankCellsForSprite(url, grid) {
+        try {
+          const { imageData, width, height } = await getImageDataFromUrl(url);
+          const bbox = computeBoundingBox(imageData, width, height);
+          return computeBlankCells(bbox, width, height, grid);
+        } catch (err) {
+          console.error('Error analyzing sprite', err);
+          return [];
+        }
+      }
+
       // Set up a new round with a Pokémon
       async function setupPokemonRound() {
         messageDiv.textContent = '';
         guessInput.value = '';
-        // Reset counts and disable guessing until at least one tile is flipped
+        // Reset counts and state for a new round
         flippedCount = 0;
         livesLeft = 3;
-        // Total tiles in the grid and scoring multiplier
         const difficulty = difficultySettings[difficultyKey];
-        maxTiles = difficulty.grid * difficulty.grid;
-        maxPoints = 1000 * difficulty.multiplier;
-        // Start potential score at max.  Guessing will be ignored until the first flip.
-        scorePotential = maxPoints;
+
         livesDisplay.textContent = `Lives: ${livesLeft}`;
 
         // Pick random Pokémon from gameData
@@ -188,19 +276,42 @@
         if (!spriteUrl) {
           console.error('Sprite not found for', currentPokemonName);
         }
+        // Analyze sprite to identify blank cells for the current grid size
+        let blankCells = [];
+        try {
+          blankCells = await getBlankCellsForSprite(spriteUrl, difficulty.grid);
+        } catch (err) {
+          console.error('Failed to compute blank cells:', err);
+          blankCells = [];
+        }
+        // Compute scoring parameters after removing blank cells
+        const totalCells = difficulty.grid * difficulty.grid;
+        maxTiles = totalCells - blankCells.length;
+        if (maxTiles < 1) {
+          // Ensure there is at least one tile to flip
+          maxTiles = 1;
+        }
+        maxPoints = 1000 * difficulty.multiplier;
+        scorePotential = maxPoints;
         // Set background image
         pokemonContainer.style.backgroundImage = `url('${spriteUrl}')`;
         // Build overlay grid
         overlayGrid.innerHTML = '';
         overlayGrid.style.gridTemplateColumns = `repeat(${difficulty.grid}, 1fr)`;
         overlayGrid.style.gridTemplateRows = `repeat(${difficulty.grid}, 1fr)`;
-        for (let i = 0; i < maxTiles; i++) {
+        // Create all cells (totalCells) but mark blank ones as revealed
+        for (let i = 0; i < totalCells; i++) {
           const cell = document.createElement('div');
           cell.className = 'overlay-cell';
-          cell.addEventListener('click', () => {
-            if (cell.classList.contains('revealed')) return;
-            revealCell(cell);
-          });
+          // If this index is in the blankCells list, mark it as revealed so it doesn't count as a flip
+          if (blankCells.includes(i)) {
+            cell.classList.add('revealed');
+          } else {
+            cell.addEventListener('click', () => {
+              if (cell.classList.contains('revealed')) return;
+              revealCell(cell);
+            });
+          }
           overlayGrid.appendChild(cell);
         }
         updateScoreboard();
@@ -241,15 +352,20 @@
       }
 
       function handleGuess() {
-        const guess = guessInput.value.trim().toLowerCase();
+        // Normalise both guess and Pokémon name: remove spaces, hyphens, apostrophes
+        // and other non-alphanumeric characters before comparing.  This allows
+        // e.g. "mr mime", "mr-mime" or "mr'mime" to all match "mr-mime".
+        const rawGuess = guessInput.value.trim().toLowerCase();
+        const normalizedGuess = rawGuess.replace(/[^a-z0-9]/g, '');
+        const normalizedAnswer = currentPokemonName.toLowerCase().replace(/[^a-z0-9]/g, '');
         // Do not allow guesses until at least one tile has been flipped
         if (flippedCount === 0) {
           messageDiv.style.color = '#d9534f';
           messageDiv.textContent = 'Flip at least one tile before guessing.';
           return;
         }
-        if (!guess) return;
-        if (guess === currentPokemonName.toLowerCase()) {
+        if (!normalizedGuess) return;
+        if (normalizedGuess === normalizedAnswer) {
           // Correct guess: reveal the entire image and award the current potential score
           revealAllTiles();
           messageDiv.style.color = '#28a745';
@@ -290,6 +406,14 @@
         gameArea.style.display = 'none';
         summaryScreen.style.display = 'block';
         summaryText.textContent = `You guessed ${correctCount} out of ${numImages} Pokémon correctly and scored ${totalScore} points.`;
+      }
+
+      // Return to the start screen so the player can change generations or difficulty
+      function backToSettings() {
+        // Stop any ongoing round and show the start screen
+        startScreen.style.display = 'block';
+        gameArea.style.display = 'none';
+        summaryScreen.style.display = 'none';
       }
 
       async function startGame() {
@@ -339,6 +463,13 @@
         await setupPokemonRound();
       }
 
+      // Navigate back to the start screen for selecting generations and difficulty
+      function backToSettings() {
+        startScreen.style.display = 'block';
+        gameArea.style.display = 'none';
+        summaryScreen.style.display = 'none';
+      }
+
       // Event listeners
       document.getElementById('start-button').addEventListener('click', startGame);
       guessButton.addEventListener('click', () => {
@@ -349,6 +480,8 @@
           handleGuess();
         }
       });
+      settingsButton.addEventListener('click', backToSettings);
+      settingsButton.addEventListener('click', backToSettings);
     })();
   </script>
 </body>
