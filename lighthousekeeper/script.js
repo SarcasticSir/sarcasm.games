@@ -139,9 +139,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Modals
     const rulesButton = document.getElementById('rules-button');
     const rulesModal = document.getElementById('rules-modal');
-    const gameOverModal = document.getElementById('game-over-modal');
-    const closeModalButton = document.querySelector('.close-button');
-    const restartButton = document.getElementById('restart-button');
+    const victoryModal = document.getElementById('victory-modal');
+    const defeatModal = document.getElementById('defeat-modal');
+    const closeButtons = document.querySelectorAll('.close-button');
+    const restartButtons = document.querySelectorAll('.restart-button');
 
     // --- FUNCTIONS ---
 
@@ -187,7 +188,10 @@ document.addEventListener('DOMContentLoaded', () => {
             drawActionCard();
         }
 
-        gameOverModal.classList.add('hidden');
+        rulesModal.classList.add('hidden');
+        victoryModal.classList.add('hidden');
+        defeatModal.classList.add('hidden');
+
         updateUI();
         renderPlayerHand();
         drawStormCard();
@@ -414,16 +418,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function endGame(isWin) {
-        const title = document.getElementById('game-over-title');
-        const message = document.getElementById('game-over-message');
         if (isWin) {
-            title.textContent = "You survived the storm!";
-            message.textContent = "The light is safe, and dawn is breaking. Well done, Lighthouse Keeper!";
+            victoryModal.classList.remove('hidden');
         } else {
-            title.textContent = "The light has gone out...";
-            message.textContent = "The storm was too mighty. Darkness has won this time.";
+            defeatModal.classList.remove('hidden');
         }
-        gameOverModal.classList.remove('hidden');
     }
 
     // --- EVENT LISTENERS ---
@@ -431,11 +430,15 @@ document.addEventListener('DOMContentLoaded', () => {
     passButton.addEventListener('click', () => resolveTurn(false));
     
     rulesButton.addEventListener('click', () => rulesModal.classList.remove('hidden'));
-    closeModalButton.addEventListener('click', () => rulesModal.classList.add('hidden'));
-    rulesModal.addEventListener('click', (e) => {
-        if(e.target === rulesModal) rulesModal.classList.add('hidden');
+    closeButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            button.closest('.modal').classList.add('hidden');
+        });
     });
-    restartButton.addEventListener('click', initGame);
+    
+    restartButtons.forEach(button => {
+        button.addEventListener('click', initGame);
+    });
 
     // --- START GAME ---
     initGame();
