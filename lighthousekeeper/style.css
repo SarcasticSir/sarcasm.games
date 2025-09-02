@@ -224,6 +224,27 @@ button {
     cursor: pointer;
 }
 
+.result-title {
+    font-size: 2.2rem;
+    margin-bottom: 10px;
+}
+
+.result-message {
+    font-size: 1.2rem;
+    line-height: 1.5;
+}
+
+.restart-button {
+    margin-top: 20px;
+    padding: 12px 24px;
+    font-size: 1.1rem;
+    background-color: #2ecc71;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
 /* Back button fixed to bottom right */
 .back-button {
   position: fixed;
@@ -246,8 +267,7 @@ button {
   background-color: #5a6268;
 }
 
-
-/* Add this to style.css */
+/* Disabled card styling */
 .action-card.disabled {
     opacity: 0.5;
     pointer-events: none;
