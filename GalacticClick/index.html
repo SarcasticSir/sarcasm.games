@@ -1,1 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Galactic Mining Adventure</title>
+    <link rel="stylesheet" href="styles.css">
+    <script defer src="script.js"></script>
+</head>
+<body>
+    <div id="game-container">
+        <!-- Currency Display -->
+        <div id="header">
+            <h1>Galactic Mining Adventure</h1>
+            <div id="currency-display">Crystals: <span id="crystal-count">0</span></div>
+            <div id="prestige-display">Prestige Points: <span id="prestige-count">0</span></div>
+        </div>
+        
+        <!-- Clickable Asteroid -->
+        <div id="click-area">
+            <button id="asteroid-button" title="Click to mine crystals">
+                <!-- We'll use a simple emoji for the asteroid; could be replaced with an image later -->
+                🪐
+            </button>
+            <div id="per-click-info">Crystals per click: <span id="per-click-value">1</span></div>
+        </div>
 
+        <!-- Shop for Items and Upgrades -->
+        <div id="shop-container">
+            <h2>Shop</h2>
+            <div id="items-shop" class="shop-section">
+                <h3>Items</h3>
+                <!-- Items will be dynamically inserted here -->
+            </div>
+            <div id="upgrades-shop" class="shop-section">
+                <h3>Upgrades</h3>
+                <!-- Upgrades will be dynamically inserted here -->
+            </div>
+        </div>
+
+        <!-- Prestige Section -->
+        <div id="prestige-container">
+            <h2>Prestige</h2>
+            <p>Reset your progress for long‑term bonuses. Each prestige grants you Stardust, boosting all future production.</p>
+            <div>Current Stardust: <span id="stardust-count">0</span></div>
+            <button id="prestige-button">Prestige (Cost: <span id="prestige-cost">100000</span> crystals)</button>
+        </div>
+
+        <!-- Save/Load Section -->
+        <div id="save-load-container">
+            <h2>Save & Load</h2>
+            <button id="save-button">Save to LocalStorage</button>
+            <button id="export-button">Export Save to File</button>
+            <label class="file-input-label">
+                Import Save:
+                <input type="file" id="file-input" accept="application/json" />
+            </label>
+        </div>
+
+    </div>
+
+    <!-- Sarcasm.games link -->
+    <a href="https://sarcasm.games" id="sarcasm-link" target="_blank">sarcasm.games</a>
+</body>
+</html>
