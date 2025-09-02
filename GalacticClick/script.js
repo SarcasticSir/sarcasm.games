@@ -1,508 +1,344 @@
-/*
- * Galactic Mining Adventure
- *
- * A simple incremental game where players mine crystals by clicking on an asteroid.
- * Purchase items to automatically generate crystals per second and upgrades to
- * multiply the crystals obtained per click or add lucky bonuses. Progress is
- * stored locally and can be exported/imported via JSON files. A prestige
- * mechanic allows players to reset progress for long‑term bonuses (Stardust).
- */
+/* Galactic Mining Adventure – stable shop rendering + working upgrades */
 
-// Main game object to track all state
-const game = {
-    crystals: 0,
-    totalCrystals: 0,      // total crystals ever earned (for prestige calculations)
-    crystalsPerClick: 1,
-    clickMultiplier: 1,
-    stardust: 0,          // permanent currency gained from prestiges
-    prestigePoints: 0,    // number of times player has prestiged
-    items: [],            // array of purchased items
-    upgrades: [],         // array of purchased upgrades
-    lastUpdated: Date.now(),
+const fmt = (n) => {
+  if (n >= 1e12) return (n/1e12).toFixed(2) + "T";
+  if (n >= 1e9)  return (n/1e9).toFixed(2)  + "B";
+  if (n >= 1e6)  return (n/1e6).toFixed(2)  + "M";
+  if (n >= 1e3)  return (n/1e3).toFixed(2)  + "k";
+  return Math.floor(n).toString();
 };
 
-// Define the available items (mining equipment) with base cost and production rate
-const defaultItems = [
-    {
-        name: "Mining Drone",
-        baseCost: 15,
-        quantity: 0,
-        costMultiplier: 1.15,
-        production: 0.1, // crystals per second
-        description: "Small drones that mine asteroids autonomously.",
-    },
-    {
-        name: "Asteroid Miner",
-        baseCost: 100,
-        quantity: 0,
-        costMultiplier: 1.15,
-        production: 1,
-        description: "A manned mining station for steady extraction.",
-    },
-    {
-        name: "Laser Extractor",
-        baseCost: 500,
-        quantity: 0,
-        costMultiplier: 1.15,
-        production: 5,
-        description: "High‑powered lasers slice asteroids like butter.",
-    },
-    {
-        name: "Quantum Drill",
-        baseCost: 3000,
-        quantity: 0,
-        costMultiplier: 1.15,
-        production: 20,
-        description: "Experimental drills that mine in multiple dimensions.",
-    }
-];
+const state = {
+  crystals: 0,
+  totalCrystals: 0,
+  baseClick: 1,
+  clickMultiplier: 1,
+  luck: { double: 0, triple: 0, quadruple: 0 }, // probabilities in [0..1]
+  stardust: 0,
+  lastSavedAt: Date.now(),
+  prestigeCost: 100_000,
 
-// Define the available upgrades with cost and effect
-const defaultUpgrades = [
-    {
-        name: "Double Click",
-        cost: 100,
-        description: "Doubles the crystals gained per click.",
-        purchased: false,
-        effect() {
-            game.clickMultiplier = 2;
-        }
-    },
-    {
-        name: "Triple Click",
-        cost: 500,
-        description: "Triples the crystals gained per click.",
-        purchased: false,
-        effect() {
-            game.clickMultiplier = 3;
-        }
-    },
-    {
-        name: "Quadruple Click",
-        cost: 2000,
-        description: "Quadruples the crystals gained per click.",
-        purchased: false,
-        effect() {
-            game.clickMultiplier = 4;
-        }
-    },
-    {
-        name: "Lucky Mining",
-        cost: 5000,
-        description: "5% chance to double the crystals on each click.",
-        purchased: false,
-        effect() {
-            game.luckyChance = (game.luckyChance || 0) + 0.05;
-        }
-    },
-    {
-        name: "Fortune Mining",
-        cost: 15000,
-        description: "3% chance to triple the crystals on each click.",
-        purchased: false,
-        effect() {
-            game.fortuneChance = (game.fortuneChance || 0) + 0.03;
-        }
-    },
-    {
-        name: "Cosmic Blessing",
-        cost: 40000,
-        description: "1% chance to quadruple the crystals on each click.",
-        purchased: false,
-        effect() {
-            game.blessingChance = (game.blessingChance || 0) + 0.01;
-        }
-    }
-];
+  generators: {
+    drone:   { id: "drone",   name: "Mining Drone",   desc: "Small drones that mine asteroids autonomously.", baseCost: 15,   cost: 15,   count: 0, cps: 0.1, scale: 1.15 },
+    miner:   { id: "miner",   name: "Asteroid Miner", desc: "A manned mining station for steady extraction.",  baseCost: 100,  cost: 100,  count: 0, cps: 1,   scale: 1.15 },
+    laser:   { id: "laser",   name: "Laser Extractor",desc: "High-powered lasers slice asteroids like butter.", baseCost: 500,  cost: 500,  count: 0, cps: 8,   scale: 1.15 },
+    quantum: { id: "quantum", name: "Quantum Drill",  desc: "Experimental drills that mine in multiple dimensions.", baseCost: 3000, cost: 3000, count: 0, cps: 40,  scale: 1.17 },
+  },
 
-/**
- * Load the game state from localStorage. If no saved state exists, initialize
- * with defaults. Also calculates offline progress based on last update time.
- */
-function loadGame() {
-    const saved = localStorage.getItem('galacticMiningSave');
-    if (saved) {
-        try {
-            const data = JSON.parse(saved);
-            Object.assign(game, data);
-            // Reconstruct items and upgrades arrays to ensure methods persist
-            game.items = defaultItems.map((item, index) => {
-                const savedItem = data.items && data.items[index] ? data.items[index] : {};
-                return {
-                    ...item,
-                    quantity: savedItem.quantity || 0,
-                };
-            });
-            game.upgrades = defaultUpgrades.map((up, index) => {
-                const savedUp = data.upgrades && data.upgrades[index] ? data.upgrades[index] : {};
-                return {
-                    ...up,
-                    purchased: savedUp.purchased || false,
-                };
-            });
-            // Compute offline progress
-            const now = Date.now();
-            const elapsed = Math.max(0, (now - (data.lastUpdated || now)) / 1000); // seconds
-            const autoProdPerSec = getAutoProductionRate();
-            const offlineGain = autoProdPerSec * elapsed;
-            if (offlineGain > 0) {
-                game.crystals += offlineGain;
-                game.totalCrystals += offlineGain;
-            }
-            game.lastUpdated = now;
-        } catch (err) {
-            console.error('Failed to load save:', err);
-            initializeDefaults();
-        }
-    } else {
-        initializeDefaults();
-    }
+  upgrades: {
+    u_double:   { id: "u_double",   name: "Double Click",  desc: "Doubles the crystals gained per click.", cost: 100,   purchased: false, apply(){ state.clickMultiplier *= 2; } },
+    u_triple:   { id: "u_triple",   name: "Triple Click",  desc: "Triples the crystals gained per click.", cost: 500,   purchased: false, apply(){ state.clickMultiplier *= 3; } },
+    u_quadruple:{ id: "u_quadruple",name: "Quadruple Click", desc: "Quadruples the crystals gained per click.", cost: 2000, purchased: false, apply(){ state.clickMultiplier *= 4; } },
+    u_lucky:    { id: "u_lucky",    name: "Lucky Mining",  desc: "5% chance to double the crystals on each click.",  cost: 5000, purchased: false, apply(){ state.luck.double += 0.05; } },
+    u_fortune:  { id: "u_fortune",  name: "Fortune Mining",desc: "3% chance to triple the crystals on each click.", cost: 15000,purchased: false, apply(){ state.luck.triple += 0.03; } },
+    u_cosmic:   { id: "u_cosmic",   name: "Cosmic Blessing", desc: "1% chance to quadruple the crystals on each click.", cost: 40000, purchased: false, apply(){ state.luck.quadruple += 0.01; } },
+  },
+};
+
+/** Cached DOM refs */
+const $ = (sel) => document.querySelector(sel);
+const elCrystals = $("#crystalsCount");
+const elStardust = $("#stardustCount");
+const elStardustNow = $("#stardustNow");
+const elPerClick = $("#perClick");
+const elPrestigeCost = $("#prestigeCost");
+const elGenerators = $("#generators");
+const elUpgrades = $("#upgrades");
+const elBigClicker = $("#bigClicker");
+const elPrestigeBtn = $("#prestigeBtn");
+const elSaveLocal = $("#saveLocalBtn");
+const elExport = $("#exportBtn");
+const elImport = $("#importFile");
+
+const ui = {
+  gens: {},     // id -> {root, cost, owned, btn}
+  upgrades: {}, // id -> {root, cost, owned/purchased label, btn}
+};
+
+function globalMultiplier() {
+  // Each stardust gives +10% global production (clicks & cps)
+  return 1 + state.stardust * 0.10;
 }
 
-/**
- * Initialize default game state.
- */
-function initializeDefaults() {
-    game.crystals = 0;
-    game.totalCrystals = 0;
-    game.crystalsPerClick = 1;
-    game.clickMultiplier = 1;
-    game.stardust = 0;
-    game.prestigePoints = 0;
-    game.luckyChance = 0;
-    game.fortuneChance = 0;
-    game.blessingChance = 0;
-    game.items = defaultItems.map(item => ({ ...item, quantity: 0 }));
-    game.upgrades = defaultUpgrades.map(up => ({ ...up, purchased: false }));
-    game.lastUpdated = Date.now();
+function crystalsPerClick() {
+  let base = state.baseClick * state.clickMultiplier * globalMultiplier();
+  return base;
 }
 
-/**
- * Save the current game state to localStorage.
- */
-function saveGame() {
-    const saveData = {
-        crystals: game.crystals,
-        totalCrystals: game.totalCrystals,
-        crystalsPerClick: game.crystalsPerClick,
-        clickMultiplier: game.clickMultiplier,
-        stardust: game.stardust,
-        prestigePoints: game.prestigePoints,
-        luckyChance: game.luckyChance || 0,
-        fortuneChance: game.fortuneChance || 0,
-        blessingChance: game.blessingChance || 0,
-        items: game.items.map(item => ({ quantity: item.quantity })),
-        upgrades: game.upgrades.map(up => ({ purchased: up.purchased })),
-        lastUpdated: Date.now(),
-    };
-    localStorage.setItem('galacticMiningSave', JSON.stringify(saveData));
+function totalCps() {
+  let cps = 0;
+  for (const g of Object.values(state.generators)) {
+    cps += g.cps * g.count;
+  }
+  return cps * globalMultiplier();
 }
 
-/**
- * Returns the total crystals per second produced by all items, including stardust bonus.
- */
-function getAutoProductionRate() {
-    const baseRate = game.items.reduce((acc, item) => acc + item.production * item.quantity, 0);
-    return baseRate * (1 + game.stardust * 0.1);
+/* ------- Building the shop ONCE ------- */
+function buildGenerators() {
+  elGenerators.innerHTML = "";
+  for (const g of Object.values(state.generators)) {
+    const root = document.createElement("div");
+    root.className = "shop-item";
+    root.innerHTML = `
+      <div class="shop-title">${g.name}</div>
+      <div class="shop-desc">${g.desc}</div>
+      <div class="shop-row">
+        <div class="cost">Cost: <span data-cost>${fmt(g.cost)}</span> ⭐</div>
+        <div class="owned">Owned: <span data-owned>${g.count}</span></div>
+        <button class="buy-btn" data-buy>Buy</button>
+      </div>
+    `;
+    const cost = root.querySelector("[data-cost]");
+    const owned = root.querySelector("[data-owned]");
+    const btn = root.querySelector("[data-buy]");
+    btn.addEventListener("click", () => buyGenerator(g.id));
+    elGenerators.appendChild(root);
+    ui.gens[g.id] = { root, cost, owned, btn };
+  }
 }
 
-/**
- * Update displayed values in the UI: crystals, per click, items, upgrades, prestige.
- */
-function updateDisplay() {
-    document.getElementById('crystal-count').textContent = Math.floor(game.crystals).toLocaleString();
-    document.getElementById('prestige-count').textContent = game.prestigePoints;
-    document.getElementById('stardust-count').textContent = game.stardust;
-    document.getElementById('per-click-value').textContent = (game.crystalsPerClick * game.clickMultiplier).toLocaleString();
-    document.getElementById('prestige-cost').textContent = getPrestigeCost().toLocaleString();
-    renderShops();
+function buildUpgrades() {
+  elUpgrades.innerHTML = "";
+  for (const u of Object.values(state.upgrades)) {
+    const root = document.createElement("div");
+    root.className = "shop-item";
+    root.innerHTML = `
+      <div class="shop-title">${u.name}</div>
+      <div class="shop-desc">${u.desc}</div>
+      <div class="shop-row">
+        <div class="cost">Cost: <span data-cost>${fmt(u.cost)}</span> ⭐</div>
+        <div class="owned"><span data-owned>${u.purchased ? "Purchased" : "Not purchased"}</span></div>
+        <button class="buy-btn" data-buy>Buy</button>
+      </div>
+    `;
+    const cost = root.querySelector("[data-cost]");
+    const owned = root.querySelector("[data-owned]");
+    const btn = root.querySelector("[data-buy]");
+    btn.addEventListener("click", () => buyUpgrade(u.id));
+    elUpgrades.appendChild(root);
+    ui.upgrades[u.id] = { root, cost, owned, btn };
+  }
 }
 
-/**
- * Render the items and upgrades lists in the shop.
- */
-function renderShops() {
-    const itemsContainer = document.getElementById('items-shop');
-    itemsContainer.innerHTML = '';
-    game.items.forEach((item, index) => {
-        const currentCost = getItemCost(item);
-        const div = document.createElement('div');
-        div.className = 'shop-item';
-        div.innerHTML = `
-            <div class="item-info">
-                <span class="item-name">${item.name}</span>
-                <span class="item-description">${item.description}</span>
-            </div>
-            <div class="item-actions">
-                <span class="item-cost">Cost: ${Math.floor(currentCost).toLocaleString()}⭐</span>
-                <span class="item-quantity">Owned: ${item.quantity}</span>
-                <button class="purchase-btn" data-item-index="${index}">Buy</button>
-            </div>
-        `;
-        itemsContainer.appendChild(div);
-    });
-    // Attach click listeners after generating the list
-    itemsContainer.querySelectorAll('.purchase-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const idx = parseInt(btn.getAttribute('data-item-index'));
-            purchaseItem(idx);
-        });
-    });
-    // Upgrades
-    const upgradesContainer = document.getElementById('upgrades-shop');
-    upgradesContainer.innerHTML = '';
-    game.upgrades.forEach((up, index) => {
-        const div = document.createElement('div');
-        div.className = 'upgrade-item';
-        if (up.purchased) {
-            div.innerHTML = `
-                <div class="item-info">
-                    <span class="item-name">${up.name}</span>
-                    <span class="item-description">${up.description}</span>
-                </div>
-                <div class="item-actions">
-                    <span class="item-cost">Purchased</span>
-                </div>
-            `;
-        } else {
-            div.innerHTML = `
-                <div class="item-info">
-                    <span class="item-name">${up.name}</span>
-                    <span class="item-description">${up.description}</span>
-                </div>
-                <div class="item-actions">
-                    <span class="item-cost">Cost: ${up.cost.toLocaleString()}⭐</span>
-                    <button class="purchase-btn" data-upgrade-index="${index}">Buy</button>
-                </div>
-            `;
-        }
-        upgradesContainer.appendChild(div);
-    });
-    // Attach upgrade buttons
-    upgradesContainer.querySelectorAll('.purchase-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const idx = parseInt(btn.getAttribute('data-upgrade-index'));
-            purchaseUpgrade(idx);
-        });
-    });
+/* ------- Update UI without rebuilding ------- */
+function updateTopBar() {
+  elCrystals.textContent = fmt(state.crystals);
+  elStardust.textContent = fmt(state.stardust);
+  elStardustNow.textContent = fmt(state.stardust);
+  elPerClick.textContent = fmt(crystalsPerClick());
+  elPrestigeCost.textContent = "100,000"; // static display
+  elPrestigeBtn.disabled = state.crystals < state.prestigeCost;
 }
 
-/**
- * Calculate the current cost of an item based on base cost, quantity, and multiplier.
- */
-function getItemCost(item) {
-    return item.baseCost * Math.pow(item.costMultiplier, item.quantity);
+function updateShop() {
+  // Generators
+  for (const g of Object.values(state.generators)) {
+    const uiEntry = ui.gens[g.id];
+    if (!uiEntry) continue;
+    uiEntry.cost.textContent = fmt(g.cost);
+    uiEntry.owned.textContent = g.count;
+    uiEntry.btn.disabled = state.crystals < g.cost;
+  }
+
+  // Upgrades (one-time purchases)
+  for (const u of Object.values(state.upgrades)) {
+    const uiEntry = ui.upgrades[u.id];
+    if (!uiEntry) continue;
+    uiEntry.cost.textContent = fmt(u.cost);
+    uiEntry.owned.textContent = u.purchased ? "Purchased" : "Not purchased";
+    uiEntry.btn.disabled = u.purchased || state.crystals < u.cost;
+  }
 }
 
-/**
- * Purchase an item if enough crystals are available.
- */
-function purchaseItem(index) {
-    const item = game.items[index];
-    const cost = getItemCost(item);
-    if (game.crystals >= cost) {
-        game.crystals -= cost;
-        item.quantity++;
-        // Increase total crystals spent (for prestige calculation)
-        // not necessary but we track by adding total crystals to crystals produced. We'll not update total for spending.
-        updateDisplay();
-        saveGame();
-    }
+/* ------- Game actions ------- */
+function mineClick() {
+  // base click with luck rolls
+  let amount = crystalsPerClick();
+
+  // lucky rolls are independent and multiplicative
+  if (Math.random() < state.luck.double)   amount *= 2;
+  if (Math.random() < state.luck.triple)   amount *= 3;
+  if (Math.random() < state.luck.quadruple)amount *= 4;
+
+  addCrystals(amount);
 }
 
-/**
- * Purchase an upgrade if enough crystals are available.
- */
-function purchaseUpgrade(index) {
-    const up = game.upgrades[index];
-    if (up.purchased) return;
-    if (game.crystals >= up.cost) {
-        game.crystals -= up.cost;
-        up.purchased = true;
-        if (typeof up.effect === 'function') {
-            up.effect();
-        }
-        updateDisplay();
-        saveGame();
-    }
+function addCrystals(n) {
+  state.crystals += n;
+  state.totalCrystals += n;
 }
 
-/**
- * Handle clicking on the asteroid. Applies multipliers and lucky chances.
- */
-function handleAsteroidClick() {
-    let gain = game.crystalsPerClick * game.clickMultiplier;
-    // Lucky chances
-    const rnd = Math.random();
-    if (game.blessingChance && rnd < game.blessingChance) {
-        gain *= 4;
-    } else if (game.fortuneChance && rnd < (game.blessingChance || 0) + game.fortuneChance) {
-        gain *= 3;
-    } else if (game.luckyChance && rnd < (game.blessingChance || 0) + (game.fortuneChance || 0) + game.luckyChance) {
-        gain *= 2;
-    }
-    game.crystals += gain;
-    game.totalCrystals += gain;
-    updateDisplay();
-    saveGame();
+function buyGenerator(id) {
+  const g = state.generators[id];
+  if (!g) return;
+  if (state.crystals < g.cost) return;
+
+  state.crystals -= g.cost;
+  g.count += 1;
+  g.cost = Math.ceil(g.cost * g.scale);
+
+  updateShop();
+  updateTopBar();
 }
 
-/**
- * Perform prestige: reset the game in exchange for stardust. Stardust boosts future production.
- */
+function buyUpgrade(id) {
+  const u = state.upgrades[id];
+  if (!u || u.purchased) return;
+  if (state.crystals < u.cost) return;
+
+  state.crystals -= u.cost;
+  u.purchased = true;
+  u.apply();
+
+  updateShop();
+  updateTopBar();
+}
+
+/* ------- Prestige ------- */
 function prestige() {
-    const cost = getPrestigeCost();
-    if (game.crystals < cost) return;
-    // Calculate stardust gained from total crystals
-    const gainedStardust = Math.floor(game.totalCrystals / 100000); // 1 stardust per 100k total crystals
-    game.stardust += gainedStardust;
-    game.prestigePoints += 1;
-    // Reset game state but preserve stardust and prestigePoints
-    game.crystals = 0;
-    game.totalCrystals = 0;
-    game.crystalsPerClick = 1;
-    game.clickMultiplier = 1;
-    game.luckyChance = 0;
-    game.fortuneChance = 0;
-    game.blessingChance = 0;
-    // reset items and upgrades
-    game.items.forEach(item => item.quantity = 0);
-    game.upgrades.forEach((up, idx) => up.purchased = false);
-    game.lastUpdated = Date.now();
-    updateDisplay();
-    saveGame();
-    alert(`You gained ${gainedStardust} Stardust! All progress has been reset.`);
+  if (state.crystals < state.prestigeCost) return;
+  // Simple formula: gain 1 Stardust per 100k crystals (floored)
+  const gained = Math.floor(state.crystals / 100_000);
+  if (gained <= 0) return;
+
+  state.stardust += gained;
+
+  // reset core progress but keep stardust
+  state.crystals = 0;
+  state.totalCrystals = 0;
+  state.baseClick = 1;
+  state.clickMultiplier = 1;
+  state.luck = { double: 0, triple: 0, quadruple: 0 };
+
+  // reset generators
+  for (const g of Object.values(state.generators)) {
+    g.count = 0;
+    g.cost = g.baseCost;
+  }
+  // reset upgrades purchase state
+  for (const u of Object.values(state.upgrades)) {
+    u.purchased = false;
+  }
+
+  updateShop();
+  updateTopBar();
+  saveLocal(false);
+  alert(`Prestige! You gained ${gained} Stardust.`);
 }
 
-/**
- * Calculate the cost of performing a prestige based on number of prestiges already completed.
- */
-function getPrestigeCost() {
-    return 100000 * (game.prestigePoints + 1);
+/* ------- Save / Load ------- */
+function saveLocal(showAlert = true) {
+  state.lastSavedAt = Date.now();
+  localStorage.setItem("gma_save_v1", JSON.stringify(state));
+  if (showAlert) alert("Game saved to localStorage.");
 }
 
-/**
- * Export the save data as a downloadable JSON file.
- */
-function exportSave() {
-    // Save to localStorage first to ensure the latest state
-    saveGame();
-    const dataStr = localStorage.getItem('galacticMiningSave');
-    const blob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    const date = new Date().toISOString().replace(/[:.]/g, '-');
-    a.download = `galactic_mining_save_${date}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+function loadLocal() {
+  const raw = localStorage.getItem("gma_save_v1");
+  if (!raw) return false;
+  try {
+    const loaded = JSON.parse(raw);
+    // Defensive merge
+    Object.assign(state, loaded);
+
+    // Merge nested objects safely
+    for (const id in state.generators) {
+      if (!loaded.generators?.[id]) continue;
+      Object.assign(state.generators[id], loaded.generators[id]);
+    }
+    for (const id in state.upgrades) {
+      if (!loaded.upgrades?.[id]) continue;
+      Object.assign(state.upgrades[id], loaded.upgrades[id]);
+    }
+    if (!state.luck) state.luck = { double:0, triple:0, quadruple:0 };
+    if (typeof state.stardust !== "number") state.stardust = 0;
+    if (!state.lastSavedAt) state.lastSavedAt = Date.now();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function applyOfflineProgress() {
+  const now = Date.now();
+  const dtSec = Math.max(0, (now - state.lastSavedAt) / 1000);
+  const gain = totalCps() * dtSec;
+  if (gain > 0) addCrystals(gain);
+}
+
+/* Export / Import file */
+function exportToFile() {
+  saveLocal(false);
+  const blob = new Blob([localStorage.getItem("gma_save_v1") || ""], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "galactic_mining_save.json";
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
     URL.revokeObjectURL(url);
+    a.remove();
+  }, 0);
 }
 
-/**
- * Import save data from a JSON file selected by the user.
- */
-function importSave(file) {
-    const reader = new FileReader();
-    reader.onload = function(event) {
-        try {
-            const data = JSON.parse(event.target.result);
-            // Replace current game data
-            Object.assign(game, data);
-            // Recreate items and upgrades arrays using default definitions
-            game.items = defaultItems.map((item, index) => {
-                const savedItem = data.items && data.items[index] ? data.items[index] : {};
-                return {
-                    ...item,
-                    quantity: savedItem.quantity || 0,
-                };
-            });
-            game.upgrades = defaultUpgrades.map((up, index) => {
-                const savedUp = data.upgrades && data.upgrades[index] ? data.upgrades[index] : {};
-                return {
-                    ...up,
-                    purchased: savedUp.purchased || false,
-                };
-            });
-            updateDisplay();
-            saveGame();
-            alert('Save loaded successfully!');
-        } catch (err) {
-            alert('Failed to import save: invalid file.');
-        }
-    };
-    reader.readAsText(file);
-}
-
-/**
- * Main game loop: generates crystals per second from items and updates the game state.
- */
-function gameLoop() {
-    const now = Date.now();
-    const dt = (now - game.lastUpdated) / 1000; // seconds since last update
-    if (dt > 0) {
-        const autoProd = getAutoProductionRate() * dt;
-        if (autoProd > 0) {
-            game.crystals += autoProd;
-            game.totalCrystals += autoProd;
-        }
-        game.lastUpdated = now;
+function importFromFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      localStorage.setItem("gma_save_v1", reader.result);
+      loadLocal();
+      // rebuild UI (structure is same, but we want text + buttons to reflect purchase states)
+      buildGenerators();
+      buildUpgrades();
+      updateTopBar();
+      updateShop();
+      alert("Save imported!");
+    } catch {
+      alert("Import failed: invalid file.");
     }
-    updateDisplay();
-    // Save periodically (not too frequently)
-    if (Math.random() < 0.01) {
-        saveGame();
-    }
+  };
+  reader.readAsText(file);
 }
 
-/**
- * Initialize event listeners and start the game.
- */
+/* ------- Loop ------- */
+let last = performance.now();
+function loop(now) {
+  const dt = (now - last) / 1000;
+  last = now;
+
+  // passive income
+  const cpsGain = totalCps() * dt;
+  if (cpsGain > 0) addCrystals(cpsGain);
+
+  updateTopBar();
+  updateShop();
+  requestAnimationFrame(loop);
+}
+
+/* ------- Init ------- */
 function init() {
-    // Load saved data or defaults
-    loadGame();
-    // Attach click handler to asteroid button
-    document.getElementById('asteroid-button').addEventListener('click', handleAsteroidClick);
-    // Prestige button
-    document.getElementById('prestige-button').addEventListener('click', () => {
-        if (game.crystals >= getPrestigeCost()) {
-            prestige();
-        } else {
-            alert('You need more crystals to prestige!');
-        }
-    });
-    // Save button
-    document.getElementById('save-button').addEventListener('click', () => {
-        saveGame();
-        alert('Game saved to localStorage.');
-    });
-    // Export button
-    document.getElementById('export-button').addEventListener('click', () => {
-        exportSave();
-    });
-    // File input
-    document.getElementById('file-input').addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            importSave(file);
-            e.target.value = '';
-        }
-    });
-    // Render initial shop lists
-    renderShops();
-    updateDisplay();
-    // Start game loop
-    setInterval(gameLoop, 1000 / 10); // update 10 times per second
-    // Save the game before closing the tab
-    window.addEventListener('beforeunload', () => {
-        saveGame();
-    });
+  const hadSave = loadLocal();
+  buildGenerators();
+  buildUpgrades();
+
+  if (hadSave) applyOfflineProgress();
+
+  updateTopBar();
+  updateShop();
+
+  // events
+  elBigClicker.addEventListener("click", mineClick);
+  elPrestigeBtn.addEventListener("click", prestige);
+  elSaveLocal.addEventListener("click", () => saveLocal(true));
+  elExport.addEventListener("click", exportToFile);
+  elImport.addEventListener("change", (e) => importFromFile(e.target.files?.[0]));
+
+  // autosave every 30s
+  setInterval(() => saveLocal(false), 30_000);
+
+  requestAnimationFrame(loop);
 }
 
-// Start the game once DOM is ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-} else {
-    init();
-}
+document.addEventListener("DOMContentLoaded", init);
