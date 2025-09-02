@@ -1,31 +1,38 @@
-/* Galactic Mining Adventure – upgrades show effects + autoclickers use click power + 1-decimal formatting + scientific >= 1e18 */
+/* Galactic Mining Adventure
+ * - Clear upgrade effects
+ * - Autoclickers use click power (generators produce clicks/sec, converted via crystalsPerClick)
+ * - CPS display: total (EMA smoothed), auto, manual
+ * - Manual CPS = recent clicks/S * expected per-click (includes luck expectation)
+ * - 1 decimal everywhere it makes sense; scientific notation from 1e18 (e.g., 1.0e18)
+ * - Breakdown panel and TTA per generator item
+ */
 
+/* ---------- Formatting ---------- */
 const fmt = (n) => {
   if (!isFinite(n)) return "0";
   const abs = Math.abs(n);
-  // Scientific notation from 1e18 and up
   if (abs >= 1e18) {
-    // One decimal in scientific notation
-    const s = n.toExponential(1); // e.g., "1.0e+18"
-    return s.replace("e+", "e");
+    // scientific notation with 1 decimal, compact exponent
+    return n.toExponential(1).replace("e+", "e");
   }
-  // Use one decimal only if needed
+  // one decimal max
   const oneDec = Math.round(n * 10) / 10;
   if (Number.isInteger(oneDec)) return String(oneDec);
   return oneDec.toFixed(1);
 };
 
+/* ---------- Game State ---------- */
 const state = {
   crystals: 0,
   totalCrystals: 0,
-  baseClick: 1,               // base crystals per click (before multipliers)
-  clickMultiplier: 1,         // multiplicative click power upgrades
-  luck: { double: 0, triple: 0, quadruple: 0 }, // probabilities in [0..1]
+  baseClick: 1,
+  clickMultiplier: 1,
+  luck: { double: 0, triple: 0, quadruple: 0 }, // probabilities
   stardust: 0,
   lastSavedAt: Date.now(),
   prestigeCost: 100_000,
 
-  // Generators now interpreted as "clicks per second"
+  // Generators produce clicks per second (CPS). Clicks are converted into crystals by crystalsPerClick().
   generators: {
     drone:   { id: "drone",   name: "Mining Drone",   desc: "Small drones that click once in a while.", baseCost: 15,   cost: 15,   count: 0, cps: 0.1, scale: 1.15 },
     miner:   { id: "miner",   name: "Asteroid Miner", desc: "A steady miner that clicks every second.",  baseCost: 100,  cost: 100,  count: 0, cps: 1.0, scale: 1.15 },
@@ -58,32 +65,61 @@ const elSaveLocal     = $("#saveLocalBtn");
 const elExport        = $("#exportBtn");
 const elImport        = $("#importFile");
 
+const elCpsNow    = $("#cpsNow");
+const elCpsAuto   = $("#cpsAuto");
+const elCpsManual = $("#cpsManual");
+const elCpsBtn    = $("#cpsDetailsBtn");
+const elCpsPanel  = $("#cpsDetails");
+const elBreakdown = $("#cpsBreakdown");
+
 const ui = { gens: {}, upgrades: {} };
 
 /* ---------- Maths ---------- */
 function globalMultiplier() {
-  // Each stardust gives +10% global production (affects click AND generators via click power)
+  // Each stardust gives +10% global production (affects clicks and autoclickers via click power)
   return 1 + state.stardust * 0.10;
 }
 
 function crystalsPerClick() {
-  const raw = state.baseClick * state.clickMultiplier * globalMultiplier();
-  // limit to 1 decimal where needed
-  const oneDec = Math.round(raw * 10) / 10;
+  const base = state.baseClick * state.clickMultiplier * globalMultiplier();
+  const oneDec = Math.round(base * 10) / 10;
   return oneDec;
 }
 
 function totalClicksPerSec() {
   let cps = 0;
   for (const g of Object.values(state.generators)) cps += g.cps * g.count;
-  // CPS is in "clicks per second" and already multiplied by click power later
   return cps;
 }
 
-function totalCrystalsPerSec() {
-  // Passive income: (clicks/sec) * (crystals per click)
+function autoCrystalsPerSec() {
   return totalClicksPerSec() * crystalsPerClick();
 }
+
+function expectedLuckFactor() {
+  const { double: p2, triple: p3, quadruple: p4 } = state.luck;
+  // Independent multiplicative effects
+  return (1 + p2) * (1 + 2*p3) * (1 + 3*p4);
+}
+
+/* ---------- Manual CPS tracking ---------- */
+const clickTimestamps = [];
+const MANUAL_WINDOW_MS = 10_000; // 10 seconds
+
+function manualCrystalsPerSec() {
+  const now = performance.now();
+  while (clickTimestamps.length && now - clickTimestamps[0] > MANUAL_WINDOW_MS) {
+    clickTimestamps.shift();
+  }
+  const clicksPerSec = clickTimestamps.length / (MANUAL_WINDOW_MS / 1000);
+  const expectedPerClick = crystalsPerClick() * expectedLuckFactor();
+  const val = Math.round(clicksPerSec * expectedPerClick * 10) / 10;
+  return val;
+}
+
+/* ---------- EMA smoothing for total CPS ---------- */
+let emaCps = 0;
+const EMA_TAU_SEC = 3; // responsiveness (~3s)
 
 /* ---------- Build shop ONCE ---------- */
 function buildGenerators() {
@@ -156,17 +192,27 @@ function updateTopBar() {
 }
 
 function updateShop() {
-  // Generators: also show CPS stats with effect of click power
+  // Generators: show clicks/s and crystals/s; show TTA (time to afford)
   const cpc = crystalsPerClick();
+  const totalCpsForTta = autoCrystalsPerSec() + manualCrystalsPerSec();
   for (const g of Object.values(state.generators)) {
     const uiEntry = ui.gens[g.id];
     if (!uiEntry) continue;
     uiEntry.cost.textContent  = fmt(g.cost);
     uiEntry.owned.textContent = g.count;
     uiEntry.btn.disabled      = state.crystals < g.cost;
+
     const clicksPerSec = g.cps * g.count;
     const crystalsPerSec = clicksPerSec * cpc;
-    uiEntry.stats.textContent = `Clicks/s: ${fmt(clicksPerSec)} ⇒ Crystals/s: ${fmt(crystalsPerSec)}`;
+
+    let tta = "—";
+    const missing = g.cost - state.crystals;
+    if (missing > 0 && totalCpsForTta > 0) {
+      const sec = Math.round((missing / totalCpsForTta) * 10) / 10;
+      tta = `${fmt(sec)}s`;
+    }
+
+    uiEntry.stats.textContent = `Clicks/s: ${fmt(clicksPerSec)} ⇒ Crystals/s: ${fmt(crystalsPerSec)} · TTA: ${tta}`;
   }
 
   // Upgrades
@@ -179,6 +225,37 @@ function updateShop() {
   }
 }
 
+function updateCpsUi(dt) {
+  const auto = autoCrystalsPerSec();
+  const manual = manualCrystalsPerSec();
+  const instantaneous = auto + manual;
+
+  // EMA smoothing: alpha = 1 - exp(-dt/tau)
+  const alpha = 1 - Math.exp(-dt / EMA_TAU_SEC);
+  emaCps = emaCps === 0 ? instantaneous : (alpha * instantaneous + (1 - alpha) * emaCps);
+
+  elCpsAuto.textContent   = fmt(auto);
+  elCpsManual.textContent = fmt(manual);
+  elCpsNow.textContent    = fmt(emaCps);
+}
+
+function renderBreakdown() {
+  const cpc = crystalsPerClick();
+  let html = `<div class="shop-list">`;
+  for (const g of Object.values(state.generators)) {
+    const clicks = g.cps * g.count;
+    const cps = clicks * cpc;
+    html += `
+      <div class="shop-item">
+        <div class="shop-title">${g.name}</div>
+        <div class="shop-desc">Clicks/s: ${fmt(clicks)} ⇒ Crystals/s: ${fmt(cps)}</div>
+      </div>
+    `;
+  }
+  html += `</div>`;
+  elBreakdown.innerHTML = html;
+}
+
 /* ---------- Actions ---------- */
 function addCrystals(n) {
   state.crystals += n;
@@ -186,12 +263,15 @@ function addCrystals(n) {
 }
 
 function mineClick() {
+  // track manual clicks for manual CPS window
+  clickTimestamps.push(performance.now());
+
   let amount = crystalsPerClick();
-  // Independent luck rolls; multiplicative
+  // random luck (independent, multiplicative)
   if (Math.random() < state.luck.double)    amount *= 2;
   if (Math.random() < state.luck.triple)    amount *= 3;
   if (Math.random() < state.luck.quadruple) amount *= 4;
-  // Keep one decimal
+
   amount = Math.round(amount * 10) / 10;
   addCrystals(amount);
 }
@@ -263,7 +343,7 @@ function loadLocal() {
 function applyOfflineProgress() {
   const now = Date.now();
   const dtSec = Math.max(0, (now - state.lastSavedAt) / 1000);
-  const gain = totalCrystalsPerSec() * dtSec;
+  const gain = autoCrystalsPerSec() * dtSec; // offline assumes no manual clicks
   if (gain > 0) addCrystals(gain);
 }
 
@@ -302,11 +382,14 @@ function loop(now) {
   const dt = (now - last) / 1000;
   last = now;
 
-  const passive = totalCrystalsPerSec() * dt;
+  // passive income from autoclickers
+  const passive = autoCrystalsPerSec() * dt;
   if (passive > 0) addCrystals(passive);
 
   updateTopBar();
   updateShop();
+  updateCpsUi(dt);
+
   requestAnimationFrame(loop);
 }
 
@@ -324,6 +407,12 @@ function init() {
   elSaveLocal.addEventListener("click", () => saveLocal(true));
   elExport.addEventListener("click", exportToFile);
   elImport.addEventListener("change", (e)=> importFromFile(e.target.files?.[0]));
+
+  elCpsBtn.addEventListener("click", () => {
+    const showing = elCpsPanel.style.display !== "none";
+    elCpsPanel.style.display = showing ? "none" : "block";
+    if (!showing) renderBreakdown();
+  });
 
   setInterval(()=> saveLocal(false), 30_000);
   requestAnimationFrame(loop);
