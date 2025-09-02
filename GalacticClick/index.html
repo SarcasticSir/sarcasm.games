@@ -8,6 +8,7 @@
   <script defer src="script.js"></script>
 </head>
 <body>
+  <!-- Required link bottom-left -->
   <a class="brand-link" href="https://sarcasm.games" target="_blank" rel="noopener">sarcasm.games</a>
 
   <div id="game-container">
@@ -20,7 +21,14 @@
 
     <div class="click-area">
       <button id="bigClicker" aria-label="Mine asteroid">🪐</button>
-      <div class="perclick">Crystals per click: <span id="perClick">1</span></div>
+      <div class="perclick">
+        Crystals per click: <span id="perClick">1</span>
+      </div>
+      <div class="cpsline">
+        Crystals/s: <span id="cpsNow">0</span>
+        <span class="sub"> (auto: <span id="cpsAuto">0</span> · manual: <span id="cpsManual">0</span>)</span>
+        <button id="cpsDetailsBtn" class="mini-btn" title="Show details">Details</button>
+      </div>
     </div>
 
     <section id="shop">
@@ -50,6 +58,11 @@
           <input id="importFile" type="file" accept=".json"/>
         </label>
       </div>
+    </section>
+
+    <section id="cpsDetails" style="display:none;">
+      <h2>Production Breakdown</h2>
+      <div id="cpsBreakdown"></div>
     </section>
   </div>
 </body>
