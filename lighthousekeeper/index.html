@@ -1,1 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Lighthouse Keeper</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
 
+    <div id="game-board">
+        <div id="top-area">
+            <div class="deck-area">
+                <p>Storm Deck</p>
+                <div id="storm-deck" class="deck">
+                    <div class="card-back"></div>
+                </div>
+                <p id="storm-deck-counter" class="deck-counter">18</p>
+            </div>
+
+            <div id="active-storm-card-slot" class="card-slot">
+                </div>
+
+            <div class="deck-area">
+                <p>Action Deck</p>
+                <div id="action-deck" class="deck">
+                     <div class="card-back"></div>
+                </div>
+                <p id="action-deck-counter" class="deck-counter">40</p>
+            </div>
+        </div>
+
+        <div id="player-hand" class="hand">
+            </div>
+
+        <div id="ui-area">
+            <div id="light-tracker">
+                <span class="icon">💡</span>
+                <p>Light Strength: <span id="light-strength">10</span></p>
+            </div>
+            <div id="action-buttons">
+                <button id="play-button" class="action-btn">Play Selected Cards</button>
+                <button id="pass-button" class="action-btn">Endure the Threat</button>
+            </div>
+            <button id="rules-button">Rules</button>
+        </div>
+    </div>
+
+    <div id="rules-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h2>Rules for The Lighthouse Keeper</h2>
+            <p><strong>Goal:</strong> Survive the storm by keeping the lighthouse's light lit until the entire storm deck is empty.</p>
+            <p><strong>How to Play:</strong></p>
+            <ol>
+                <li>Each round, a <strong>Storm Card</strong> is drawn. This is your challenge.</li>
+                <li>The card has a <strong>Threat</strong> (what happens if you fail) and a <strong>Requirement</strong> (what action cards you must play to succeed).</li>
+                <li>Choose cards from your hand that match the requirements and press <strong>"Play Selected Cards"</strong>.</li>
+                <li>If you cannot or will not meet the requirement, press <strong>"Endure the Threat"</strong> to accept the threat.</li>
+                <li>Regardless of your choice, the storm card's <strong>Aftermath</strong> effect will occur.</li>
+                <li>You lose if your <strong>Light Strength</strong> reaches 0. You win if you survive the last storm card.</li>
+            </ol>
+        </div>
+    </div>
+
+    <div id="game-over-modal" class="modal-overlay hidden">
+         <div class="modal-content">
+            <h2 id="game-over-title">Game Over</h2>
+            <p id="game-over-message">Victory or defeat message.</p>
+            <button id="restart-button" class="action-btn">Play Again</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
