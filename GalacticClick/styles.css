@@ -1,3 +1,4 @@
+/* Reset */
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
@@ -60,6 +61,14 @@ h2 {
 
 .perclick { opacity: .9; }
 
+.cpsline { margin-top: 4px; opacity: .9; }
+.cpsline .sub { opacity: .8; }
+.mini-btn {
+  margin-left: 8px; padding: 2px 8px; font-size: 12px;
+  border-radius: 8px; border: none; cursor: pointer;
+  background: #9ed0ff; color: #081a2e; font-weight: 700;
+}
+
 .shop-list { display: grid; gap: 10px; }
 
 .shop-item {
@@ -83,10 +92,7 @@ h2 {
   margin-top: 6px;
 }
 
-.cost {
-  opacity: .9;
-  font-size: 14px;
-}
+.cost { opacity: .9; font-size: 14px; }
 
 .buy-btn {
   padding: 6px 12px;
@@ -105,16 +111,9 @@ h2 {
   filter: grayscale(.35);
 }
 
-.owned {
-  font-size: 13px;
-  opacity: .75;
-}
+.owned { font-size: 13px; opacity: .75; }
 
-.prestige-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
+.prestige-row { display: flex; align-items: center; gap: 12px; }
 #prestigeBtn {
   padding: 8px 12px;
   border-radius: 10px;
