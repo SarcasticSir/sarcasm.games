@@ -1,1 +1,866 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crystal Mining</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #1e3c72, #2a5298, #4a90e2);
+            min-height: 100vh;
+            color: white;
+            overflow-x: auto;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 20px;
+            min-height: 100vh;
+        }
+
+        .main-area {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .stats {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .energy-count {
+            font-size: 3em;
+            font-weight: bold;
+            color: #00ffff;
+            text-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+            margin-bottom: 10px;
+        }
+
+        .energy-per-second {
+            font-size: 1.2em;
+            color: #88ff88;
+            margin-bottom: 20px;
+        }
+
+        .crystal-container {
+            text-align: center;
+            margin: 40px 0;
+        }
+
+        .crystal {
+            width: 200px;
+            height: 200px;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4);
+            border-radius: 50%;
+            margin: 0 auto;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            box-shadow: 0 0 30px rgba(255, 255, 255, 0.3);
+        }
+
+        .crystal:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 50px rgba(255, 255, 255, 0.5);
+        }
+
+        .crystal:active {
+            transform: scale(0.95);
+        }
+
+        .crystal.clicked {
+            animation: pulse 0.3s ease;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .floating-text {
+            position: absolute;
+            font-size: 24px;
+            font-weight: bold;
+            color: #00ffff;
+            pointer-events: none;
+            animation: float-up 1s ease-out forwards;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+        }
+
+        @keyframes float-up {
+            0% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-100px);
+            }
+        }
+
+        .sidebar {
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            max-height: 100vh;
+            overflow-y: auto;
+        }
+
+        .shop-section {
+            margin-bottom: 30px;
+        }
+
+        .shop-section h2 {
+            color: #ffd700;
+            margin-bottom: 15px;
+            text-align: center;
+            border-bottom: 2px solid #ffd700;
+            padding-bottom: 10px;
+        }
+
+        .shop-item {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .shop-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .shop-item.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .shop-item.disabled:hover {
+            background: rgba(255, 255, 255, 0.05);
+            transform: none;
+        }
+
+        .item-name {
+            font-weight: bold;
+            color: #00ffff;
+            margin-bottom: 5px;
+        }
+
+        .item-description {
+            font-size: 0.9em;
+            color: #cccccc;
+            margin-bottom: 8px;
+        }
+
+        .item-cost {
+            color: #ffd700;
+            font-weight: bold;
+        }
+
+        .item-owned {
+            color: #88ff88;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+
+        .controls {
+            margin-top: 30px;
+            text-align: center;
+        }
+
+        .control-button {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .control-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .prestige-section {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a52);
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .prestige-button {
+            background: linear-gradient(45deg, #ff4757, #ff3742);
+            border: none;
+            color: white;
+            padding: 15px 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            margin-top: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .prestige-button:hover {
+            transform: scale(1.05);
+        }
+
+        .prestige-button.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .sarcasm-link {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .sarcasm-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .offline-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1001;
+        }
+
+        .offline-modal-content {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            max-width: 400px;
+            margin: 20px;
+        }
+
+        .offline-modal h2 {
+            margin-bottom: 20px;
+            color: #ffd700;
+        }
+
+        .offline-modal p {
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+
+        .file-input {
+            margin: 10px 0;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+            
+            .crystal {
+                width: 150px;
+                height: 150px;
+                font-size: 1.2em;
+            }
+            
+            .energy-count {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="main-area">
+            <div class="stats">
+                <div class="energy-count" id="energyCount">0</div>
+                <div class="energy-per-second" id="energyPerSecond">0 energy/sec</div>
+                <div id="prestigeLevel">Prestige Level: 0</div>
+            </div>
+            
+            <div class="crystal-container">
+                <div class="crystal" id="crystal" onclick="clickCrystal()">
+                    💎 Click Me! 💎
+                </div>
+            </div>
+        </div>
+        
+        <div class="sidebar">
+            <div class="shop-section">
+                <h2>Generators</h2>
+                <div id="generatorShop"></div>
+            </div>
+            
+            <div class="shop-section">
+                <h2>Upgrades</h2>
+                <div id="upgradeShop"></div>
+            </div>
+            
+            <div class="prestige-section">
+                <h3>Prestige System</h3>
+                <p>Reset progress for permanent bonuses!</p>
+                <p id="prestigePoints">Prestige Points: 0</p>
+                <button class="prestige-button" id="prestigeButton" onclick="prestige()" disabled>
+                    Prestige (Need 1M energy)
+                </button>
+            </div>
+            
+            <div class="controls">
+                <button class="control-button" onclick="saveGame()">Save Game</button>
+                <button class="control-button" onclick="loadGame()">Load Game</button>
+                <input type="file" class="file-input" id="fileInput" accept=".json" onchange="loadFromFile(event)" style="display: none;">
+                <button class="control-button" onclick="document.getElementById('fileInput').click()">Load from File</button>
+                <button class="control-button" onclick="exportGame()">Export Save</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Offline earnings modal -->
+    <div class="offline-modal" id="offlineModal">
+        <div class="offline-modal-content">
+            <h2>Welcome Back!</h2>
+            <p>You were offline for: <span id="offlineTime"></span></p>
+            <p>You earned: <span id="offlineEarnings"></span> energy</p>
+            <button class="control-button" onclick="closeOfflineModal()">Continue</button>
+        </div>
+    </div>
+    
+    <a href="https://sarcasm.games" class="sarcasm-link" target="_blank">sarcasm.games</a>
+
+    <script>
+        // #Game state variables - core data structure for the incremental game
+        let gameState = {
+            energy: 0,
+            energyPerSecond: 0,
+            clickPower: 1,
+            prestigeLevel: 0,
+            prestigePoints: 0,
+            lastSaved: Date.now(),
+            generators: {},
+            upgrades: {}
+        };
+
+        // #Generator definitions - different types of automatic energy producers
+        const generators = {
+            autoClicker: {
+                name: "Auto Clicker",
+                description: "Automatically clicks the crystal",
+                baseCost: 15,
+                baseProduction: 1,
+                costMultiplier: 1.15,
+                owned: 0
+            },
+            crystalMiner: {
+                name: "Crystal Miner",
+                description: "Mines crystals automatically",
+                baseCost: 100,
+                baseProduction: 5,
+                costMultiplier: 1.2,
+                owned: 0
+            },
+            energyExtractor: {
+                name: "Energy Extractor",
+                description: "Extracts pure energy from crystals",
+                baseCost: 1000,
+                baseProduction: 25,
+                costMultiplier: 1.25,
+                owned: 0
+            },
+            quantumReactor: {
+                name: "Quantum Reactor",
+                description: "Harnesses quantum energy",
+                baseCost: 10000,
+                baseProduction: 100,
+                costMultiplier: 1.3,
+                owned: 0
+            }
+        };
+
+        // #Upgrade definitions - permanent improvements to game mechanics
+        const upgrades = {
+            doubleClick: {
+                name: "Double Click",
+                description: "Double your click power",
+                cost: 100,
+                owned: false,
+                effect: () => gameState.clickPower *= 2
+            },
+            tripleClick: {
+                name: "Triple Click",
+                description: "Triple your click power",
+                cost: 1000,
+                owned: false,
+                prerequisite: 'doubleClick',
+                effect: () => gameState.clickPower *= 1.5
+            },
+            quadClick: {
+                name: "Quad Click",
+                description: "Quadruple your click power",
+                cost: 10000,
+                owned: false,
+                prerequisite: 'tripleClick',
+                effect: () => gameState.clickPower *= 1.33
+            },
+            autoClickerBoost: {
+                name: "Auto Clicker Boost",
+                description: "+50% production from Auto Clickers",
+                cost: 500,
+                owned: false,
+                effect: () => {} // #Applied in calculateEPS function
+            },
+            minerBoost: {
+                name: "Miner Boost",
+                description: "+100% production from Crystal Miners",
+                cost: 5000,
+                owned: false,
+                prerequisite: 'autoClickerBoost',
+                effect: () => {} // #Applied in calculateEPS function
+            },
+            luckyClicks: {
+                name: "Lucky Clicks",
+                description: "10% chance for 5x click reward",
+                cost: 2500,
+                owned: false,
+                effect: () => {} // #Applied in clickCrystal function
+            }
+        };
+
+        // #Initialize game state from saved data or set defaults
+        function initGame() {
+            loadGame();
+            updateDisplay();
+            calculateOfflineProgress();
+            renderShops();
+            
+            // #Start main game loop - updates every 100ms for smooth experience
+            setInterval(gameLoop, 100);
+            
+            // #Save game automatically every 30 seconds
+            setInterval(() => {
+                gameState.lastSaved = Date.now();
+                localStorage.setItem('crystalMiningGame', JSON.stringify(gameState));
+            }, 30000);
+        }
+
+        // #Main game loop - handles energy generation and display updates
+        function gameLoop() {
+            // #Add energy based on generators (per second rate divided by 10 for 100ms intervals)
+            gameState.energy += gameState.energyPerSecond / 10;
+            updateDisplay();
+        }
+
+        // #Handle crystal clicking - main player interaction
+        function clickCrystal() {
+            let earnedEnergy = gameState.clickPower;
+            
+            // #Lucky clicks upgrade - 10% chance for 5x reward
+            if (gameState.upgrades.luckyClicks && Math.random() < 0.1) {
+                earnedEnergy *= 5;
+                showFloatingText("LUCKY! +" + earnedEnergy);
+            } else {
+                showFloatingText("+" + earnedEnergy);
+            }
+            
+            gameState.energy += earnedEnergy;
+            
+            // #Visual feedback for clicking
+            const crystal = document.getElementById('crystal');
+            crystal.classList.add('clicked');
+            setTimeout(() => crystal.classList.remove('clicked'), 300);
+            
+            updateDisplay();
+        }
+
+        // #Show floating text animation when clicking
+        function showFloatingText(text) {
+            const crystal = document.getElementById('crystal');
+            const floatingText = document.createElement('div');
+            floatingText.className = 'floating-text';
+            floatingText.textContent = text;
+            
+            // #Position randomly around the crystal
+            const rect = crystal.getBoundingClientRect();
+            floatingText.style.left = (rect.left + Math.random() * rect.width) + 'px';
+            floatingText.style.top = (rect.top + rect.height/2) + 'px';
+            
+            document.body.appendChild(floatingText);
+            
+            // #Remove element after animation completes
+            setTimeout(() => {
+                document.body.removeChild(floatingText);
+            }, 1000);
+        }
+
+        // #Calculate energy per second from all generators
+        function calculateEPS() {
+            let eps = 0;
+            
+            for (const [key, generator] of Object.entries(generators)) {
+                let production = generator.baseProduction * generator.owned;
+                
+                // #Apply upgrade bonuses
+                if (key === 'autoClicker' && gameState.upgrades.autoClickerBoost) {
+                    production *= 1.5;
+                }
+                if (key === 'crystalMiner' && gameState.upgrades.minerBoost) {
+                    production *= 2;
+                }
+                
+                // #Prestige bonus - 10% per prestige level
+                production *= (1 + gameState.prestigeLevel * 0.1);
+                
+                eps += production;
+            }
+            
+            gameState.energyPerSecond = eps;
+        }
+
+        // #Update all display elements
+        function updateDisplay() {
+            document.getElementById('energyCount').textContent = Math.floor(gameState.energy).toLocaleString();
+            document.getElementById('energyPerSecond').textContent = gameState.energyPerSecond.toFixed(1) + ' energy/sec';
+            document.getElementById('prestigeLevel').textContent = 'Prestige Level: ' + gameState.prestigeLevel;
+            document.getElementById('prestigePoints').textContent = 'Prestige Points: ' + gameState.prestigePoints;
+            
+            // #Update prestige button
+            const prestigeButton = document.getElementById('prestigeButton');
+            if (gameState.energy >= 1000000) {
+                prestigeButton.disabled = false;
+                prestigeButton.classList.remove('disabled');
+                prestigeButton.textContent = 'Prestige (+' + Math.floor(gameState.energy / 1000000) + ' PP)';
+            } else {
+                prestigeButton.disabled = true;
+                prestigeButton.classList.add('disabled');
+                prestigeButton.textContent = 'Prestige (Need 1M energy)';
+            }
+            
+            calculateEPS();
+            updateShopItems();
+        }
+
+        // #Render shop sections for generators and upgrades
+        function renderShops() {
+            const generatorShop = document.getElementById('generatorShop');
+            const upgradeShop = document.getElementById('upgradeShop');
+            
+            // #Render generator shop items
+            generatorShop.innerHTML = '';
+            for (const [key, generator] of Object.entries(generators)) {
+                const cost = Math.floor(generator.baseCost * Math.pow(generator.costMultiplier, generator.owned));
+                const item = createShopItem(
+                    generator.name,
+                    generator.description,
+                    cost,
+                    generator.owned + ' owned',
+                    () => buyGenerator(key)
+                );
+                generatorShop.appendChild(item);
+            }
+            
+            // #Render upgrade shop items
+            upgradeShop.innerHTML = '';
+            for (const [key, upgrade] of Object.entries(upgrades)) {
+                if (!gameState.upgrades[key]) {
+                    // #Check prerequisites
+                    let canShow = true;
+                    if (upgrade.prerequisite && !gameState.upgrades[upgrade.prerequisite]) {
+                        canShow = false;
+                    }
+                    
+                    if (canShow) {
+                        const item = createShopItem(
+                            upgrade.name,
+                            upgrade.description,
+                            upgrade.cost,
+                            '',
+                            () => buyUpgrade(key)
+                        );
+                        upgradeShop.appendChild(item);
+                    }
+                }
+            }
+        }
+
+        // #Create a shop item element
+        function createShopItem(name, description, cost, owned, clickHandler) {
+            const item = document.createElement('div');
+            item.className = 'shop-item';
+            item.onclick = clickHandler;
+            
+            item.innerHTML = `
+                <div class="item-name">${name}</div>
+                <div class="item-description">${description}</div>
+                <div class="item-cost">Cost: ${cost.toLocaleString()} energy</div>
+                ${owned ? `<div class="item-owned">${owned}</div>` : ''}
+            `;
+            
+            return item;
+        }
+
+        // #Update shop item availability based on current energy
+        function updateShopItems() {
+            const shopItems = document.querySelectorAll('.shop-item');
+            shopItems.forEach(item => {
+                const costText = item.querySelector('.item-cost').textContent;
+                const cost = parseInt(costText.replace(/[^0-9]/g, ''));
+                
+                if (gameState.energy < cost) {
+                    item.classList.add('disabled');
+                } else {
+                    item.classList.remove('disabled');
+                }
+            });
+        }
+
+        // #Buy a generator
+        function buyGenerator(generatorKey) {
+            const generator = generators[generatorKey];
+            const cost = Math.floor(generator.baseCost * Math.pow(generator.costMultiplier, generator.owned));
+            
+            if (gameState.energy >= cost) {
+                gameState.energy -= cost;
+                generator.owned++;
+                renderShops();
+                updateDisplay();
+            }
+        }
+
+        // #Buy an upgrade
+        function buyUpgrade(upgradeKey) {
+            const upgrade = upgrades[upgradeKey];
+            
+            if (gameState.energy >= upgrade.cost && !gameState.upgrades[upgradeKey]) {
+                gameState.energy -= upgrade.cost;
+                gameState.upgrades[upgradeKey] = true;
+                upgrade.effect();
+                renderShops();
+                updateDisplay();
+            }
+        }
+
+        // #Prestige system - reset progress for permanent bonuses
+        function prestige() {
+            if (gameState.energy >= 1000000) {
+                const prestigePointsGained = Math.floor(gameState.energy / 1000000);
+                
+                // #Reset most progress
+                gameState.energy = 0;
+                gameState.clickPower = 1 + gameState.prestigeLevel * 0.5; // #Previous prestige bonus
+                
+                // #Reset generators
+                for (const generator of Object.values(generators)) {
+                    generator.owned = 0;
+                }
+                
+                // #Reset upgrades
+                gameState.upgrades = {};
+                
+                // #Gain prestige rewards
+                gameState.prestigeLevel++;
+                gameState.prestigePoints += prestigePointsGained;
+                gameState.clickPower = 1 + gameState.prestigeLevel * 0.5; // #New click power bonus
+                
+                renderShops();
+                updateDisplay();
+                
+                alert(`Congratulations! You've prestiged and gained ${prestigePointsGained} Prestige Points!\nYour click power is now ${gameState.clickPower} and all generators are 10% more efficient per prestige level.`);
+            }
+        }
+
+        // #Calculate offline progress when returning to the game
+        function calculateOfflineProgress() {
+            const now = Date.now();
+            const timeDiff = now - gameState.lastSaved;
+            const hoursOffline = timeDiff / (1000 * 60 * 60);
+            
+            if (hoursOffline > 0.1) { // #Only show if offline for more than 6 minutes
+                calculateEPS();
+                const offlineEarnings = Math.floor(gameState.energyPerSecond * (timeDiff / 1000));
+                
+                if (offlineEarnings > 0) {
+                    gameState.energy += offlineEarnings;
+                    
+                    // #Show offline modal
+                    document.getElementById('offlineTime').textContent = formatTime(timeDiff);
+                    document.getElementById('offlineEarnings').textContent = offlineEarnings.toLocaleString();
+                    document.getElementById('offlineModal').style.display = 'flex';
+                }
+            }
+            
+            gameState.lastSaved = now;
+        }
+
+        // #Format time for offline modal
+        function formatTime(milliseconds) {
+            const hours = Math.floor(milliseconds / (1000 * 60 * 60));
+            const minutes = Math.floor((milliseconds % (1000 * 60 * 60)) / (1000 * 60));
+            
+            if (hours > 0) {
+                return `${hours}h ${minutes}m`;
+            } else {
+                return `${minutes}m`;
+            }
+        }
+
+        // #Close offline modal
+        function closeOfflineModal() {
+            document.getElementById('offlineModal').style.display = 'none';
+        }
+
+        // #Save game to localStorage
+        function saveGame() {
+            gameState.lastSaved = Date.now();
+            localStorage.setItem('crystalMiningGame', JSON.stringify(gameState));
+            
+            // #Sync generator owned counts to gameState
+            for (const [key, generator] of Object.entries(generators)) {
+                gameState.generators[key] = generator.owned;
+            }
+            
+            localStorage.setItem('crystalMiningGame', JSON.stringify(gameState));
+            alert('Game saved successfully!');
+        }
+
+        // #Load game from localStorage
+        function loadGame() {
+            const saved = localStorage.getItem('crystalMiningGame');
+            if (saved) {
+                const loadedState = JSON.parse(saved);
+                
+                // #Merge saved state with current state
+                Object.assign(gameState, loadedState);
+                
+                // #Restore generator owned counts
+                for (const [key, generator] of Object.entries(generators)) {
+                    if (gameState.generators[key] !== undefined) {
+                        generator.owned = gameState.generators[key];
+                    }
+                }
+                
+                // #Ensure upgrades object exists
+                if (!gameState.upgrades) {
+                    gameState.upgrades = {};
+                }
+                
+                // #Apply upgrade effects
+                for (const [key, upgrade] of Object.entries(upgrades)) {
+                    if (gameState.upgrades[key]) {
+                        upgrade.effect();
+                    }
+                }
+            }
+        }
+
+        // #Export game save as downloadable file
+        function exportGame() {
+            // #Update gameState with current generator counts
+            for (const [key, generator] of Object.entries(generators)) {
+                gameState.generators[key] = generator.owned;
+            }
+            
+            const saveData = JSON.stringify(gameState, null, 2);
+            const blob = new Blob([saveData], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'crystal_mining_save.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            
+            URL.revokeObjectURL(url);
+        }
+
+        // #Load game from uploaded file
+        function loadFromFile(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const loadedState = JSON.parse(e.target.result);
+                        
+                        // #Merge loaded state
+                        Object.assign(gameState, loadedState);
+                        
+                        // #Restore generator owned counts
+                        for (const [key, generator] of Object.entries(generators)) {
+                            if (gameState.generators[key] !== undefined) {
+                                generator.owned = gameState.generators[key];
+                            }
+                        }
+                        
+                        // #Apply upgrade effects
+                        for (const [key, upgrade] of Object.entries(upgrades)) {
+                            if (gameState.upgrades[key]) {
+                                upgrade.effect();
+                            }
+                        }
+                        
+                        renderShops();
+                        updateDisplay();
+                        alert('Game loaded successfully from file!');
+                    } catch (error) {
+                        alert('Error loading save file. Please make sure it\'s a valid Crystal Mining save file.');
+                    }
+                };
+                reader.readAsText(file);
+            }
+            
+            // #Reset file input
+            event.target.value = '';
+        }
+
+        // #Initialize game when page loads
+        window.onload = initGame;
+    </script>
+</body>
+</html>
