@@ -1,1 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cosmic Miner</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-container">
+        <h1>Cosmic Miner</h1>
+        <div class="stats">
+            <p>Crystals: <span id="crystals-count">0</span></p>
+            <p>Crystals per Second: <span id="cps-count">0</span></p>
+        </div>
 
+        <div class="game-area">
+            <button id="asteroid-clicker" class="click-button">
+                <span role="img" aria-label="Asteroid">☄️</span>
+            </button>
+            <p id="click-message" class="click-message"></p>
+        </div>
+
+        <div class="upgrades-container">
+            <h2>Upgrades</h2>
+            <div id="upgrades-list"></div>
+        </div>
+
+        <div class="prestige-container">
+            <h2>Prestige</h2>
+            <p>Meteor Fragments: <span id="prestige-count">0</span></p>
+            <button id="prestige-button" class="prestige-button" disabled>Restart for fragments</button>
+        </div>
+
+        <div class="save-load">
+            <button id="save-button">Download Save</button>
+            <input type="file" id="load-file" accept=".json" style="display: none;">
+            <button id="load-button">Upload Save</button>
+        </div>
+
+        <div class="sarcasm-link">
+            <a href="https://sarcasm.games" target="_blank">sarcasm.games</a>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
