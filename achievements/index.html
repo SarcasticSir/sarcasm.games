@@ -1,1 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Life Achievements</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <h1>Life Achievements</h1>
+        <div class="score-display">
+            <span id="total-score">Total Points: 0</span>
+        </div>
+    </header>
 
+    <main class="container">
+        <div class="button-group">
+            <button class="button secondary" id="toggle-dark-mode">Toggle Dark Mode</button>
+            <button class="button secondary" id="export-data">Export Data</button>
+            <label for="import-file" class="button secondary">Import Data
+                <input type="file" id="import-file" accept=".json" style="display: none;">
+            </label>
+            <button class="button secondary" id="sarcasm-games-button">sarcasm.games</button>
+        </div>
+
+        <section id="categories-section">
+            <h2>Categories</h2>
+            <div id="category-grid" class="grid-container">
+                </div>
+        </section>
+
+        <section id="achievements-section" class="hidden">
+            <div class="button-group">
+                <button class="button" id="back-button">Back to categories</button>
+                <button class="button secondary" id="toggle-unlocked">Hide Unlocked</button>
+                <div class="view-options">
+                    <label for="card-size-select">Card Size:</label>
+                    <select id="card-size-select" class="button secondary">
+                        <option value="large">Large</option>
+                        <option value="medium">Medium</option>
+                        <option value="small">Small</option>
+                    </select>
+                    <button class="button secondary" id="toggle-list-view">Show as List</button>
+                </div>
+            </div>
+            <h2 id="category-title"></h2>
+            <div id="achievement-grid" class="grid-container">
+                </div>
+        </section>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>

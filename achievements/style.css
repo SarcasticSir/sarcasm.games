@@ -1,0 +1,288 @@
+/* Core Styling */
+:root {
+    --bg-color: #f0f2f5;
+    --card-bg-color: #fff;
+    --text-color: #333;
+    --border-color: #e0e0e0;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+    --unlocked-card-bg: #e8f5e9;
+    --unlocked-card-border: #4CAF50;
+    --unlocked-card-shadow: rgba(76, 175, 80, 0.2);
+    --green-highlight: #4CAF50;
+    --gray-text: #777;
+}
+
+/* Dark Mode Variables */
+.dark-mode {
+    --bg-color: #121212;
+    --card-bg-color: #1e1e1e;
+    --text-color: #f0f2f5;
+    --border-color: #333;
+    --shadow-color: rgba(255, 255, 255, 0.05);
+    --unlocked-card-bg: #384239;
+    --unlocked-card-border: #81C784;
+    --unlocked-card-shadow: rgba(129, 199, 132, 0.2);
+    --green-highlight: #81C784;
+    --gray-text: #ccc;
+}
+
+body {
+    font-family: 'Poppins', sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    margin: 0;
+    padding: 20px;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+h1 {
+    font-size: 2.5em;
+    font-weight: 700;
+    color: var(--green-highlight);
+    margin-bottom: 5px;
+}
+
+.score-display {
+    font-size: 1.2em;
+    font-weight: 500;
+    color: var(--gray-text);
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+.grid-container {
+    display: grid;
+    gap: 20px;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+}
+
+.card {
+    background-color: var(--card-bg-color);
+    border-radius: 12px;
+    box-shadow: 0 4px 8px var(--shadow-color);
+    border: 2px solid transparent;
+    padding: 25px;
+    text-align: center;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s, background-color 0.3s, border-color 0.3s;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 12px var(--shadow-color);
+}
+
+.card h3 {
+    margin-top: 10px;
+    margin-bottom: 5px;
+    font-size: 1.2em;
+}
+
+.card p {
+    margin: 0;
+    color: var(--gray-text);
+    font-size: 0.9em;
+}
+
+.trophy-icon {
+    font-size: 2.5em;
+}
+
+.trophy-bronze { color: #CD7F32; }
+.trophy-silver { color: #C0C0C0; }
+.trophy-gold { color: #FFD700; }
+.trophy-platinum { color: #E5E4E2; }
+
+.achievement-unlocked {
+    background-color: var(--unlocked-card-bg);
+    border-color: var(--unlocked-card-border);
+}
+
+.confetti-piece {
+    position: fixed;
+    border-radius: 50%;
+    animation: confetti-fall 3s ease-out forwards;
+    z-index: 1000;
+}
+
+@keyframes confetti-fall {
+    0% {
+        opacity: 1;
+        transform: translate(0, 0) rotate(0deg);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(var(--dx), var(--dy)) rotate(var(--dr));
+    }
+}
+
+.hidden {
+    display: none;
+}
+
+.button-group {
+    text-align: center;
+    margin-top: 20px;
+    margin-bottom: 20px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+}
+
+.button {
+    background-color: var(--green-highlight);
+    color: white;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1em;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.button:hover {
+    background-color: #45a049;
+}
+
+.button.secondary {
+    background-color: #ccc;
+    color: var(--text-color);
+}
+
+.button.secondary:hover {
+    background-color: #bbb;
+}
+
+.dark-mode .button.secondary {
+    background-color: #555;
+    color: var(--text-color);
+}
+
+.dark-mode .button.secondary:hover {
+    background-color: #666;
+}
+
+/* Card Size Styles (Grid View) */
+.card-large {
+    padding: 25px;
+}
+
+.card-medium {
+    padding: 12px;
+}
+
+.card-medium .trophy-icon {
+    font-size: 1.8em;
+}
+
+.card-medium h3 {
+    font-size: 1em;
+}
+
+.card-medium p {
+    font-size: 0.8em;
+}
+
+.card-small {
+    padding: 8px;
+}
+
+.card-small .trophy-icon {
+    font-size: 1.2em;
+}
+
+.card-small h3 {
+    font-size: 0.8em;
+}
+
+.card-small p {
+    font-size: 0.7em;
+}
+
+/* List View Styles */
+.list-view {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.list-view .card {
+    display: flex;
+    align-items: center;
+    text-align: left;
+    gap: 15px;
+}
+
+/* Specific List View sizes */
+.list-view .card-large {
+    padding: 15px;
+}
+
+.list-view .card-medium {
+    padding: 8px;
+}
+
+.list-view .card-medium h3 {
+    font-size: 0.9em;
+}
+
+.list-view .card-medium p {
+    font-size: 0.8em;
+}
+
+.list-view .card-small {
+    padding: 5px;
+}
+
+.list-view .card-small .trophy-icon {
+    font-size: 1.2em;
+}
+
+.list-view .card-small h3 {
+    font-size: 0.7em;
+}
+
+.list-view .card-small p {
+    font-size: 0.6em;
+}
+
+/* Common List View elements */
+.list-view .trophy-icon {
+    font-size: 1.5em;
+}
+
+.list-view .card h3 {
+    margin: 0;
+    flex-grow: 1;
+}
+
+.list-view .card p {
+    margin: 0;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.view-options {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.view-options select {
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background-color: var(--card-bg-color);
+    color: var(--text-color);
+}
