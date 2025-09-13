@@ -331,10 +331,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const card = document.querySelector(`[data-id="${achievementId}"]`);
                 if (card) {
                     launchConfetti(card);
-                    if (!memories[achievementId]) {
-                        askForMemory(achievementId);
-                    }
                 }
+            }
+            // After unlocking, ask for a memory
+            if (!memories[achievementId]) {
+                askForMemory(achievementId);
             }
             updateScoreDisplay();
             renderAchievements(currentCategory);
