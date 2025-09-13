@@ -14,15 +14,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const cardSizeSelect = document.getElementById('card-size-select');
     const toggleListViewButton = document.getElementById('toggle-list-view');
 
-    // Memory Modal Elements
+    // Memory Modal Elements - These are now dynamic, so we'll grab them inside the functions
     const memoryModal = document.getElementById('memory-modal');
-    const modalTitle = document.getElementById('modal-title');
-    const memoryAchievementName = document.getElementById('memory-achievement-name');
-    const memoryNoteInput = document.getElementById('memory-note');
-    const memoryImageUpload = document.getElementById('memory-image-upload');
-    const saveMemoryButton = document.getElementById('save-memory-button');
-    const memoryImageName = document.getElementById('memory-image-name');
-    const closeButton = memoryModal.querySelector('.close-button');
 
     let unlockedAchievements = new Set();
     let memories = {};
@@ -330,7 +323,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function unlockAchievement(achievementId) {
-        if (!unlockedAchievements.has(achievementId)) { // Prevent unlocking an already unlocked achievement
+        if (!unlockedAchievements.has(achievementId)) {
             unlockedAchievements.add(achievementId);
             saveData();
             const achievement = findAchievementById(achievementId);
@@ -338,7 +331,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const card = document.querySelector(`[data-id="${achievementId}"]`);
                 if (card) {
                     launchConfetti(card);
-                    // Check if a memory already exists for this achievement before asking
                     if (!memories[achievementId]) {
                         askForMemory(achievementId);
                     }
@@ -526,12 +518,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const achievement = findAchievementById(achievementId);
         if (!achievement) return;
 
-        // Reset the modal content before populating it
-        const modalContent = memoryModal.querySelector('.modal-content');
-        modalContent.innerHTML = `
+        memoryModal.classList.remove('hidden');
+
+        // Dynamically create and populate the modal content
+        memoryModal.querySelector('.modal-content').innerHTML = `
             <span class="close-button">&times;</span>
-            <h2 id="modal-title">Add a Memory</h2>
-            <p id="memory-achievement-name"></p>
+            <h2 class="modal-title">Add a Memory</h2>
+            <p id="memory-achievement-name">${achievement.name}</p>
             <textarea id="memory-note" placeholder="Write your memory here..."></textarea>
             <label for="memory-image-upload" class="upload-label">
                 <span class="upload-icon">🖼️</span> Upload an Image
@@ -541,31 +534,26 @@ document.addEventListener('DOMContentLoaded', () => {
             <p id="memory-image-name" class="image-name"></p>
         `;
         
-        // Populate new content
-        const newMemoryAchievementName = modalContent.querySelector('#memory-achievement-name');
-        const newMemoryNoteInput = modalContent.querySelector('#memory-note');
-        const newMemoryImageUpload = modalContent.querySelector('#memory-image-upload');
-        const newSaveMemoryButton = modalContent.querySelector('#save-memory-button');
-        const newMemoryImageName = modalContent.querySelector('#memory-image-name');
-        const newCloseButton = modalContent.querySelector('.close-button');
+        // Attach event listeners to the new elements
+        const closeButton = memoryModal.querySelector('.close-button');
+        const saveMemoryButton = memoryModal.querySelector('#save-memory-button');
+        const memoryImageUpload = memoryModal.querySelector('#memory-image-upload');
+        const memoryImageName = memoryModal.querySelector('#memory-image-name');
 
-        newMemoryAchievementName.textContent = achievement.name;
-        newSaveMemoryButton.dataset.achievementId = achievementId;
-
-        // Attach listeners to new elements
-        newCloseButton.addEventListener('click', () => {
+        closeButton.addEventListener('click', () => {
             memoryModal.classList.add('hidden');
         });
-        newSaveMemoryButton.addEventListener('click', saveMemory);
-        newMemoryImageUpload.addEventListener('change', () => {
-            if (newMemoryImageUpload.files.length > 0) {
-                newMemoryImageName.textContent = newMemoryImageUpload.files[0].name;
+
+        saveMemoryButton.dataset.achievementId = achievementId;
+        saveMemoryButton.addEventListener('click', saveMemory);
+
+        memoryImageUpload.addEventListener('change', () => {
+            if (memoryImageUpload.files.length > 0) {
+                memoryImageName.textContent = memoryImageUpload.files[0].name;
             } else {
-                newMemoryImageName.textContent = '';
+                memoryImageName.textContent = '';
             }
         });
-        
-        memoryModal.classList.remove('hidden');
     }
 
     function viewMemory(achievementId) {
@@ -573,22 +561,20 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!memory) return;
         const achievement = findAchievementById(achievementId);
 
-        // Render the view memory content
-        const modalContent = memoryModal.querySelector('.modal-content');
-        modalContent.innerHTML = `
+        memoryModal.classList.remove('hidden');
+
+        // Dynamically create and populate the modal content for viewing
+        memoryModal.querySelector('.modal-content').innerHTML = `
             <span class="close-button">&times;</span>
-            <h2 id="modal-title">Memory for: ${achievement.name}</h2>
+            <h2 class="modal-title">Memory for: ${achievement.name}</h2>
             ${memory.note ? `<p class="memory-display-content">${memory.note}</p>` : ''}
             ${memory.image ? `<img src="${memory.image}" class="memory-image-display" alt="Memory Image">` : ''}
         `;
         
-        memoryModal.classList.remove('hidden');
-
-        // Re-attach close button listener
-        modalContent.querySelector('.close-button').addEventListener('click', () => {
+        // Attach close button listener to the new element
+        const closeButton = memoryModal.querySelector('.close-button');
+        closeButton.addEventListener('click', () => {
             memoryModal.classList.add('hidden');
-            // Re-render the original modal content for adding memories
-            renderMemoryModalContent();
         });
     }
 
@@ -615,7 +601,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 saveData();
                 memoryModal.classList.add('hidden');
                 renderAchievements(currentCategory);
-                renderMemoryModalContent();
             };
             reader.readAsDataURL(imageFile);
         } else {
@@ -623,25 +608,7 @@ document.addEventListener('DOMContentLoaded', () => {
             saveData();
             memoryModal.classList.add('hidden');
             renderAchievements(currentCategory);
-            renderMemoryModalContent();
         }
-    }
-
-    function renderMemoryModalContent() {
-        const modalContent = memoryModal.querySelector('.modal-content');
-        modalContent.innerHTML = `
-            <span class="close-button">&times;</span>
-            <h2 id="modal-title">Add a Memory</h2>
-            <p id="memory-achievement-name"></p>
-            <textarea id="memory-note" placeholder="Write your memory here..."></textarea>
-            <label for="memory-image-upload" class="upload-label">
-                <span class="upload-icon">🖼️</span> Upload an Image
-            </label>
-            <input type="file" id="memory-image-upload" accept="image/*" class="hidden">
-            <button id="save-memory-button" class="button">Save Memory</button>
-            <p id="memory-image-name" class="image-name"></p>
-        `;
-        // No need to attach listeners here, as `askForMemory` will do it when the modal opens.
     }
 
     // Event Listeners
