@@ -1,251 +1,297 @@
+/* Core Styling */
 :root {
-    --bg-color-light: #f4f4f9;
-    --text-color-light: #333;
-    --card-bg-light: #fff;
-    --border-color-light: #e0e0e0;
-    --button-bg-light: #5c6770;
-    --button-text-light: #fff;
-    --accent-color-light: #4a90e2;
-    --trophy-bronze-light: #cd7f32;
-    --trophy-silver-light: #c0c0c0;
-    --trophy-gold-light: #ffd700;
-    --trophy-platinum-light: #e5e4e2;
+    --bg-color: #f0f2f5;
+    --card-bg-color: #fff;
+    --text-color: #333;
+    --border-color: #e0e0e0;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+    --unlocked-card-bg: #e8f5e9;
+    --unlocked-card-border: #4CAF50;
+    --unlocked-card-shadow: rgba(76, 175, 80, 0.2);
+    --green-highlight: #4CAF50;
+    --gray-text: #777;
 }
 
-body.dark-mode {
-    --bg-color-light: #1a1a2e;
-    --text-color-light: #e0e0e0;
-    --card-bg-light: #2c2c44;
-    --border-color-light: #444;
-    --button-bg-light: #4a4a5a;
-    --button-text-light: #e0e0e0;
-    --accent-color-light: #76a9f8;
-    --trophy-bronze-light: #8b4513;
-    --trophy-silver-light: #a9a9a9;
-    --trophy-gold-light: #cc9900;
-    --trophy-platinum-light: #c4c3c0;
+/* Dark Mode Variables */
+.dark-mode {
+    --bg-color: #121212;
+    --card-bg-color: #1e1e1e;
+    --text-color: #f0f2f5;
+    --border-color: #333;
+    --shadow-color: rgba(255, 255, 255, 0.05);
+    --unlocked-card-bg: #384239;
+    --unlocked-card-border: #81C784;
+    --unlocked-card-shadow: rgba(129, 199, 132, 0.2);
+    --green-highlight: #81C784;
+    --gray-text: #ccc;
 }
 
 body {
     font-family: 'Poppins', sans-serif;
-    background-color: var(--bg-color-light);
-    color: var(--text-color-light);
+    background-color: var(--bg-color);
+    color: var(--text-color);
     margin: 0;
-    padding: 0;
+    padding: 20px;
     transition: background-color 0.3s, color 0.3s;
 }
 
 header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 20px 40px;
-    background-color: var(--card-bg-light);
-    border-bottom: 1px solid var(--border-color-light);
-    flex-wrap: wrap;
-    gap: 10px;
-}
-
-.header-left, .header-right {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 10px;
+    text-align: center;
+    margin-bottom: 40px;
 }
 
 h1 {
-    margin: 0;
-    font-size: 24px;
-    font-weight: 600;
+    font-size: 2.5em;
+    font-weight: 700;
+    color: var(--green-highlight);
+    margin-bottom: 5px;
 }
 
 .score-display {
-    margin: 0;
-    font-weight: 400;
-    font-size: 16px;
-    color: #666;
+    font-size: 1.2em;
+    font-weight: 500;
+    color: var(--gray-text);
 }
 
-body.dark-mode .score-display {
-    color: #bbb;
-}
-
-.button, select {
-    padding: 10px 15px;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-family: inherit;
-    font-size: 14px;
-    font-weight: 600;
-    background-color: var(--button-bg-light);
-    color: var(--button-text-light);
-    transition: background-color 0.2s, transform 0.1s;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    appearance: none;
-}
-
-.button:hover, select:hover {
-    background-color: var(--accent-color-light);
-    transform: translateY(-2px);
-}
-
-.button:active {
-    transform: translateY(0);
-}
-
-main {
-    padding: 20px 40px;
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
 }
 
 .grid-container {
-    display: flex;
-    justify-content: center;
-}
-
-.grid-view {
     display: grid;
     gap: 20px;
-    width: 100%;
-    max-width: 1200px;
     grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
 }
 
-.list-view {
-    grid-template-columns: 1fr;
-}
-
 .card {
-    background-color: var(--card-bg-light);
-    border: 1px solid var(--border-color-light);
+    background-color: var(--card-bg-color);
     border-radius: 12px;
-    padding: 20px;
+    box-shadow: 0 4px 8px var(--shadow-color);
+    border: 2px solid transparent;
+    padding: 25px;
     text-align: center;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-    transition: transform 0.2s, box-shadow 0.2s, background-color 0.2s;
     cursor: pointer;
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
+    transition: transform 0.2s, box-shadow 0.2s, background-color 0.3s, border-color 0.3s;
 }
 
 .card:hover {
     transform: translateY(-5px);
-    box-shadow: 0 8px 12px rgba(0, 0, 0, 0.1);
-}
-
-.card-small {
-    padding: 10px;
-}
-
-.card-medium {
-    padding: 15px;
-}
-
-.card-large {
-    padding: 20px;
+    box-shadow: 0 6px 12px var(--shadow-color);
 }
 
 .card h3 {
-    margin: 10px 0;
-    font-weight: 600;
-    font-size: 18px;
+    margin-top: 10px;
+    margin-bottom: 5px;
+    font-size: 1.2em;
 }
 
 .card p {
     margin: 0;
-    font-size: 14px;
-    color: #888;
+    color: var(--gray-text);
+    font-size: 0.9em;
 }
 
-body.dark-mode .card p {
-    color: #ccc;
+.trophy-icon {
+    font-size: 2.5em;
 }
 
-.category-card .trophy-icon {
-    font-size: 48px;
-}
-
-.achievement-card .trophy-icon {
-    font-size: 28px;
-    margin-bottom: 5px;
-}
+.trophy-bronze { color: #CD7F32; }
+.trophy-silver { color: #C0C0C0; }
+.trophy-gold { color: #FFD700; }
+.trophy-platinum { color: #E5E4E2; }
 
 .achievement-unlocked {
-    background-color: var(--accent-color-light);
-    color: var(--button-text-light);
+    background-color: var(--unlocked-card-bg);
+    border-color: var(--unlocked-card-border);
 }
-
-.achievement-unlocked .trophy-icon {
-    color: #fff;
-}
-
-.achievement-unlocked p {
-    color: rgba(255, 255, 255, 0.8);
-}
-
-.hidden {
-    display: none !important;
-}
-
-.trophy-bronze { color: var(--trophy-bronze-light); }
-.trophy-silver { color: var(--trophy-silver-light); }
-.trophy-gold { color: var(--trophy-gold-light); }
-.trophy-platinum { color: var(--trophy-platinum-light); }
-
-.achievement-unlocked .trophy-bronze { color: #f0f0f0; }
-.achievement-unlocked .trophy-silver { color: #f0f0f0; }
-.achievement-unlocked .trophy-gold { color: #f0f0f0; }
-.achievement-unlocked .trophy-platinum { color: #f0f0f0; }
 
 .confetti-piece {
     position: fixed;
+    border-radius: 50%;
+    animation: confetti-fall 3s ease-out forwards;
     z-index: 1000;
-    pointer-events: none;
-    transition: transform 0.5s, opacity 0.5s;
-    will-change: transform, opacity;
-    animation: confetti-fall 2s forwards;
 }
 
 @keyframes confetti-fall {
-    from {
-        transform: translate(0, 0) rotate(0);
+    0% {
         opacity: 1;
+        transform: translate(0, 0) rotate(0deg);
     }
-    to {
-        transform: translate(var(--dx, 0), var(--dy, 1000px)) rotate(var(--dr, 720deg));
+    100% {
         opacity: 0;
+        transform: translate(var(--dx), var(--dy)) rotate(var(--dr));
     }
 }
 
-footer {
+.hidden {
+    display: none;
+}
+
+.button-group {
+    text-align: center;
+    margin-top: 20px;
+    margin-bottom: 20px;
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 15px 40px;
-    background-color: var(--card-bg-light);
-    border-top: 1px solid var(--border-color-light);
-    position: sticky;
-    bottom: 0;
     flex-wrap: wrap;
-    gap: 10px;
-}
-
-.footer-left, .footer-right {
-    display: flex;
+    justify-content: center;
     align-items: center;
     gap: 10px;
 }
 
-/* --- New Styles for Modal and Memories --- */
+.button {
+    background-color: var(--green-highlight);
+    color: white;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1em;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
 
-/* Modal */
+.button:hover {
+    background-color: #45a049;
+}
+
+.button.secondary {
+    background-color: #ccc;
+    color: var(--text-color);
+}
+
+.button.secondary:hover {
+    background-color: #bbb;
+}
+
+.dark-mode .button.secondary {
+    background-color: #555;
+    color: var(--text-color);
+}
+
+.dark-mode .button.secondary:hover {
+    background-color: #666;
+}
+
+/* Card Size Styles (Grid View) */
+.card-large {
+    padding: 25px;
+}
+
+.card-medium {
+    padding: 12px;
+}
+
+.card-medium .trophy-icon {
+    font-size: 1.8em;
+}
+
+.card-medium h3 {
+    font-size: 1em;
+}
+
+.card-medium p {
+    font-size: 0.8em;
+}
+
+.card-small {
+    padding: 8px;
+}
+
+.card-small .trophy-icon {
+    font-size: 1.2em;
+}
+
+.card-small h3 {
+    font-size: 0.8em;
+}
+
+.card-small p {
+    font-size: 0.7em;
+}
+
+/* List View Styles */
+.list-view {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.list-view .card {
+    display: flex;
+    align-items: center;
+    text-align: left;
+    gap: 15px;
+}
+
+/* Specific List View sizes */
+.list-view .card-large {
+    padding: 15px;
+}
+
+.list-view .card-medium {
+    padding: 8px;
+}
+
+.list-view .card-medium h3 {
+    font-size: 0.9em;
+}
+
+.list-view .card-medium p {
+    font-size: 0.8em;
+}
+
+.list-view .card-small {
+    padding: 5px;
+}
+
+.list-view .card-small .trophy-icon {
+    font-size: 1.2em;
+}
+
+.list-view .card-small h3 {
+    font-size: 0.7em;
+}
+
+.list-view .card-small p {
+    font-size: 0.6em;
+}
+
+/* Common List View elements */
+.list-view .trophy-icon {
+    font-size: 1.5em;
+}
+
+.list-view .card h3 {
+    margin: 0;
+    flex-grow: 1;
+}
+
+.list-view .card p {
+    margin: 0;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.view-options {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.view-options select {
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background-color: var(--card-bg-color);
+    color: var(--text-color);
+}
+
+/* --- Styles for Memory Modal and Buttons --- */
+
 .modal {
     position: fixed;
-    z-index: 1;
+    z-index: 10;
     left: 0;
     top: 0;
     width: 100%;
@@ -257,7 +303,7 @@ footer {
 }
 
 .modal-content {
-    background-color: var(--card-bg-light);
+    background-color: var(--card-bg-color);
     padding: 30px;
     border-radius: 12px;
     width: 90%;
@@ -273,19 +319,19 @@ footer {
     position: absolute;
     top: 15px;
     right: 25px;
-    color: var(--text-color-light);
+    color: var(--text-color);
     font-size: 28px;
     font-weight: bold;
     cursor: pointer;
 }
 
 .modal-content .close-button:hover {
-    color: var(--accent-color-light);
+    color: var(--green-highlight);
 }
 
 .modal-title {
     margin-top: 0;
-    font-size: 24px;
+    font-size: 1.5em;
     font-weight: 600;
 }
 
@@ -293,12 +339,12 @@ footer {
     width: 100%;
     height: 150px;
     padding: 10px;
-    border: 1px solid var(--border-color-light);
+    border: 1px solid var(--border-color);
     border-radius: 8px;
-    background-color: var(--bg-color-light);
-    color: var(--text-color-light);
+    background-color: var(--bg-color);
+    color: var(--text-color);
     font-family: inherit;
-    font-size: 16px;
+    font-size: 1em;
     resize: vertical;
 }
 
@@ -308,11 +354,11 @@ footer {
     justify-content: center;
     gap: 10px;
     padding: 10px 15px;
-    border: 2px dashed var(--border-color-light);
+    border: 2px dashed var(--border-color);
     border-radius: 8px;
     cursor: pointer;
     font-weight: 600;
-    color: var(--text-color-light);
+    color: var(--text-color);
     transition: background-color 0.2s;
 }
 
@@ -325,12 +371,12 @@ body.dark-mode .upload-label:hover {
 }
 
 .upload-icon {
-    font-size: 20px;
+    font-size: 1.2em;
 }
 
 .image-name {
-    font-size: 14px;
-    color: #888;
+    font-size: 0.8em;
+    color: var(--gray-text);
     margin: -10px 0 0;
     text-align: center;
 }
@@ -338,7 +384,7 @@ body.dark-mode .upload-label:hover {
 .memory-display-content {
     white-space: pre-wrap;
     word-wrap: break-word;
-    background-color: var(--bg-color-light);
+    background-color: var(--bg-color);
     padding: 15px;
     border-radius: 8px;
 }
@@ -347,7 +393,7 @@ body.dark-mode .upload-label:hover {
     max-width: 100%;
     height: auto;
     border-radius: 8px;
-    border: 1px solid var(--border-color-light);
+    border: 1px solid var(--border-color);
     margin-top: 10px;
 }
 
@@ -357,6 +403,13 @@ body.dark-mode .upload-label:hover {
     right: 10px;
     background: transparent;
     border: none;
-    font-size: 24px;
+    font-size: 1.2em;
     cursor: pointer;
+    color: #ffd700;
+    text-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
+    transition: transform 0.2s;
+}
+
+.memory-icon-button:hover {
+    transform: scale(1.1);
 }
