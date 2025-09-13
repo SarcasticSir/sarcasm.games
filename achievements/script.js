@@ -1,5 +1,5 @@
 /* Core Styling */
-:root {
+{
     --bg-color: #f0f2f5;
     --card-bg-color: #fff;
     --text-color: #333;
