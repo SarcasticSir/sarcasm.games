@@ -379,7 +379,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateScoreDisplay() {
-        totalScoreElement.textContent = `Total Points: ${calculateTotalScore()}`;
+        // Fix: Use the correct element ID from the HTML
+        const scoreElement = document.querySelector('.score-display');
+        if (scoreElement) {
+            scoreElement.textContent = `Total Points: ${calculateTotalScore()}`;
+        }
         if (currentCategory) {
             const categoryScore = calculateCategoryScore(currentCategory);
             categoryTitleElement.textContent = `${currentCategory} (${categoryScore} Points)`;
