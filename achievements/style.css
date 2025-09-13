@@ -38,9 +38,12 @@ body {
 header {
     text-align: center;
     margin-bottom: 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
-h1 {
+.header-content h1 {
     font-size: 2.5em;
     font-weight: 700;
     color: var(--green-highlight);
@@ -51,6 +54,14 @@ h1 {
     font-size: 1.2em;
     font-weight: 500;
     color: var(--gray-text);
+}
+
+.header-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 20px;
 }
 
 .container {
@@ -74,6 +85,7 @@ h1 {
     text-align: center;
     cursor: pointer;
     transition: transform 0.2s, box-shadow 0.2s, background-color 0.3s, border-color 0.3s;
+    position: relative; /* Added for memory icon */
 }
 
 .card:hover {
@@ -129,17 +141,6 @@ h1 {
     display: none;
 }
 
-.button-group {
-    text-align: center;
-    margin-top: 20px;
-    margin-bottom: 20px;
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    align-items: center;
-    gap: 10px;
-}
-
 .button {
     background-color: var(--green-highlight);
     color: white;
@@ -174,41 +175,20 @@ h1 {
 }
 
 /* Card Size Styles (Grid View) */
-.card-large {
-    padding: 25px;
-}
+.card-large { padding: 25px; }
+.card-large .trophy-icon { font-size: 2.5em; }
+.card-large h3 { font-size: 1.2em; }
+.card-large p { font-size: 0.9em; }
 
-.card-medium {
-    padding: 12px;
-}
+.card-medium { padding: 12px; }
+.card-medium .trophy-icon { font-size: 1.8em; }
+.card-medium h3 { font-size: 1em; }
+.card-medium p { font-size: 0.8em; }
 
-.card-medium .trophy-icon {
-    font-size: 1.8em;
-}
-
-.card-medium h3 {
-    font-size: 1em;
-}
-
-.card-medium p {
-    font-size: 0.8em;
-}
-
-.card-small {
-    padding: 8px;
-}
-
-.card-small .trophy-icon {
-    font-size: 1.2em;
-}
-
-.card-small h3 {
-    font-size: 0.8em;
-}
-
-.card-small p {
-    font-size: 0.7em;
-}
+.card-small { padding: 8px; }
+.card-small .trophy-icon { font-size: 1.2em; }
+.card-small h3 { font-size: 0.8em; }
+.card-small p { font-size: 0.7em; }
 
 /* List View Styles */
 .list-view {
@@ -222,44 +202,7 @@ h1 {
     align-items: center;
     text-align: left;
     gap: 15px;
-}
-
-/* Specific List View sizes */
-.list-view .card-large {
-    padding: 15px;
-}
-
-.list-view .card-medium {
-    padding: 8px;
-}
-
-.list-view .card-medium h3 {
-    font-size: 0.9em;
-}
-
-.list-view .card-medium p {
-    font-size: 0.8em;
-}
-
-.list-view .card-small {
-    padding: 5px;
-}
-
-.list-view .card-small .trophy-icon {
-    font-size: 1.2em;
-}
-
-.list-view .card-small h3 {
-    font-size: 0.7em;
-}
-
-.list-view .card-small p {
-    font-size: 0.6em;
-}
-
-/* Common List View elements */
-.list-view .trophy-icon {
-    font-size: 1.5em;
+    padding: 15px; /* Common padding for list view cards */
 }
 
 .list-view .card h3 {
@@ -273,22 +216,7 @@ h1 {
     white-space: nowrap;
 }
 
-.view-options {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-}
-
-.view-options select {
-    padding: 10px;
-    border-radius: 8px;
-    border: 1px solid var(--border-color);
-    background-color: var(--card-bg-color);
-    color: var(--text-color);
-}
-
-/* --- Styles for Memory Modal and Buttons --- */
-
+/* Memory Modal Styles */
 .modal {
     position: fixed;
     z-index: 10;
@@ -412,4 +340,22 @@ body.dark-mode .upload-label:hover {
 
 .memory-icon-button:hover {
     transform: scale(1.1);
+}
+
+footer {
+    text-align: center;
+    margin-top: 40px;
+    padding: 20px;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.footer-buttons, .footer-credit {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
 }
