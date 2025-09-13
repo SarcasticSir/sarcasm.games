@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Memory Modal Elements
     const memoryModal = document.getElementById('memory-modal');
+    const modalContent = memoryModal.querySelector('.modal-content');
 
     let unlockedAchievements = new Set();
     let memories = {};
@@ -326,17 +327,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!unlockedAchievements.has(achievementId)) {
             unlockedAchievements.add(achievementId);
             saveData();
-            const achievement = findAchievementById(achievementId);
-            if (achievement) {
-                const card = document.querySelector(`[data-id="${achievementId}"]`);
-                if (card) {
-                    launchConfetti(card);
-                }
+            const card = document.querySelector(`[data-id="${achievementId}"]`);
+            if (card) {
+                launchConfetti(card);
             }
-            // After unlocking, ask for a memory
-            if (!memories[achievementId]) {
-                askForMemory(achievementId);
-            }
+            // Ask for memory AFTER the achievement is successfully unlocked
+            askForMemory(achievementId);
             updateScoreDisplay();
             renderAchievements(currentCategory);
         }
@@ -399,9 +395,14 @@ document.addEventListener('DOMContentLoaded', () => {
     function loadData() {
         const storedData = localStorage.getItem('achievementsData');
         if (storedData) {
-            const data = JSON.parse(storedData);
-            unlockedAchievements = new Set(data.unlocked);
-            memories = data.memories || {};
+            try {
+                const data = JSON.parse(storedData);
+                unlockedAchievements = new Set(data.unlocked);
+                memories = data.memories || {};
+            } catch (e) {
+                console.error("Failed to parse stored data, resetting.", e);
+                localStorage.removeItem('achievementsData');
+            }
         }
         updateScoreDisplay();
     }
@@ -519,10 +520,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const achievement = findAchievementById(achievementId);
         if (!achievement) return;
 
-        memoryModal.classList.remove('hidden');
-
-        // Dynamically create and populate the modal content
-        const modalContent = memoryModal.querySelector('.modal-content');
         modalContent.innerHTML = `
             <span class="close-button">&times;</span>
             <h2 class="modal-title">Add a Memory</h2>
@@ -536,27 +533,8 @@ document.addEventListener('DOMContentLoaded', () => {
             <p id="memory-image-name" class="image-name"></p>
         `;
         
-        // Attach event listeners to the new elements
-        const closeButton = modalContent.querySelector('.close-button');
-        const saveMemoryButton = modalContent.querySelector('#save-memory-button');
-        const memoryImageUpload = modalContent.querySelector('#memory-image-upload');
-        const memoryImageName = modalContent.querySelector('#memory-image-name');
-        const memoryNoteInput = modalContent.querySelector('#memory-note');
-
-        closeButton.addEventListener('click', () => {
-            memoryModal.classList.add('hidden');
-        });
-
-        saveMemoryButton.dataset.achievementId = achievementId;
-        saveMemoryButton.addEventListener('click', () => saveMemory(achievementId, memoryNoteInput.value, memoryImageUpload.files[0]));
-
-        memoryImageUpload.addEventListener('change', () => {
-            if (memoryImageUpload.files.length > 0) {
-                memoryImageName.textContent = memoryImageUpload.files[0].name;
-            } else {
-                memoryImageName.textContent = '';
-            }
-        });
+        memoryModal.classList.remove('hidden');
+        initializeModalListeners(achievementId);
     }
 
     function viewMemory(achievementId) {
@@ -564,10 +542,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!memory) return;
         const achievement = findAchievementById(achievementId);
 
-        memoryModal.classList.remove('hidden');
-
-        // Dynamically create and populate the modal content for viewing
-        const modalContent = memoryModal.querySelector('.modal-content');
         modalContent.innerHTML = `
             <span class="close-button">&times;</span>
             <h2 class="modal-title">Memory for: ${achievement.name}</h2>
@@ -575,19 +549,48 @@ document.addEventListener('DOMContentLoaded', () => {
             ${memory.image ? `<img src="${memory.image}" class="memory-image-display" alt="Memory Image">` : ''}
         `;
         
-        // Attach close button listener to the new element
+        memoryModal.classList.remove('hidden');
+        initializeModalListeners(achievementId);
+    }
+
+    function initializeModalListeners(achievementId) {
         const closeButton = modalContent.querySelector('.close-button');
-        closeButton.addEventListener('click', () => {
-            memoryModal.classList.add('hidden');
-        });
+        const saveMemoryButton = modalContent.querySelector('#save-memory-button');
+        const memoryImageUpload = modalContent.querySelector('#memory-image-upload');
+        const memoryImageName = modalContent.querySelector('#memory-image-name');
+        const memoryNoteInput = modalContent.querySelector('#memory-note');
+
+        // Check if elements exist before adding listeners
+        if (closeButton) {
+            closeButton.addEventListener('click', () => {
+                memoryModal.classList.add('hidden');
+            });
+        }
+        
+        if (saveMemoryButton) {
+            saveMemoryButton.addEventListener('click', () => {
+                const note = memoryNoteInput.value.trim();
+                const imageFile = memoryImageUpload.files[0];
+                if (!note && !imageFile) {
+                    alert('Please add a note or an image before saving.');
+                    return;
+                }
+                saveMemory(achievementId, note, imageFile);
+            });
+        }
+        
+        if (memoryImageUpload && memoryImageName) {
+            memoryImageUpload.addEventListener('change', () => {
+                if (memoryImageUpload.files.length > 0) {
+                    memoryImageName.textContent = memoryImageUpload.files[0].name;
+                } else {
+                    memoryImageName.textContent = '';
+                }
+            });
+        }
     }
 
     function saveMemory(achievementId, note, imageFile) {
-        if (!note && !imageFile) {
-            alert('Please add a note or an image before saving.');
-            return;
-        }
-
         const newMemory = {};
         if (note) {
             newMemory.note = note;
