@@ -12,24 +12,24 @@
 </head>
 <body>
     <header>
-        <div class="header-left">
+        <div class="header-content">
             <h1 id="category-title">Life Achievements</h1>
-            <p class="score-display">Total Points: 0</p>
+            <p id="total-score" class="score-display">Total Points: 0</p>
         </div>
-        <div class="header-right">
-            <button id="back-button" class="button hidden">Back to Categories</button>
-            <button id="toggle-unlocked" class="button">Hide Unlocked</button>
-            <button id="toggle-list-view" class="button">Show as List</button>
-            <button id="toggle-dark-mode" class="button">Toggle Dark Mode</button>
-            <select id="card-size-select" class="button">
+        <div class="header-buttons">
+            <button id="back-button" class="button secondary hidden">Back to Categories</button>
+            <button id="toggle-unlocked" class="button secondary">Hide Unlocked</button>
+            <button id="toggle-list-view" class="button secondary">Show as List</button>
+            <select id="card-size-select">
                 <option value="small">Small</option>
                 <option value="medium">Medium</option>
                 <option value="large" selected>Large</option>
             </select>
+            <button id="toggle-dark-mode" class="button">Toggle Dark Mode</button>
         </div>
     </header>
 
-    <main>
+    <main class="container">
         <section id="categories-section" class="grid-container">
             <div id="category-grid" class="grid-view"></div>
         </section>
@@ -40,13 +40,13 @@
     </main>
 
     <footer>
-        <div class="footer-left">
-            <button id="export-data" class="button">Export Data</button>
-            <label for="import-file" class="button">Import Data</label>
+        <div class="footer-buttons">
+            <button id="export-data" class="button secondary">Export Data</button>
+            <label for="import-file" class="button secondary">Import Data</label>
             <input type="file" id="import-file" accept=".json" class="hidden">
         </div>
-        <div class="footer-right">
-            <button id="sarcasm-games-button" class="button">by Sarcasm Games</button>
+        <div class="footer-credit">
+            <button id="sarcasm-games-button" class="button secondary">by Sarcasm Games</button>
         </div>
     </footer>
 
