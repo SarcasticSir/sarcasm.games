@@ -10,11 +10,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const toggleUnlockedButton = document.getElementById('toggle-unlocked');
     const exportDataButton = document.getElementById('export-data');
     const importFileInput = document.getElementById('import-file');
-    const sarcasmGamesButton = document = document.getElementById('sarcasm-games-button');
+    const sarcasmGamesButton = document.getElementById('sarcasm-games-button');
     const cardSizeSelect = document.getElementById('card-size-select');
     const toggleListViewButton = document.getElementById('toggle-list-view');
 
+    // Memory Modal Elements
+    const memoryModal = document.getElementById('memory-modal');
+    const modalTitle = document.getElementById('modal-title');
+    const memoryAchievementName = document.getElementById('memory-achievement-name');
+    const memoryNoteInput = document.getElementById('memory-note');
+    const memoryImageUpload = document.getElementById('memory-image-upload');
+    const saveMemoryButton = document.getElementById('save-memory-button');
+    const memoryImageName = document.getElementById('memory-image-name');
+    const closeButton = memoryModal.querySelector('.close-button');
+
     let unlockedAchievements = new Set();
+    let memories = {};
     let currentCategory = '';
     let areUnlockedVisible = true;
     let currentCardSize = 'large';
@@ -270,27 +281,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             const card = document.createElement('div');
-            
             card.className = `card achievement-card card-${currentCardSize} ${isUnlocked ? 'achievement-unlocked' : ''}`;
             card.dataset.id = achievement.id;
-            
+
             card.innerHTML = `
                 <span class="trophy-icon ${getTrophyClass(achievement.points)}">${getTrophyIcon(achievement.points)}</span>
                 <h3>${achievement.name}</h3>
                 <p>${achievement.points} Points</p>
+                ${isUnlocked && memories[achievement.id] ? '<button class="memory-icon-button" data-action="view-memory">⭐</button>' : ''}
             `;
-            
-            card.addEventListener('click', () => {
+
+            card.addEventListener('click', (event) => {
+                if (event.target.dataset.action === 'view-memory') {
+                    event.stopPropagation();
+                    viewMemory(achievement.id);
+                    return;
+                }
                 if (isUnlocked) {
                     resetAchievement(achievement.id);
                 } else {
                     unlockAchievement(achievement.id);
                 }
             });
-            
             achievementGrid.appendChild(card);
         });
-
         if (isListView) {
             achievementGrid.classList.add('list-view');
         } else {
@@ -322,6 +336,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const card = document.querySelector(`[data-id="${achievementId}"]`);
             if (card) {
                 launchConfetti(card);
+                askForMemory(achievementId);
             }
         }
         updateScoreDisplay();
@@ -330,6 +345,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function resetAchievement(achievementId) {
         unlockedAchievements.delete(achievementId);
+        delete memories[achievementId];
         saveData();
         updateScoreDisplay();
         renderAchievements(currentCategory);
@@ -370,7 +386,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function saveData() {
         const dataToSave = {
-            unlocked: Array.from(unlockedAchievements)
+            unlocked: Array.from(unlockedAchievements),
+            memories: memories
         };
         localStorage.setItem('achievementsData', JSON.stringify(dataToSave));
     }
@@ -380,6 +397,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (storedData) {
             const data = JSON.parse(storedData);
             unlockedAchievements = new Set(data.unlocked);
+            memories = data.memories || {};
         }
         updateScoreDisplay();
     }
@@ -437,7 +455,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
             requestAnimationFrame(animateConfetti);
-
             document.body.appendChild(confetti);
         }
     }
@@ -456,7 +473,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function exportData() {
-        const data = JSON.stringify({ unlocked: Array.from(unlockedAchievements) }, null, 2);
+        const data = JSON.stringify({ unlocked: Array.from(unlockedAchievements), memories: memories }, null, 2);
         const blob = new Blob([data], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -471,13 +488,13 @@ document.addEventListener('DOMContentLoaded', () => {
     function importData(event) {
         const file = event.target.files[0];
         if (!file) return;
-
         const reader = new FileReader();
         reader.onload = (e) => {
             try {
                 const importedData = JSON.parse(e.target.result);
                 if (importedData.unlocked && Array.isArray(importedData.unlocked)) {
                     unlockedAchievements = new Set(importedData.unlocked);
+                    memories = importedData.memories || {};
                     saveData();
                     updateScoreDisplay();
                     renderCategories();
@@ -491,6 +508,130 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         };
         reader.readAsText(file);
+    }
+
+    // Modal Functions
+    function askForMemory(achievementId) {
+        const achievement = findAchievementById(achievementId);
+        if (!achievement) return;
+
+        modalTitle.textContent = 'Add a Memory';
+        memoryAchievementName.textContent = achievement.name;
+        memoryNoteInput.value = '';
+        memoryImageUpload.value = null;
+        memoryImageName.textContent = '';
+        saveMemoryButton.textContent = 'Save Memory';
+        saveMemoryButton.dataset.achievementId = achievementId;
+
+        memoryNoteInput.style.display = 'block';
+        memoryImageUpload.style.display = 'block';
+        memoryImageUpload.previousElementSibling.style.display = 'inline-block';
+        saveMemoryButton.style.display = 'block';
+
+        memoryModal.classList.remove('hidden');
+    }
+
+    function viewMemory(achievementId) {
+        const memory = memories[achievementId];
+        if (!memory) return;
+        const achievement = findAchievementById(achievementId);
+
+        modalTitle.textContent = `Memory for: ${achievement.name}`;
+        
+        // Clear previous content
+        memoryNoteInput.style.display = 'none';
+        memoryImageUpload.style.display = 'none';
+        memoryImageUpload.previousElementSibling.style.display = 'none';
+        saveMemoryButton.style.display = 'none';
+        memoryImageName.textContent = '';
+
+        const noteDisplay = document.createElement('p');
+        noteDisplay.classList.add('memory-display-content');
+        noteDisplay.textContent = memory.note;
+
+        const imageDisplay = document.createElement('img');
+        imageDisplay.classList.add('memory-image-display');
+        imageDisplay.src = memory.image;
+        imageDisplay.alt = 'Memory Image';
+
+        memoryAchievementName.textContent = '';
+        memoryModal.querySelector('.modal-content').appendChild(noteDisplay);
+        if (memory.image) {
+            memoryModal.querySelector('.modal-content').appendChild(imageDisplay);
+        }
+
+        memoryModal.classList.remove('hidden');
+
+        // Re-attach close button listener
+        closeButton.onclick = () => {
+            memoryModal.classList.add('hidden');
+            // Clean up the modal content to prepare for the next use
+            memoryModal.querySelector('.modal-content').innerHTML = `
+                <span class="close-button">&times;</span>
+                <h2 id="modal-title">Add a Memory</h2>
+                <p id="memory-achievement-name"></p>
+                <textarea id="memory-note" placeholder="Write your memory here..."></textarea>
+                <label for="memory-image-upload" class="upload-label">
+                    <span class="upload-icon">🖼️</span> Upload an Image
+                </label>
+                <input type="file" id="memory-image-upload" accept="image/*" class="hidden">
+                <button id="save-memory-button" class="button">Save Memory</button>
+                <p id="memory-image-name" class="image-name"></p>
+            `;
+            attachModalListeners();
+        };
+    }
+
+    function saveMemory() {
+        const achievementId = saveMemoryButton.dataset.achievementId;
+        const note = memoryNoteInput.value.trim();
+        const imageFile = memoryImageUpload.files[0];
+        
+        if (!note && !imageFile) {
+            alert('Please add a note or an image before saving.');
+            return;
+        }
+
+        const newMemory = {};
+        if (note) {
+            newMemory.note = note;
+        }
+        
+        if (imageFile) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                newMemory.image = e.target.result;
+                memories[achievementId] = newMemory;
+                saveData();
+                memoryModal.classList.add('hidden');
+                renderAchievements(currentCategory);
+            };
+            reader.readAsDataURL(imageFile);
+        } else {
+            memories[achievementId] = newMemory;
+            saveData();
+            memoryModal.classList.add('hidden');
+            renderAchievements(currentCategory);
+        }
+    }
+
+    function attachModalListeners() {
+        // Re-attach listeners to the modal's dynamic content
+        const modal = document.getElementById('memory-modal');
+        const closeBtn = modal.querySelector('.close-button');
+        const saveBtn = modal.querySelector('#save-memory-button');
+        const fileInput = modal.querySelector('#memory-image-upload');
+        const fileNameDisplay = modal.querySelector('#memory-image-name');
+        
+        closeBtn.addEventListener('click', () => modal.classList.add('hidden'));
+        saveBtn.addEventListener('click', saveMemory);
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length > 0) {
+                fileNameDisplay.textContent = fileInput.files[0].name;
+            } else {
+                fileNameDisplay.textContent = '';
+            }
+        });
     }
 
     // Event Listeners
