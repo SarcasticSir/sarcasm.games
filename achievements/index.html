@@ -4,61 +4,55 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Life Achievements Tracker</title>
+    <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="icon" href="https://www.flaticon.com/svg/static/icons/svg/1057/1057286.svg" type="image/svg+xml">
 </head>
 <body>
-    <div class="container">
-        <header>
+    <header>
+        <div class="header-left">
             <h1 id="category-title">Life Achievements</h1>
             <p class="score-display">Total Points: 0</p>
-        </header>
+        </div>
+        <div class="header-right">
+            <button id="back-button" class="button hidden">Back to Categories</button>
+            <button id="toggle-unlocked" class="button">Hide Unlocked</button>
+            <button id="toggle-list-view" class="button">Show as List</button>
+            <button id="toggle-dark-mode" class="button">Toggle Dark Mode</button>
+            <select id="card-size-select" class="button">
+                <option value="small">Small</option>
+                <option value="medium">Medium</option>
+                <option value="large" selected>Large</option>
+            </select>
+        </div>
+    </header>
 
-        <section id="categories-section">
-            <div class="button-group">
-                <button id="toggle-dark-mode" class="button secondary">Toggle Dark Mode</button>
-                <button id="export-data" class="button secondary">Export Data</button>
-                <label for="import-file" class="button secondary">
-                    Import Data
-                    <input type="file" id="import-file" accept=".json" class="hidden">
-                </label>
-                <button id="sarcasm-games-button" class="button secondary">Sarcasm.Games</button>
-            </div>
-            <div id="category-grid" class="grid-container"></div>
+    <main>
+        <section id="categories-section" class="grid-container">
+            <div id="category-grid" class="grid-view"></div>
         </section>
 
-        <section id="achievements-section" class="hidden">
-            <div class="button-group">
-                <button id="back-button" class="button">Back to Categories</button>
-                <button id="toggle-unlocked" class="button secondary">Hide Unlocked</button>
-                <div class="view-options">
-                    <button id="toggle-list-view" class="button secondary">Show as List</button>
-                    <select id="card-size-select">
-                        <option value="large">Large Cards</option>
-                        <option value="medium">Medium Cards</option>
-                        <option value="small">Small Cards</option>
-                    </select>
-                </div>
-            </div>
-            <div id="achievement-grid" class="grid-container"></div>
+        <section id="achievements-section" class="grid-container hidden">
+            <div id="achievement-grid" class="grid-view"></div>
         </section>
-    </div>
+    </main>
+
+    <footer>
+        <div class="footer-left">
+            <button id="export-data" class="button">Export Data</button>
+            <label for="import-file" class="button">Import Data</label>
+            <input type="file" id="import-file" accept=".json" class="hidden">
+        </div>
+        <div class="footer-right">
+            <button id="sarcasm-games-button" class="button">by Sarcasm Games</button>
+        </div>
+    </footer>
 
     <div id="memory-modal" class="modal hidden">
         <div class="modal-content">
-            <span class="close-button">&times;</span>
-            <h2 id="modal-title">Add a Memory</h2>
-            <p id="memory-achievement-name"></p>
-            <textarea id="memory-note" placeholder="Write your memory here..."></textarea>
-            <label for="memory-image-upload" class="upload-label">
-                <span class="upload-icon">🖼️</span> Upload an Image
-            </label>
-            <input type="file" id="memory-image-upload" accept="image/*" class="hidden">
-            <button id="save-memory-button" class="button">Save Memory</button>
-            <p id="memory-image-name" class="image-name"></p>
-        </div>
+            </div>
     </div>
 
     <script src="script.js"></script>
