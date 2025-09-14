@@ -267,6 +267,9 @@ header {
     border-radius: 12px;
     width: 90%;
     max-width: 500px;
+    /* Constrain the height of the modal so it never grows off-screen */
+    max-height: 80vh;
+    overflow-y: auto;
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
     position: relative;
     display: flex;
@@ -350,6 +353,8 @@ body.dark-mode .upload-label:hover {
 
 .memory-image-display {
     max-width: 100%;
+    /* Limit the image height so it doesn't overflow the modal */
+    max-height: 40vh;
     height: auto;
     border-radius: 8px;
     border: 1px solid var(--border-color);
