@@ -13,12 +13,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const sarcasmGamesButton = document.getElementById('sarcasm-games-button');
     const cardSizeSelect = document.getElementById('card-size-select');
     const toggleListViewButton = document.getElementById('toggle-list-view');
-    memoryModal.classList.add('hidden');
 
 
     // Memory Modal Elements
     const memoryModal = document.getElementById('memory-modal');
     const modalContent = memoryModal.querySelector('.modal-content');
+
+    memoryModal.classList.add('hidden');
+
     
 
     let unlockedAchievements = new Set();
@@ -676,4 +678,5 @@ document.addEventListener('DOMContentLoaded', () => {
     loadData();
     renderCategories();
 });
+
 
