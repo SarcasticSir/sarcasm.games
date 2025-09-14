@@ -373,6 +373,19 @@ body.dark-mode .upload-label:hover {
     transform: scale(1.1);
 }
 
+/* Adjust memory icon position in list view to appear to the left of the points */
+.list-view .memory-icon-button {
+    position: static;
+    order: 3;
+    margin-left: 0;
+    margin-right: 0;
+}
+
+/* In list view, ensure the points come after the star */
+.list-view .card p {
+    order: 4;
+}
+
 footer {
     text-align: center;
     margin-top: 40px;

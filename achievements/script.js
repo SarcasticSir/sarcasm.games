@@ -14,14 +14,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const cardSizeSelect = document.getElementById('card-size-select');
     const toggleListViewButton = document.getElementById('toggle-list-view');
 
-
     // Memory Modal Elements
     const memoryModal = document.getElementById('memory-modal');
     const modalContent = memoryModal.querySelector('.modal-content');
 
     memoryModal.classList.add('hidden');
-
-    
 
     let unlockedAchievements = new Set();
     let memories = {};
@@ -289,16 +286,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 memoryButtonHTML = `<button class="memory-icon-button" data-action="add-memory">⭐</button>`;
             }
 
-            card.innerHTML = `
-                <div class="achievement-header">
+            // Build card content: for list view, place star before points; for grid view, after points.
+            let cardInnerHTML;
+            if (isListView && memoryButtonHTML) {
+                cardInnerHTML = `
                     <span class="trophy-icon ${getTrophyClass(achievement.points)}">${getTrophyIcon(achievement.points)}</span>
                     <h3>${achievement.name}</h3>
-                </div>
-                <div class="achievement-meta">
                     ${memoryButtonHTML}
                     <p>${achievement.points} Points</p>
-                </div>
-            `;
+                `;
+            } else {
+                cardInnerHTML = `
+                    <span class="trophy-icon ${getTrophyClass(achievement.points)}">${getTrophyIcon(achievement.points)}</span>
+                    <h3>${achievement.name}</h3>
+                    <p>${achievement.points} Points</p>
+                    ${memoryButtonHTML}
+                `;
+            }
+            card.innerHTML = cardInnerHTML;
 
             card.addEventListener('click', (event) => {
                 const targetAction = event.target.dataset.action;
