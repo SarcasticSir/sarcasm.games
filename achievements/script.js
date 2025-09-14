@@ -27,6 +27,20 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentCardSize = 'large';
     let isListView = false;
 
+    /**
+     * Handle the Escape key to close the memory modal. This listener is attached
+     * when a memory modal is opened and removed when it is closed. If the modal
+     * is visible and the user presses Escape, the modal will be hidden and the
+     * listener removed.
+     * @param {KeyboardEvent} event
+     */
+    function handleEscape(event) {
+        if (event.key === 'Escape' && !memoryModal.classList.contains('hidden')) {
+            memoryModal.classList.add('hidden');
+            document.removeEventListener('keydown', handleEscape);
+        }
+    }
+
     const TROPHY_ICONS = {
         bronze: '🏆',
         silver: '🥈',
@@ -551,6 +565,8 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
         
         memoryModal.classList.remove('hidden');
+        // Attach an Escape key listener to allow exiting the modal with ESC
+        document.addEventListener('keydown', handleEscape);
         initializeModalListeners(achievementId);
     }
 
@@ -568,6 +584,8 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
         
         memoryModal.classList.remove('hidden');
+        // Attach an Escape key listener to allow exiting the modal with ESC
+        document.addEventListener('keydown', handleEscape);
         initializeModalListeners(achievementId);
     }
 
@@ -590,6 +608,8 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
     
         memoryModal.classList.remove('hidden');
+        // Attach an Escape key listener to allow exiting the modal with ESC
+        document.addEventListener('keydown', handleEscape);
         initializeModalListeners(achievementId);
     }
 
@@ -603,7 +623,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const memoryNoteInput = modalContent.querySelector('#memory-note');
 
         if (closeButton) {
-            closeButton.addEventListener('click', () => memoryModal.classList.add('hidden'));
+            closeButton.addEventListener('click', () => {
+                memoryModal.classList.add('hidden');
+                // Remove the Escape key listener when closing the modal
+                document.removeEventListener('keydown', handleEscape);
+            });
         }
         
         if (saveMemoryButton) {
@@ -656,6 +680,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 memories[achievementId] = newMemory;
                 saveData();
                 memoryModal.classList.add('hidden');
+                // Remove the Escape key listener when the modal is closed
+                document.removeEventListener('keydown', handleEscape);
                 renderAchievements(currentCategory);
             };
             reader.readAsDataURL(imageFile);
@@ -666,6 +692,8 @@ document.addEventListener('DOMContentLoaded', () => {
             memories[achievementId] = newMemory;
             saveData();
             memoryModal.classList.add('hidden');
+            // Remove the Escape key listener when the modal is closed
+            document.removeEventListener('keydown', handleEscape);
             renderAchievements(currentCategory);
         }
     }
