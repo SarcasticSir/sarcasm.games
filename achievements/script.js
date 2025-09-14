@@ -290,10 +290,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             card.innerHTML = `
-                <span class="trophy-icon ${getTrophyClass(achievement.points)}">${getTrophyIcon(achievement.points)}</span>
-                <h3>${achievement.name}</h3>
-                <p>${achievement.points} Points</p>
-                ${memoryButtonHTML}
+                <div class="achievement-header">
+                    <span class="trophy-icon ${getTrophyClass(achievement.points)}">${getTrophyIcon(achievement.points)}</span>
+                    <h3>${achievement.name}</h3>
+                </div>
+                <div class="achievement-meta">
+                    ${memoryButtonHTML}
+                    <p>${achievement.points} Points</p>
+                </div>
             `;
 
             card.addEventListener('click', (event) => {
@@ -678,5 +682,3 @@ document.addEventListener('DOMContentLoaded', () => {
     loadData();
     renderCategories();
 });
-
-
