@@ -552,7 +552,7 @@ document.addEventListener('DOMContentLoaded', () => {
     /** Toggle showing/hiding unlocked items. */
     function toggleUnlocked() {
         areUnlockedVisible = !areUnlockedVisible;
-        toggleUnlockedButton.textContent = areUnlockedVisible ? 'Hide Unlocked' : 'Show All';
+        toggleUnlockedButton.textContent = areUnlockedVisible ? 'Hide Unlocked' : 'Show Unlocked';
         renderAchievements(currentCategory);
     }
 
@@ -901,4 +901,5 @@ document.addEventListener('DOMContentLoaded', () => {
     loadData();
     renderCategories();
 });
+
 
