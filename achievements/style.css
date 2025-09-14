@@ -73,7 +73,12 @@ header {
 .grid-container {
     display: grid;
     gap: 20px;
+}
+
+.grid-view {
+    display: grid;
     grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
 }
 
 .card {
@@ -85,7 +90,7 @@ header {
     text-align: center;
     cursor: pointer;
     transition: transform 0.2s, box-shadow 0.2s, background-color 0.3s, border-color 0.3s;
-    position: relative; /* Added for memory icon */
+    position: relative;
 }
 
 .card:hover {
@@ -202,9 +207,21 @@ header {
     align-items: center;
     text-align: left;
     gap: 15px;
-    padding: 15px; /* Common padding for list view cards */
+    padding: 15px;
 }
 
+/* Specific List View sizes */
+.list-view .card-large { padding: 15px; }
+.list-view .card-medium { padding: 8px; }
+.list-view .card-medium h3 { font-size: 0.9em; }
+.list-view .card-medium p { font-size: 0.8em; }
+.list-view .card-small { padding: 5px; }
+.list-view .card-small .trophy-icon { font-size: 1.2em; }
+.list-view .card-small h3 { font-size: 0.7em; }
+.list-view .card-small p { font-size: 0.6em; }
+
+/* Common List View elements */
+.list-view .trophy-icon { font-size: 1.5em; }
 .list-view .card h3 {
     margin: 0;
     flex-grow: 1;
@@ -214,6 +231,20 @@ header {
     margin: 0;
     text-align: right;
     white-space: nowrap;
+}
+
+.view-options {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.view-options select {
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background-color: var(--card-bg-color);
+    color: var(--text-color);
 }
 
 /* Memory Modal Styles */
