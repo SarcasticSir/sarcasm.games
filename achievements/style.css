@@ -210,7 +210,6 @@ header {
     padding: 15px;
 }
 
-/* Specific List View sizes */
 .list-view .card-large { padding: 15px; }
 .list-view .card-medium { padding: 8px; }
 .list-view .card-medium h3 { font-size: 0.9em; }
@@ -226,7 +225,6 @@ header {
     margin: 0;
     flex-grow: 1;
 }
-
 .list-view .card p {
     margin: 0;
     text-align: right;
@@ -267,7 +265,7 @@ header {
     border-radius: 12px;
     width: 90%;
     max-width: 500px;
-    /* Constrain the height of the modal so it never grows off-screen */
+    /* Ensure the modal fits within the viewport */
     max-height: 80vh;
     overflow-y: auto;
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
@@ -353,7 +351,6 @@ body.dark-mode .upload-label:hover {
 
 .memory-image-display {
     max-width: 100%;
-    /* Limit the image height so it doesn't overflow the modal */
     max-height: 40vh;
     height: auto;
     border-radius: 8px;
@@ -378,7 +375,34 @@ body.dark-mode .upload-label:hover {
     transform: scale(1.1);
 }
 
-/* Adjust memory icon position in list view to appear to the left of the points */
+/* Add card for Personal Goals */
+.add-card {
+    border: 2px dashed var(--border-color);
+    color: var(--gray-text);
+    cursor: pointer;
+}
+.add-card:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+.dark-mode .add-card:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Delete button for Personal Goals */
+.delete-goal-button {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 1.1em;
+    color: #e53935;
+    margin-left: 6px;
+    padding: 0;
+}
+.delete-goal-button:hover {
+    transform: scale(1.15);
+}
+
+/* Adjust memory icon position in list view to appear left of points */
 .list-view .memory-icon-button {
     position: static;
     order: 3;
@@ -386,7 +410,7 @@ body.dark-mode .upload-label:hover {
     margin-right: 0;
 }
 
-/* In list view, ensure the points come after the star */
+/* Ensure points come after the star in list view */
 .list-view .card p {
     order: 4;
 }
@@ -408,3 +432,4 @@ footer {
     flex-wrap: wrap;
     gap: 10px;
 }
+
