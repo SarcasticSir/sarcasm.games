@@ -1,379 +1,768 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="no">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Orb Navigator</title>
-  <!-- Tailwind via CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="min-h-screen">
-  <div id="root"></div>
-
-  <!-- React 18 + ReactDOM UMD via CDN -->
-  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <!-- Babel for inline JSX -->
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
-  <!-- Your game (JSX/React) -->
-  <script type="text/babel">
-    const { useState, useEffect, useCallback } = React;
-
-    // ============================================
-    // CUSTOMIZATION SETTINGS (kept for easy tweaks)
-    // ============================================
-    const COLORS = {
-      player: 'bg-white',
-      goal: 'bg-green-500',
-      obstacle: 'bg-black',
-      death: 'bg-red-500',
-      cellBackground: 'bg-gray-800',
-      cellBorder: 'border-gray-700'
-    };
-
-    const SCORING = {
-      baseTimeBonus: 1000,
-      minTimeBonus: 100,
-      levelMultiplier: 500,
-    };
-
-    const DIFFICULTY = {
-      startGridSize: 3,
-      gridGrowthRate: 0.5,
-      maxGridSize: 10,
-      baseObstacles: 2,
-      obstaclesPerLevel: 1,
-      maxObstaclePercent: 0.25,
-      redOrbStartLevel: 3,
-      redOrbGrowthRate: 0.5,
-    };
-    // ============================================
-    // END CUSTOMIZATION SETTINGS
-    // ============================================
-
-    function OrbGame() {
-      const [gameState, setGameState] = useState('menu'); // menu, playing, won, lost
-      const [level, setLevel] = useState(1);
-      const [gridSize, setGridSize] = useState(3);
-      const [playerPos, setPlayerPos] = useState({ x: 1, y: 1 });
-      const [goalPos, setGoalPos] = useState({ x: 2, y: 2 });
-      const [obstacles, setObstacles] = useState([]);
-      const [redOrbs, setRedOrbs] = useState([]);
-      const [startTime, setStartTime] = useState(null);
-      const [score, setScore] = useState(0);
-      const [totalScore, setTotalScore] = useState(0);
-      const [elapsedTime, setElapsedTime] = useState(0);
-
-      // Check if path exists using BFS
-      const hasPath = (size, start, goal, obstacles) => {
-        const visited = new Set();
-        const queue = [start];
-        visited.add(`${start.x},${start.y}`);
-
-        while (queue.length > 0) {
-          const pos = queue.shift();
-          if (pos.x === goal.x && pos.y === goal.y) return true;
-
-          const moves = [[0, 1], [0, -1], [1, 0], [-1, 0]];
-          for (const [dx, dy] of moves) {
-            const newX = pos.x + dx;
-            const newY = pos.y + dy;
-            const key = `${newX},${newY}`;
-
-            if (
-              newX >= 0 && newX < size &&
-              newY >= 0 && newY < size &&
-              !visited.has(key) &&
-              !obstacles.some(o => o.x === newX && o.y === newY)
-            ) {
-              visited.add(key);
-              queue.push({ x: newX, y: newY });
-            }
-          }
-        }
-        return false;
-      };
-
-      // Generate level obstacles and orbs
-      const generateLevel = useCallback((lvl) => {
-        const size = Math.min(3 + Math.floor(lvl / 2), 10);
-        setGridSize(size);
-
-        const center = Math.floor(size / 2);
-        setPlayerPos({ x: center, y: center });
-
-        let goalX, goalY, newObstacles, newRedOrbs;
-        let attempts = 0;
-        const maxAttempts = 100;
-
-        do {
-          // Goal (not on player)
-          do {
-            goalX = Math.floor(Math.random() * size);
-            goalY = Math.floor(Math.random() * size);
-          } while (goalX === center && goalY === center);
-
-          // Black obstacles
-          const numObstacles = Math.min(lvl + 2, Math.floor(size * size * 0.25));
-          newObstacles = [];
-          for (let i = 0; i < numObstacles; i++) {
-            let x, y;
-            let obstacleAttempts = 0;
-            do {
-              x = Math.floor(Math.random() * size);
-              y = Math.floor(Math.random() * size);
-              obstacleAttempts++;
-            } while (
-              obstacleAttempts < 50 &&
-              ((x === center && y === center) ||
-                (x === goalX && y === goalY) ||
-                newObstacles.some(o => o.x === x && o.y === y))
-            );
-            if (obstacleAttempts < 50) {
-              newObstacles.push({ x, y });
-            }
-          }
-
-          // Red orbs (from level 3+)
-          const numRedOrbs = Math.max(0, Math.floor((lvl - 2) / 2));
-          newRedOrbs = [];
-          for (let i = 0; i < numRedOrbs; i++) {
-            let x, y;
-            let redAttempts = 0;
-            do {
-              x = Math.floor(Math.random() * size);
-              y = Math.floor(Math.random() * size);
-              redAttempts++;
-            } while (
-              redAttempts < 50 &&
-              ((x === center && y === center) ||
-                (x === goalX && y === goalY) ||
-                newObstacles.some(o => o.x === x && o.y === y) ||
-                newRedOrbs.some(o => o.x === x && o.y === y))
-            );
-            if (redAttempts < 50) {
-              newRedOrbs.push({ x, y });
-            }
-          }
-
-          attempts++;
-        } while (
-          attempts < maxAttempts &&
-          !hasPath(size, { x: Math.floor(size / 2), y: Math.floor(size / 2) }, { x: goalX, y: goalY }, [...newObstacles, ...newRedOrbs])
-        );
-
-        setGoalPos({ x: goalX, y: goalY });
-        setObstacles(newObstacles);
-        setRedOrbs(newRedOrbs);
-      }, []);
-
-      // Start game
-      const startGame = () => {
-        setLevel(1);
-        setTotalScore(0);
-        generateLevel(1);
-        setGameState('playing');
-        setStartTime(Date.now());
-        setElapsedTime(0);
-      };
-
-      // Timer
-      useEffect(() => {
-        let interval;
-        if (gameState === 'playing' && startTime) {
-          interval = setInterval(() => {
-            setElapsedTime(Date.now() - startTime);
-          }, 10);
-        }
-        return () => clearInterval(interval);
-      }, [gameState, startTime]);
-
-      // Move player
-      const movePlayer = useCallback((dx, dy) => {
-        if (gameState !== 'playing') return;
-
-        const newX = playerPos.x + dx;
-        const newY = playerPos.y + dy;
-
-        // Bounds
-        if (newX < 0 || newX >= gridSize || newY < 0 || newY >= gridSize) return;
-
-        // Obstacles
-        if (obstacles.some(o => o.x === newX && o.y === newY)) return;
-
-        setPlayerPos({ x: newX, y: newY });
-
-        // Red orb collision
-        if (redOrbs.some(o => o.x === newX && o.y === newY)) {
-          setGameState('lost');
-          return;
-        }
-
-        // Goal collision
-        if (newX === goalPos.x && newY === goalPos.y) {
-          const timeBonus = Math.max(1000 - elapsedTime, 100);
-          const levelScore = Math.round(timeBonus + (level * 500));
-          setScore(levelScore);
-          setTotalScore(prev => prev + levelScore);
-
-          // Next level
-          const newLevel = level + 1;
-          setLevel(newLevel);
-          generateLevel(newLevel);
-          setStartTime(Date.now());
-          setElapsedTime(0);
-        }
-      }, [gameState, playerPos, gridSize, obstacles, redOrbs, goalPos, elapsedTime, level, generateLevel]);
-
-      // Keyboard
-      useEffect(() => {
-        const handleKeyPress = (e) => {
-          if (gameState !== 'playing') return;
-          const k = e.key.toLowerCase();
-          if (['arrowup', 'w', 'arrowdown', 's', 'arrowleft', 'a', 'arrowright', 'd'].includes(k)) {
-            e.preventDefault();
-          }
-          switch (k) {
-            case 'arrowup':
-            case 'w':
-              movePlayer(0, -1); break;
-            case 'arrowdown':
-            case 's':
-              movePlayer(0, 1); break;
-            case 'arrowleft':
-            case 'a':
-              movePlayer(-1, 0); break;
-            case 'arrowright':
-            case 'd':
-              movePlayer(1, 0); break;
-            default: break;
-          }
-        };
-        window.addEventListener('keydown', handleKeyPress);
-        return () => window.removeEventListener('keydown', handleKeyPress);
-      }, [gameState, movePlayer]);
-
-      // Grid sizing
-      const maxGridWidth = typeof window !== 'undefined' ? Math.min(600, window.innerWidth - 48) : 600;
-      const cellSize = Math.floor(maxGridWidth / gridSize);
-
-      // Render cell
-      const renderCell = (x, y) => {
-        const isPlayer = playerPos.x === x && playerPos.y === y;
-        const isGoal = goalPos.x === x && goalPos.y === y;
-        const isObstacle = obstacles.some(o => o.x === x && o.y === y);
-        const isRedOrb = redOrbs.some(o => o.x === x && o.y === y);
-
-        return (
-          <div
-            key={`${x}-${y}`}
-            className={`bg-gray-800 border border-gray-700 flex items-center justify-center`}
-            style={{
-              width: `${cellSize}px`,
-              height: `${cellSize}px`,
-              minWidth: `${cellSize}px`,
-              minHeight: `${cellSize}px`
-            }}
-          >
-            {isPlayer && <div className="w-4/5 h-4/5 bg-white rounded-full shadow-lg"></div>}
-            {isGoal && <div className="w-4/5 h-4/5 bg-green-500 rounded-full shadow-lg animate-pulse"></div>}
-            {isObstacle && <div className="w-4/5 h-4/5 bg-black rounded-full shadow-lg"></div>}
-            {isRedOrb && <div className="w-4/5 h-4/5 bg-red-500 rounded-full shadow-lg"></div>}
-          </div>
-        );
-      };
-
-      return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 flex items-center justify-center p-4">
-          <div className="max-w-2xl w-full">
-            {/* Header */}
-            <div className="text-center mb-6">
-              <h1 className="text-4xl font-bold text-white mb-2">Orb Navigator</h1>
-              <div className="flex justify-center gap-8 text-white">
-                <div className="text-lg">
-                  <span className="text-gray-400">Level:</span> <span className="font-bold">{level}</span>
-                </div>
-                <div className="text-lg">
-                  <span className="text-gray-400">Score:</span> <span className="font-bold">{totalScore}</span>
-                </div>
-                {gameState === 'playing' && (
-                  <div className="text-lg">
-                    <span className="text-gray-400">Time:</span> <span className="font-bold">{(elapsedTime / 1000).toFixed(2)}s</span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Menu */}
-            {gameState === 'menu' && (
-              <div className="bg-gray-800 rounded-lg p-8 text-center">
-                <div className="text-6xl mb-4">🏆</div>
-                <h2 className="text-2xl font-bold text-white mb-4">Welcome!</h2>
-                <div className="text-gray-300 mb-6 space-y-2">
-                  <p>• Move the <span className="text-white font-semibold">white orb</span> to the <span className="text-green-500 font-semibold">green goal</span></p>
-                  <p>• Avoid <span className="text-black font-semibold bg-white px-1 rounded">black obstacles</span> and <span className="text-red-500 font-semibold">red death orbs</span></p>
-                  <p>• Use WASD or Arrow Keys to move</p>
-                  <p>• Complete levels quickly for bonus points!</p>
-                </div>
-                <button
-                  onClick={startGame}
-                  className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-8 rounded-lg flex items-center gap-2 mx-auto transition-colors"
-                >
-                  <span>▶️</span>
-                  <span>Start Game</span>
-                </button>
-              </div>
-            )}
-
-            {/* Game Grid */}
-            {gameState === 'playing' && (
-              <div className="bg-gray-800 rounded-lg p-4 md:p-6">
-                <div
-                  className="grid mx-auto"
-                  style={{
-                    gridTemplateColumns: `repeat(${gridSize}, ${cellSize}px)`,
-                    gridTemplateRows: `repeat(${gridSize}, ${cellSize}px)`,
-                    gap: '1px'
-                  }}
-                >
-                  {Array.from({ length: gridSize }, (_, y) =>
-                    Array.from({ length: gridSize }, (_, x) => renderCell(x, y))
-                  )}
-                </div>
-                <div className="text-center mt-4 text-gray-400 text-sm">
-                  Use WASD or Arrow Keys to move
-                </div>
-              </div>
-            )}
-
-            {/* Loss Screen */}
-            {gameState === 'lost' && (
-              <div className="bg-gray-800 rounded-lg p-8 text-center">
-                <div className="text-6xl mb-4">💥</div>
-                <h2 className="text-3xl font-bold text-red-400 mb-4">Game Over!</h2>
-                <div className="text-white text-xl mb-2">
-                  Reached Level: {level}
-                </div>
-                <div className="text-white text-xl mb-6">
-                  Final Score: <span className="font-bold text-yellow-400">{totalScore}</span>
-                </div>
-                <button
-                  onClick={startGame}
-                  className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-8 rounded-lg flex items-center gap-2 mx-auto transition-colors"
-                >
-                  <span>🔄</span>
-                  <span>Play Again</span>
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      );
+<meta charset="UTF-8">
+<title>Liten Orb Puzzle</title>
+<style>
+    /* Definer fargevariabler for lys modus */
+    :root {
+        /* Justér disse variablene for å endre fargene i lys modus */
+        --bg-color: #ffffff;      /* bakgrunnsfarge for kroppen */
+        --text-color: #000000;    /* tekstfarge */
+        --empty-color: #dddddd;   /* farge for tomme celler */
+        --player-color: #1a44cfff;  /* farge for spilleren */
+        --goal-color: #00cc44;    /* farge for målet */
+        --block-color: #000000;   /* farge for sorte blokker */
+        --hazard-color: #ff2222;  /* farge for røde feller */
+        --status-color: #555555;  /* farge for statusmeldingene */
+        --bonus-color: #ffd700;   /* farge for gule bonuskuler */
+    }
+    /* Overstyr variablene i mørk modus */
+    body.dark-mode {
+        /* Variabler for mørk modus - endre disse for å justere temaet */
+        --bg-color: #1a1a1a;
+        --text-color: #f0f0f0;
+        --empty-color: #333333;
+        --player-color: #e6e6e6;
+        --goal-color: #33aa55;
+        --block-color: #000000;
+        --hazard-color: #cc4444;
+        --status-color: #bbbbbb;
+        --bonus-color: #e6c200;
+    }
+    html, body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        overflow: hidden; /* unngå scrollbars */
+    }
+    body {
+        font-family: Arial, sans-serif;
+        /* gjør at spillområdet alltid er sentrert på skjermen */
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        background-color: var(--bg-color);
+        color: var(--text-color);
     }
 
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<OrbGame />);
-  </script>
+    /* Gjør tittelen mindre slik at den ikke tar opp for mye av skjermen */
+    h1 {
+        font-size: 1.4em;
+        margin-top: 0;
+        margin-bottom: 4px;
+    }
+    #scoreboard {
+        margin: 10px;
+        font-size: 1.2em;
+    }
+    /* gjør brettet responsivt slik at det passer på ulike skjermer */
+    #gameContainer {
+        /*
+         * Spillbrettets størrelse kontrolleres dynamisk i JavaScript basert på
+         * gridWidth og gridHeight. Vi setter ikke fast width/height her, slik
+         * at vi kan beregne brettets forholdstall (aspect ratio) på egenhånd.
+         * Containeren er fremdeles et grid, med et lite mellomrom mellom cellene.
+         */
+        display: grid;
+        gap: 2px;
+        margin: 10px 0;
+        /* La brettet sentrere seg horisontalt når bredden justeres av JS */
+        margin-left: auto;
+        margin-right: auto;
+    }
+    /* hver celle fyller en brøkdel av brettet og holder kvadratisk form */
+    .cell {
+        /* cellstørrelsen bestemmes av gridens rad- og kolonnefraksjoner samt containerens aspect ratio */
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background-color 0.2s;
+    }
+    .empty {
+        background-color: var(--empty-color);
+    }
+    .player {
+        background-color: var(--player-color);
+        box-shadow: 0 0 8px rgba(0,0,0,0.3);
+    }
+    .goal {
+        background-color: var(--goal-color);
+    }
+    .block {
+        background-color: var(--block-color);
+    }
+    .hazard {
+        background-color: var(--hazard-color);
+    }
+
+    /* nye bonuskuler som gir ekstra poeng */
+    .bonus {
+        background-color: var(--bonus-color);
+    }
+
+    /* statusmeldingen vises mellom nivåer og fjernes automatisk */
+    /* statusmeldingen plasseres absolutt over brettet slik at den ikke påvirker layouten */
+    #statusMessage {
+        position: absolute;
+        top: 80px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 100%;
+        text-align: center;
+        font-size: 0.9em;
+        color: var(--status-color);
+        pointer-events: none;
+    }
+
+    /* wrapper for poeng og restart-knapp */
+    #scoreWrapper {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-top: 8px;
+    }
+    #scoreboard {
+        font-size: 1em;
+    }
+    #restartBtn {
+        background: none;
+        border: 1px solid var(--text-color);
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.9em;
+        color: var(--text-color);
+        cursor: pointer;
+    }
+
+    /* kontroller for mørk/lys-modus og lenke */
+    #controls {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        display: flex;
+        gap: 12px;
+        align-items: center;
+    }
+    #controls button {
+        background: none;
+        border: none;
+        font-size: 1.4em;
+        cursor: pointer;
+        color: var(--text-color);
+    }
+    #controls a {
+        text-decoration: none;
+        color: var(--text-color);
+        font-size: 0.9em;
+        border: 1px solid var(--text-color);
+        padding: 4px 6px;
+        border-radius: 4px;
+    }
+
+    /* Startoverlegg som dekker hele skjermen før og mellom spill */
+    #startOverlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 20;
+        /* Skjul overlegget som standard; vis det via JS når det trengs */
+        display: none;
+    }
+    #startContent {
+        background-color: var(--bg-color);
+        color: var(--text-color);
+        padding: 20px 30px;
+        border-radius: 8px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        text-align: center;
+    }
+    #startContent p {
+        margin-top: 0;
+        margin-bottom: 12px;
+        font-size: 1em;
+    }
+    #startContent button {
+        background: none;
+        border: 1px solid var(--text-color);
+        padding: 6px 12px;
+        border-radius: 4px;
+        font-size: 1em;
+        cursor: pointer;
+        color: var(--text-color);
+    }
+
+    /* Instruksjonsboks i startskjermen */
+    #instructions {
+        border: 1px solid var(--empty-color);
+        background-color: var(--empty-color);
+        color: var(--text-color);
+        padding: 8px 10px;
+        border-radius: 4px;
+        font-size: 0.9em;
+        line-height: 1.3;
+        max-width: 300px;
+        white-space: pre-line;
+    }
+</style>
+</head>
+<body>
+<h1>Liten Orb Puzzle</h1>
+<!-- wrapper for poeng, nivå og restart-knapp -->
+<div id="scoreWrapper">
+  <div id="scoreboard">
+    Nivå: <span id="level">1</span> | Poeng: <span id="score">0</span> | Høyeste: <span id="highScore">0</span> | Tid: <span id="time">0.0</span> sek | Trekk: <span id="movesLeft">0</span>
+  </div>
+  <!-- Restart-knappen vises kun når spilleren taper. Den flyttes ut av scoreboardet i CSS
+       og vises kun når gameOver = true. -->
+  <button id="restartBtn" style="display:none;" title="Start spillet på nytt">Restart</button>
+</div>
+<!-- kontroller: mørk/lys-modus og lenke -->
+<div id="controls">
+  <button id="themeToggle" title="Bytt mellom mørk og lys modus">🌙</button>
+  <a id="sarcasmLink" href="https://sarcasm.games" target="_blank" title="Besøk sarcasm.games">sarcasm.games</a>
+</div>
+<!-- statusmelding for raske nivåoverganger -->
+<div id="statusMessage" class="status-message"></div>
+<div id="gameContainer"></div>
+
+<!-- Start-/pauseskjerm som vises før og mellom spill. Inneholder en play-knapp og valgfri melding.  -->
+<div id="startOverlay">
+  <div id="startContent">
+    <!-- Velkomst-/sluttmelding settes dynamisk i JS -->
+    <p id="startMessage" style="font-weight:bold; font-size:1.2em; margin-bottom:8px;">Velkommen!</p>
+    <!-- Instruksjonstekst som forklarer spilleregler og kontroller -->
+    <div id="instructions">
+      Bruk piltastene eller WASD for å flytte den hvite kula til den grønne.<br>
+      Unngå svarte blokkeringer og røde feller som avslutter spillet.<br>
+      Samle gule bonuskuler for ekstra poeng.<br>
+      Du har begrenset antall trekk – planlegg ruten din!<br>
+      Poengene beregnes som antall ruter på brettet minus tiden du bruker (i sekunder), så større brett gir flere basispoeng, men jo raskere du er jo bedre. Bonuskuler gir ekstra poeng.
+    </div>
+    <button id="startButton" style="margin-top:12px;">Play</button>
+  </div>
+</div>
+<script>
+// Spillvariabler
+// baseSize angir den «kvadratiske» basestørrelsen på brettet. gridWidth og gridHeight kan
+// variere fra baseSize for å lage rektangulære brett. baseSize øker jevnt med nivået.
+let baseSize = 3;
+let gridWidth = 3;
+let gridHeight = 3;
+let board = [];
+let playerPos = {x:0, y:0};
+let goalPos = {x:0, y:0};
+let timerInterval;
+let startTime;
+let score = 0;
+let level = 1;
+let gameOver = false;
+// Antall trekk spilleren har igjen i det nåværende nivået. Dette initialiseres
+// i resetMoves() når brettet genereres. Endre formelen i resetMoves() for å
+// justere vanskeligheten (flere eller færre trekk).
+let movesLeft = 0;
+
+// Høyeste poengsum lagret i localStorage. Dette oppdateres ved spillslutt hvis
+// spilleren oppnår en ny rekord. Høy score vises i poengtavlen og
+// oppmuntrer til å spille én runde til.
+let highScore = 0;
+
+// Funksjon for å vise start-/spillslutt-overlegget med en egendefinert melding.
+function showStartOverlay(message) {
+    const overlay = document.getElementById('startOverlay');
+    const messageEl = document.getElementById('startMessage');
+    if (messageEl) {
+        messageEl.textContent = message || 'Velkommen!';
+    }
+    if (overlay) {
+        overlay.style.display = 'flex';
+    }
+}
+
+// Funksjon for å skjule startoverlegget
+function hideStartOverlay() {
+    const overlay = document.getElementById('startOverlay');
+    if (overlay) {
+        overlay.style.display = 'none';
+    }
+}
+
+// håndter mørk/lys-modus
+function applyStoredTheme() {
+    const stored = localStorage.getItem('theme');
+    const isDark = stored === 'dark';
+    const body = document.body;
+    const toggleButton = document.getElementById('themeToggle');
+    if (isDark) {
+        body.classList.add('dark-mode');
+    } else {
+        body.classList.remove('dark-mode');
+    }
+    // oppdater ikon
+    if (toggleButton) {
+        toggleButton.textContent = isDark ? '☀️' : '🌙';
+    }
+}
+
+function toggleTheme() {
+    const body = document.body;
+    const isDark = body.classList.toggle('dark-mode');
+    const toggleButton = document.getElementById('themeToggle');
+    if (toggleButton) {
+        toggleButton.textContent = isDark ? '☀️' : '🌙';
+    }
+    localStorage.setItem('theme', isDark ? 'dark' : 'light');
+}
+
+// Sjekk om det finnes en sti fra spilleren til målet, gitt gjeldende brett
+// Vi bruker bredde-først-søk (BFS) og behandler både blokkeringer og feller som ugjennomtrengelige.
+function hasPath() {
+    const queue = [];
+    // Opprett besøkt-matrisen basert på gridHeight og gridWidth. gridHeight er antall rader,
+    // gridWidth er antall kolonner.
+    const visited = Array.from({ length: gridHeight }, () => Array(gridWidth).fill(false));
+    queue.push({ x: playerPos.x, y: playerPos.y });
+    visited[playerPos.y][playerPos.x] = true;
+    const directions = [
+        { dx: 1, dy: 0 },
+        { dx: -1, dy: 0 },
+        { dx: 0, dy: 1 },
+        { dx: 0, dy: -1 },
+    ];
+    while (queue.length > 0) {
+        const { x, y } = queue.shift();
+        // hvis vi når målet, er brettet løsbart
+        if (x === goalPos.x && y === goalPos.y) {
+            return true;
+        }
+        for (const { dx, dy } of directions) {
+            const nx = x + dx;
+            const ny = y + dy;
+            if (
+                nx >= 0 && nx < gridWidth && ny >= 0 && ny < gridHeight &&
+                !visited[ny][nx] &&
+                board[ny][nx] !== 'block' &&
+                board[ny][nx] !== 'hazard'
+            ) {
+                visited[ny][nx] = true;
+                queue.push({ x: nx, y: ny });
+            }
+        }
+    }
+    return false;
+}
+
+function initBoard() {
+    // Vi ønsker å generere et brett som alltid kan løses.
+    // Derfor forsøker vi flere ganger til en gyldig sti fra spiller til mål finnes.
+    let solvable = false;
+    let attempts = 0;
+    while (!solvable) {
+        attempts++;
+        // start med tomt brett basert på gridHeight og gridWidth
+        board = [];
+        for (let y = 0; y < gridHeight; y++) {
+            board[y] = [];
+            for (let x = 0; x < gridWidth; x++) {
+                board[y][x] = 'empty';
+            }
+        }
+        // plasser spilleren på en tilfeldig tom celle for variasjon
+        // (Hvis du ønsker at spilleren alltid skal starte i midten, kan du endre dette.)
+        let placedPlayer = false;
+        while (!placedPlayer) {
+            const px = Math.floor(Math.random() * gridWidth);
+            const py = Math.floor(Math.random() * gridHeight);
+            if (board[py][px] === 'empty') {
+                playerPos = { x: px, y: py };
+                board[playerPos.y][playerPos.x] = 'player';
+                placedPlayer = true;
+            }
+        }
+        // plasser målet på tilfeldig tom celle som ikke er spiller
+        let placedGoal = false;
+        while (!placedGoal) {
+            const gx = Math.floor(Math.random() * gridWidth);
+            const gy = Math.floor(Math.random() * gridHeight);
+            if (board[gy][gx] === 'empty') {
+                board[gy][gx] = 'goal';
+                goalPos = { x: gx, y: gy };
+                placedGoal = true;
+            }
+        }
+        // beregn antall hindringer og feller basert på nivå og brettstørrelse
+        const totalCells = gridWidth * gridHeight;
+        // ********* Justér vanskelighetsparametre her *********
+        // baseBlockPercent: andel av rutenettet som skal fylles med sorte blokker på nivå 1 (0.1 = 10%).
+        // baseHazardPercent: andel av rutenettet som skal fylles med røde feller på nivå 1.
+        // For hvert nivå økes andelen med et lite påslag (0.01 = 1 % for blokker og 0.007 = 0.7 % for feller).
+        // blockPercent og hazardPercent har også en øvre grense (0.2 for blokker, 0.15 for feller).
+        const baseBlockPercent = 0.1;
+        const baseHazardPercent = 0.05;
+        const blockPercent = Math.min(0.2, baseBlockPercent + (level - 1) * 0.01);
+        const hazardPercent = Math.min(0.15, baseHazardPercent + (level - 1) * 0.007);
+        // beregn antall blokker og feller basert på andelene over
+        let numBlocks = Math.floor(totalCells * blockPercent);
+        let numHazards = Math.floor(totalCells * hazardPercent);
+        // maxObstaclesTotal: maksimal andel av brettet (her 35 %) som kan fylles med hindringer (blokker + feller).
+        const maxObstaclesTotal = Math.floor(totalCells * 0.35);
+        const totalObstacles = numBlocks + numHazards;
+        if (totalObstacles > maxObstaclesTotal) {
+            const ratio = maxObstaclesTotal / totalObstacles;
+            numBlocks = Math.floor(numBlocks * ratio);
+            numHazards = Math.floor(numHazards * ratio);
+        }
+        placeRandomCells('block', numBlocks);
+        placeRandomCells('hazard', numHazards);
+        // beregn antall bonuskuler (gule) for dette nivået. Bonuskuler gir ekstra poeng
+        // men påvirker ikke brettets løsbarthet. Du kan justere formelen under for å
+        // endre hvor mange bonuskuler som plasseres. For eksempel starter vi med 1
+        // bonuskule og øker med ett for hver tredje nivå, begrenset til 5.
+        let numBonuses = 1 + Math.floor((level - 1) / 3);
+        numBonuses = Math.min(5, numBonuses);
+        placeRandomCells('bonus', numBonuses);
+        // sjekk om brettet har en sti til målet
+        solvable = hasPath();
+        // hvis ikke, prøv på nytt
+    }
+    // Tilbakestill antall trekk når et nytt brett genereres.
+    // Dette gjør at spilleren starter hvert nivå med en ny mengde trekk.
+    resetMoves();
+}
+
+function placeRandomCells(type, count) {
+    let placed = 0;
+    while (placed < count) {
+        let x = Math.floor(Math.random() * gridWidth);
+        let y = Math.floor(Math.random() * gridHeight);
+        if (board[y][x] === 'empty') {
+            board[y][x] = type;
+            placed++;
+        }
+    }
+}
+
+function drawBoard() {
+    const container = document.getElementById('gameContainer');
+    // Beregn størrelsen på containeren dynamisk. Ved rektangulære brett
+    // ønsker vi at lengste side skal fylle en viss andel av skjermen, og
+    // at den andre siden skal beregnes ut fra gridWidth/gridHeight.
+    // Vi tar utgangspunkt i den minste av vinduets bredde og høyde for å
+    // sikre at brettet ikke går utenfor skjermen. Juster scaleFactor for
+    // å endre hvor stor andel av skjermen brettet skal ta. Standard er 0.8
+    // (80 % av mindre vindusdimensjon).
+    const scaleFactor = 0.8;
+    // Maksimal absolutt størrelse (px) på lengste side. Du kan endre maxBoardSize
+    // for å forhindre at brettet blir for stort på store skjermer.
+    const maxBoardSize = 500;
+    const minDimension = Math.min(window.innerWidth, window.innerHeight);
+    let boardSquare = minDimension * scaleFactor;
+    if (boardSquare > maxBoardSize) boardSquare = maxBoardSize;
+    // Bestem om gridWidth eller gridHeight er den styrende for lengste side.
+    const ratio = gridWidth / gridHeight;
+    let widthPx, heightPx;
+    if (ratio >= 1) {
+        // Flere kolonner enn rader: brettet er bredere enn høyt.
+        widthPx = boardSquare;
+        heightPx = boardSquare / ratio;
+    } else {
+        // Flere rader enn kolonner: brettet er høyere enn bredt.
+        heightPx = boardSquare;
+        widthPx = boardSquare * ratio;
+    }
+    // Sett width og height på containeren.
+    container.style.width = `${widthPx}px`;
+    container.style.height = `${heightPx}px`;
+    // Definer gridstrukturen (kolonner og rader) slik at hver celle får
+    // lik fraksjon av containeren.
+    container.style.gridTemplateColumns = `repeat(${gridWidth}, 1fr)`;
+    container.style.gridTemplateRows = `repeat(${gridHeight}, 1fr)`;
+    // Rydd containeren før ny tegning
+    container.innerHTML = '';
+    for (let y = 0; y < gridHeight; y++) {
+        for (let x = 0; x < gridWidth; x++) {
+            const cell = document.createElement('div');
+            cell.classList.add('cell');
+            cell.classList.add(board[y][x]);
+            container.appendChild(cell);
+        }
+    }
+}
+
+function startTimer() {
+    startTime = Date.now();
+    if (timerInterval) clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+        const now = Date.now();
+        const elapsed = ((now - startTime)/1000).toFixed(1);
+        document.getElementById('time').textContent = elapsed;
+    }, 100);
+}
+
+function stopTimer() {
+    if (timerInterval) {
+        clearInterval(timerInterval);
+    }
+}
+
+function updateScoreboard() {
+    document.getElementById('score').textContent = score;
+    document.getElementById('level').textContent = level;
+    // Oppdater også antall gjenstående trekk i brukergrensesnittet.
+    document.getElementById('movesLeft').textContent = movesLeft;
+    document.getElementById('highScore').textContent = highScore;
+}
+
+// Tilbakestill antall tilgjengelige trekk for et nytt nivå. Trekk beregnes
+// basert på brettstørrelse og kan justeres for ønsket vanskelighetsgrad.
+// Standardinnstillingen under gir dobbelt så mange trekk som brettets størrelse,
+// pluss ett ekstra trekk. Du kan endre faktoren eller legge til et konstant
+// påslag for å gjøre spillet enklere eller vanskeligere.
+function resetMoves() {
+    // Beregn antall trekk ut fra bredde og høyde på brettet. Du kan justere formelen
+    // for å endre vanskelighetsgraden. Her gir vi spilleren like mange trekk som
+    // summen av brettets bredde og høyde pluss 2.
+    movesLeft = gridWidth + gridHeight + 2;
+    // Oppdater visningen umiddelbart slik at scoreboardet viser riktige verdier
+    document.getElementById('movesLeft').textContent = movesLeft;
+}
+
+function movePlayer(dx, dy) {
+    if (gameOver) return;
+    const newX = playerPos.x + dx;
+    const newY = playerPos.y + dy;
+    if (newX < 0 || newX >= gridWidth || newY < 0 || newY >= gridHeight) {
+        return; // kan ikke gå utenfor brettet
+    }
+    const destination = board[newY][newX];
+    if (destination === 'block') {
+        return; // kan ikke gå inn i hindring
+    } else if (destination === 'hazard') {
+        // spillet over
+        handleGameOver();
+        return;
+    } else if (destination === 'goal') {
+        handleSuccess();
+        return;
+    } else if (destination === 'bonus') {
+        // samler en bonuskule: gir ekstra poeng uten å avslutte nivået
+        // juster bonusPoeng for å endre hvor mye hver bonuskule er verdt
+        const bonusPoeng = 5;
+        score += bonusPoeng;
+        // flytt spilleren til bonusposisjonen
+        board[playerPos.y][playerPos.x] = 'empty';
+        playerPos.x = newX;
+        playerPos.y = newY;
+        board[playerPos.y][playerPos.x] = 'player';
+        drawBoard();
+        movesLeft--;
+        // oppdater scoreboard (score, trekk og eventuell høy score)
+        // sjekk om ny høy score er oppnådd midt i nivået
+        if (score > highScore) {
+            highScore = score;
+            localStorage.setItem('highScore', highScore);
+        }
+        updateScoreboard();
+        if (movesLeft <= 0) {
+            handleOutOfMoves();
+        }
+        return;
+    }
+    // flytt spilleren
+    board[playerPos.y][playerPos.x] = 'empty';
+    playerPos.x = newX;
+    playerPos.y = newY;
+    board[playerPos.y][playerPos.x] = 'player';
+    drawBoard();
+    // Reduser trekk og sjekk om spilleren har flere igjen.
+    movesLeft--;
+    // oppdater scoreboard slik at trekkverdien vises
+    document.getElementById('movesLeft').textContent = movesLeft;
+    if (movesLeft <= 0) {
+        handleOutOfMoves();
+        return;
+    }
+}
+
+function handleSuccess() {
+    // beregn tid og poeng
+    stopTimer();
+    const endTime = Date.now();
+    const elapsedSeconds = (endTime - startTime)/1000;
+    // poengformel: antall poeng øker med kvadratet av brettstørrelsen, minus tiden (i sekunder).
+    // Justér 'base' eller formelen for å endre poengberegningen.
+    // poengformel: antall poeng øker med arealet (bredde * høyde) minus tiden.
+    const base = gridWidth * gridHeight;
+    const gained = Math.max(0, Math.floor(base - elapsedSeconds));
+    score += gained;
+    level += 1;
+    // Øk basestørrelsen etter hver femte nivå.
+    // Formelen under beregner en ny baseSize ut fra nivået.
+    // Når (level-1) er 0-4 → floor((level-1)/5) = 0 og basestørrelsen forblir 3.
+    // Når (level-1) er 5-9 → floor((level-1)/5) = 1 og basestørrelsen blir 4, osv.
+    const newBase = 3 + Math.floor((level - 1) / 5);
+    baseSize = Math.min(12, newBase);
+    // Bestem om brettet skal være rektangulært i stedet for kvadratisk. Vi bruker en sjanse til å
+    // variere formfaktoren. Du kan justere rectChance for å påvirke hvor ofte dette skjer.
+    const rectChance = 0.3; // 30 % sjanse for rektangulært brett
+    if (Math.random() < rectChance && baseSize < 12) {
+        // Velg tilfeldig om vi skal øke bredden eller høyden med 1, hvis mulig
+        if (Math.random() < 0.5) {
+            gridWidth = Math.min(12, baseSize + 1);
+            gridHeight = baseSize;
+        } else {
+            gridHeight = Math.min(12, baseSize + 1);
+            gridWidth = baseSize;
+        }
+    } else {
+        // Standard kvadratisk brett
+        gridWidth = baseSize;
+        gridHeight = baseSize;
+    }
+    // vis en statusmelding i stedet for å stoppe spillet med alert
+    const statusEl = document.getElementById('statusMessage');
+    statusEl.textContent = `Bra jobbet! Du tjente ${gained} poeng på ${elapsedSeconds.toFixed(1)} sekunder.`;
+    // fjern meldingen etter et par sekunder
+    setTimeout(() => {
+        statusEl.textContent = '';
+    }, 2000);
+    // sørg for at restart-knappen skjules når man klarer et nivå
+    const restartButton = document.getElementById('restartBtn');
+    if (restartButton) {
+        restartButton.style.display = 'none';
+    }
+    // start neste nivå umiddelbart
+    initBoard();
+    updateScoreboard();
+    document.getElementById('time').textContent = '0.0';
+    drawBoard();
+    startTimer();
+}
+
+function handleGameOver() {
+    stopTimer();
+    gameOver = true;
+    // vis statusmelding uten å blokkere spillet
+    const statusEl = document.getElementById('statusMessage');
+    // Oppdater høy score hvis dette er en ny rekord
+    if (score > highScore) {
+        highScore = score;
+        localStorage.setItem('highScore', highScore);
+        statusEl.textContent = `Du traff en rød kule! Spillet er over. Ny rekord: ${score}`;
+    } else {
+        statusEl.textContent = `Du traff en rød kule! Spillet er over. Din endelige poengsum: ${score}`;
+    }
+    // oppdater poengtavlen så høy score vises korrekt
+    updateScoreboard();
+    // tøm statusmeldingen slik at den ikke vises under startoverlegget
+    statusEl.textContent = '';
+    // vis startoverlegg med play-knapp og sluttpoeng
+    showStartOverlay(`Spillet er over! Du fikk ${score} poeng.`);
+}
+
+// Når spilleren går tom for trekk før målet er nådd.
+function handleOutOfMoves() {
+    stopTimer();
+    gameOver = true;
+    const statusEl = document.getElementById('statusMessage');
+    // Oppdater høy score ved spillslutt og vis melding
+    if (score > highScore) {
+        highScore = score;
+        localStorage.setItem('highScore', highScore);
+        statusEl.textContent = `Du gikk tom for trekk! Spillet er over. Ny rekord: ${score}`;
+    } else {
+        statusEl.textContent = `Du gikk tom for trekk! Spillet er over. Din endelige poengsum: ${score}`;
+    }
+    updateScoreboard();
+    // tøm statusmeldingen slik at den ikke vises under startoverlegget
+    statusEl.textContent = '';
+    // vis startoverlegg med play-knapp og sluttpoeng
+    showStartOverlay(`Spillet er over! Du fikk ${score} poeng.`);
+}
+
+function restartGame() {
+    baseSize = 3;
+    gridWidth = 3;
+    gridHeight = 3;
+    score = 0;
+    level = 1;
+    gameOver = false;
+    initBoard();
+    updateScoreboard();
+    document.getElementById('time').textContent = '0.0';
+    drawBoard();
+    startTimer();
+    document.getElementById('restartBtn').style.display = 'none';
+}
+
+// Start et nytt spill fra startskjermen. Skjuler startoverlegget og
+// kaller restartGame() for å initialisere et nytt spill.
+function startGame() {
+    hideStartOverlay();
+    restartGame();
+}
+
+document.addEventListener('keydown', (event) => {
+    if (gameOver) return;
+    switch (event.key) {
+        case 'ArrowUp':
+        case 'w':
+        case 'W':
+            movePlayer(0, -1);
+            break;
+        case 'ArrowDown':
+        case 's':
+        case 'S':
+            movePlayer(0, 1);
+            break;
+        case 'ArrowLeft':
+        case 'a':
+        case 'A':
+            movePlayer(-1, 0);
+            break;
+        case 'ArrowRight':
+        case 'd':
+        case 'D':
+            movePlayer(1, 0);
+            break;
+    }
+});
+
+document.getElementById('restartBtn').addEventListener('click', restartGame);
+
+// initialiser spillet ved lasting
+window.onload = () => {
+    // påfør lagret tema (lys/mørk modus)
+    applyStoredTheme();
+    // legg til klikkhåndtering for tema-knappen
+    const themeBtn = document.getElementById('themeToggle');
+    if (themeBtn) {
+        themeBtn.addEventListener('click', toggleTheme);
+    }
+    // hent lagret høyeste poengsum fra localStorage
+    const storedHigh = localStorage.getItem('highScore');
+    if (storedHigh !== null) {
+        highScore = parseInt(storedHigh) || 0;
+    }
+    // Oppdater poengtavlen med highscore før spillstart
+    updateScoreboard();
+    // vis startoverlegget med en velkomstmelding
+    showStartOverlay('Velkommen!');
+    // legg til klikkhåndtering for startknappen
+    const startBtn = document.getElementById('startButton');
+    if (startBtn) {
+        startBtn.addEventListener('click', startGame);
+    }
+};
+</script>
 </body>
 </html>
