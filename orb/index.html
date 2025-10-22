@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Orb Navigator</title>
+  <!-- Tailwind via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen">
+  <div id="root"></div>
+
+  <!-- React 18 + ReactDOM UMD via CDN -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <!-- Babel for inline JSX -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <!-- Your game (JSX/React) -->
+  <script type="text/babel">
+    const { useState, useEffect, useCallback } = React;
+
+    // ============================================
+    // CUSTOMIZATION SETTINGS (kept for easy tweaks)
+    // ============================================
+    const COLORS = {
+      player: 'bg-white',
+      goal: 'bg-green-500',
+      obstacle: 'bg-black',
+      death: 'bg-red-500',
+      cellBackground: 'bg-gray-800',
+      cellBorder: 'border-gray-700'
+    };
+
+    const SCORING = {
+      baseTimeBonus: 1000,
+      minTimeBonus: 100,
+      levelMultiplier: 500,
+    };
+
+    const DIFFICULTY = {
+      startGridSize: 3,
+      gridGrowthRate: 0.5,
+      maxGridSize: 10,
+      baseObstacles: 2,
+      obstaclesPerLevel: 1,
+      maxObstaclePercent: 0.25,
+      redOrbStartLevel: 3,
+      redOrbGrowthRate: 0.5,
+    };
+    // ============================================
+    // END CUSTOMIZATION SETTINGS
+    // ============================================
+
+    function OrbGame() {
+      const [gameState, setGameState] = useState('menu'); // menu, playing, won, lost
+      const [level, setLevel] = useState(1);
+      const [gridSize, setGridSize] = useState(3);
+      const [playerPos, setPlayerPos] = useState({ x: 1, y: 1 });
+      const [goalPos, setGoalPos] = useState({ x: 2, y: 2 });
+      const [obstacles, setObstacles] = useState([]);
+      const [redOrbs, setRedOrbs] = useState([]);
+      const [startTime, setStartTime] = useState(null);
+      const [score, setScore] = useState(0);
+      const [totalScore, setTotalScore] = useState(0);
+      const [elapsedTime, setElapsedTime] = useState(0);
+
+      // Check if path exists using BFS
+      const hasPath = (size, start, goal, obstacles) => {
+        const visited = new Set();
+        const queue = [start];
+        visited.add(`${start.x},${start.y}`);
+
+        while (queue.length > 0) {
+          const pos = queue.shift();
+          if (pos.x === goal.x && pos.y === goal.y) return true;
+
+          const moves = [[0, 1], [0, -1], [1, 0], [-1, 0]];
+          for (const [dx, dy] of moves) {
+            const newX = pos.x + dx;
+            const newY = pos.y + dy;
+            const key = `${newX},${newY}`;
+
+            if (
+              newX >= 0 && newX < size &&
+              newY >= 0 && newY < size &&
+              !visited.has(key) &&
+              !obstacles.some(o => o.x === newX && o.y === newY)
+            ) {
+              visited.add(key);
+              queue.push({ x: newX, y: newY });
+            }
+          }
+        }
+        return false;
+      };
+
+      // Generate level obstacles and orbs
+      const generateLevel = useCallback((lvl) => {
+        const size = Math.min(3 + Math.floor(lvl / 2), 10);
+        setGridSize(size);
+
+        const center = Math.floor(size / 2);
+        setPlayerPos({ x: center, y: center });
+
+        let goalX, goalY, newObstacles, newRedOrbs;
+        let attempts = 0;
+        const maxAttempts = 100;
+
+        do {
+          // Goal (not on player)
+          do {
+            goalX = Math.floor(Math.random() * size);
+            goalY = Math.floor(Math.random() * size);
+          } while (goalX === center && goalY === center);
+
+          // Black obstacles
+          const numObstacles = Math.min(lvl + 2, Math.floor(size * size * 0.25));
+          newObstacles = [];
+          for (let i = 0; i < numObstacles; i++) {
+            let x, y;
+            let obstacleAttempts = 0;
+            do {
+              x = Math.floor(Math.random() * size);
+              y = Math.floor(Math.random() * size);
+              obstacleAttempts++;
+            } while (
+              obstacleAttempts < 50 &&
+              ((x === center && y === center) ||
+                (x === goalX && y === goalY) ||
+                newObstacles.some(o => o.x === x && o.y === y))
+            );
+            if (obstacleAttempts < 50) {
+              newObstacles.push({ x, y });
+            }
+          }
+
+          // Red orbs (from level 3+)
+          const numRedOrbs = Math.max(0, Math.floor((lvl - 2) / 2));
+          newRedOrbs = [];
+          for (let i = 0; i < numRedOrbs; i++) {
+            let x, y;
+            let redAttempts = 0;
+            do {
+              x = Math.floor(Math.random() * size);
+              y = Math.floor(Math.random() * size);
+              redAttempts++;
+            } while (
+              redAttempts < 50 &&
+              ((x === center && y === center) ||
+                (x === goalX && y === goalY) ||
+                newObstacles.some(o => o.x === x && o.y === y) ||
+                newRedOrbs.some(o => o.x === x && o.y === y))
+            );
+            if (redAttempts < 50) {
+              newRedOrbs.push({ x, y });
+            }
+          }
+
+          attempts++;
+        } while (
+          attempts < maxAttempts &&
+          !hasPath(size, { x: Math.floor(size / 2), y: Math.floor(size / 2) }, { x: goalX, y: goalY }, [...newObstacles, ...newRedOrbs])
+        );
+
+        setGoalPos({ x: goalX, y: goalY });
+        setObstacles(newObstacles);
+        setRedOrbs(newRedOrbs);
+      }, []);
+
+      // Start game
+      const startGame = () => {
+        setLevel(1);
+        setTotalScore(0);
+        generateLevel(1);
+        setGameState('playing');
+        setStartTime(Date.now());
+        setElapsedTime(0);
+      };
+
+      // Timer
+      useEffect(() => {
+        let interval;
+        if (gameState === 'playing' && startTime) {
+          interval = setInterval(() => {
+            setElapsedTime(Date.now() - startTime);
+          }, 10);
+        }
+        return () => clearInterval(interval);
+      }, [gameState, startTime]);
+
+      // Move player
+      const movePlayer = useCallback((dx, dy) => {
+        if (gameState !== 'playing') return;
+
+        const newX = playerPos.x + dx;
+        const newY = playerPos.y + dy;
+
+        // Bounds
+        if (newX < 0 || newX >= gridSize || newY < 0 || newY >= gridSize) return;
+
+        // Obstacles
+        if (obstacles.some(o => o.x === newX && o.y === newY)) return;
+
+        setPlayerPos({ x: newX, y: newY });
+
+        // Red orb collision
+        if (redOrbs.some(o => o.x === newX && o.y === newY)) {
+          setGameState('lost');
+          return;
+        }
+
+        // Goal collision
+        if (newX === goalPos.x && newY === goalPos.y) {
+          const timeBonus = Math.max(1000 - elapsedTime, 100);
+          const levelScore = Math.round(timeBonus + (level * 500));
+          setScore(levelScore);
+          setTotalScore(prev => prev + levelScore);
+
+          // Next level
+          const newLevel = level + 1;
+          setLevel(newLevel);
+          generateLevel(newLevel);
+          setStartTime(Date.now());
+          setElapsedTime(0);
+        }
+      }, [gameState, playerPos, gridSize, obstacles, redOrbs, goalPos, elapsedTime, level, generateLevel]);
+
+      // Keyboard
+      useEffect(() => {
+        const handleKeyPress = (e) => {
+          if (gameState !== 'playing') return;
+          const k = e.key.toLowerCase();
+          if (['arrowup', 'w', 'arrowdown', 's', 'arrowleft', 'a', 'arrowright', 'd'].includes(k)) {
+            e.preventDefault();
+          }
+          switch (k) {
+            case 'arrowup':
+            case 'w':
+              movePlayer(0, -1); break;
+            case 'arrowdown':
+            case 's':
+              movePlayer(0, 1); break;
+            case 'arrowleft':
+            case 'a':
+              movePlayer(-1, 0); break;
+            case 'arrowright':
+            case 'd':
+              movePlayer(1, 0); break;
+            default: break;
+          }
+        };
+        window.addEventListener('keydown', handleKeyPress);
+        return () => window.removeEventListener('keydown', handleKeyPress);
+      }, [gameState, movePlayer]);
+
+      // Grid sizing
+      const maxGridWidth = typeof window !== 'undefined' ? Math.min(600, window.innerWidth - 48) : 600;
+      const cellSize = Math.floor(maxGridWidth / gridSize);
+
+      // Render cell
+      const renderCell = (x, y) => {
+        const isPlayer = playerPos.x === x && playerPos.y === y;
+        const isGoal = goalPos.x === x && goalPos.y === y;
+        const isObstacle = obstacles.some(o => o.x === x && o.y === y);
+        const isRedOrb = redOrbs.some(o => o.x === x && o.y === y);
+
+        return (
+          <div
+            key={`${x}-${y}`}
+            className={`bg-gray-800 border border-gray-700 flex items-center justify-center`}
+            style={{
+              width: `${cellSize}px`,
+              height: `${cellSize}px`,
+              minWidth: `${cellSize}px`,
+              minHeight: `${cellSize}px`
+            }}
+          >
+            {isPlayer && <div className="w-4/5 h-4/5 bg-white rounded-full shadow-lg"></div>}
+            {isGoal && <div className="w-4/5 h-4/5 bg-green-500 rounded-full shadow-lg animate-pulse"></div>}
+            {isObstacle && <div className="w-4/5 h-4/5 bg-black rounded-full shadow-lg"></div>}
+            {isRedOrb && <div className="w-4/5 h-4/5 bg-red-500 rounded-full shadow-lg"></div>}
+          </div>
+        );
+      };
+
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 flex items-center justify-center p-4">
+          <div className="max-w-2xl w-full">
+            {/* Header */}
+            <div className="text-center mb-6">
+              <h1 className="text-4xl font-bold text-white mb-2">Orb Navigator</h1>
+              <div className="flex justify-center gap-8 text-white">
+                <div className="text-lg">
+                  <span className="text-gray-400">Level:</span> <span className="font-bold">{level}</span>
+                </div>
+                <div className="text-lg">
+                  <span className="text-gray-400">Score:</span> <span className="font-bold">{totalScore}</span>
+                </div>
+                {gameState === 'playing' && (
+                  <div className="text-lg">
+                    <span className="text-gray-400">Time:</span> <span className="font-bold">{(elapsedTime / 1000).toFixed(2)}s</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Menu */}
+            {gameState === 'menu' && (
+              <div className="bg-gray-800 rounded-lg p-8 text-center">
+                <div className="text-6xl mb-4">🏆</div>
+                <h2 className="text-2xl font-bold text-white mb-4">Welcome!</h2>
+                <div className="text-gray-300 mb-6 space-y-2">
+                  <p>• Move the <span className="text-white font-semibold">white orb</span> to the <span className="text-green-500 font-semibold">green goal</span></p>
+                  <p>• Avoid <span className="text-black font-semibold bg-white px-1 rounded">black obstacles</span> and <span className="text-red-500 font-semibold">red death orbs</span></p>
+                  <p>• Use WASD or Arrow Keys to move</p>
+                  <p>• Complete levels quickly for bonus points!</p>
+                </div>
+                <button
+                  onClick={startGame}
+                  className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-8 rounded-lg flex items-center gap-2 mx-auto transition-colors"
+                >
+                  <span>▶️</span>
+                  <span>Start Game</span>
+                </button>
+              </div>
+            )}
+
+            {/* Game Grid */}
+            {gameState === 'playing' && (
+              <div className="bg-gray-800 rounded-lg p-4 md:p-6">
+                <div
+                  className="grid mx-auto"
+                  style={{
+                    gridTemplateColumns: `repeat(${gridSize}, ${cellSize}px)`,
+                    gridTemplateRows: `repeat(${gridSize}, ${cellSize}px)`,
+                    gap: '1px'
+                  }}
+                >
+                  {Array.from({ length: gridSize }, (_, y) =>
+                    Array.from({ length: gridSize }, (_, x) => renderCell(x, y))
+                  )}
+                </div>
+                <div className="text-center mt-4 text-gray-400 text-sm">
+                  Use WASD or Arrow Keys to move
+                </div>
+              </div>
+            )}
+
+            {/* Loss Screen */}
+            {gameState === 'lost' && (
+              <div className="bg-gray-800 rounded-lg p-8 text-center">
+                <div className="text-6xl mb-4">💥</div>
+                <h2 className="text-3xl font-bold text-red-400 mb-4">Game Over!</h2>
+                <div className="text-white text-xl mb-2">
+                  Reached Level: {level}
+                </div>
+                <div className="text-white text-xl mb-6">
+                  Final Score: <span className="font-bold text-yellow-400">{totalScore}</span>
+                </div>
+                <button
+                  onClick={startGame}
+                  className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-8 rounded-lg flex items-center gap-2 mx-auto transition-colors"
+                >
+                  <span>🔄</span>
+                  <span>Play Again</span>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<OrbGame />);
+  </script>
+</body>
+</html>
