@@ -431,15 +431,17 @@
       <button id="exportJsonBtn">Export JSON</button>
       <input type="file" id="importJsonInput" accept=".json" style="display:none" />
       <button id="importJsonBtn">Import JSON</button>
-      <!-- Ny knapp for å eksportere som bilde (PNG) -->
+      <!-- Knapp for å eksportere som bilde (PNG) -->
       <button id="exportImageBtn">Export image</button>
+      <!-- #adding Knapp for å eksportere som tekstfil -->
+      <button id="exportTextBtn">Export text file</button>
       <a href="https://sarcasm.games/">
     <button>Back to main</button>
 </a>
     </div>
 
     <!-- Søppelbøtte for å dra og slippe elementer som skal slettes -->
-    <div id="trashBin" title="Dra elementer hit for å slette">🗑 Erase</div>
+    <div id="trashBin" title="Dra elementer hit for å slette">🗑 Erase</div>
 
     <!-- Overlegg og panel for kolonneinnstillinger -->
     <div id="settingsOverlay"></div>
@@ -1434,9 +1436,9 @@
       URL.revokeObjectURL(url);
     });
 
-    // Eksporter som bilde (PNG). Vi bruker html2canvas til å tegne .container
+    // #changing Export as bilde (PNG) - fixed color picker rendering
     document.getElementById('exportImageBtn').addEventListener('click', () => {
-      // Oppdater data og counts før eksport for å sikre at alt er korrekt
+      // #remark Oppdater data og counts før eksport for å sikre at alt er korrekt
       updateDataFromDOM();
       updateCountsAndProgress();
       const containerEl = document.querySelector('.container');
@@ -1444,17 +1446,34 @@
         alert('Cannot export. html2canvas unavailable.');
         return;
       }
-      // Elementer vi vil skjule under eksport (kontroller og søppelbøtte)
+      // #remark Elementer vi vil skjule under eksport (kontroller og søppelbøtte)
       const toHide = Array.from(document.querySelectorAll('.controls, #trashBin, #settingsOverlay, #settingsPanel, #duplicateMsg'));
       const originalDisplays = new Map();
       toHide.forEach(el => {
         originalDisplays.set(el, el.style.visibility);
         el.style.visibility = 'hidden';
       });
-      // Scroll til toppen for å sikre at alt er synlig
+      
+      // #adding Hide color pickers and replace with colored squares for better image export
+      const colorInputs = Array.from(document.querySelectorAll('.tier-footer input[type="color"]'));
+      const colorReplacements = [];
+      colorInputs.forEach(input => {
+        const color = input.value;
+        const replacement = document.createElement('div');
+        replacement.style.width = '1.3rem';
+        replacement.style.height = '1.3rem';
+        replacement.style.backgroundColor = color;
+        replacement.style.border = '1px solid rgba(0,0,0,0.2)';
+        replacement.style.borderRadius = '2px';
+        input.parentNode.insertBefore(replacement, input);
+        input.style.display = 'none';
+        colorReplacements.push({ input, replacement });
+      });
+      
+      // #remark Scroll til toppen for å sikre at alt er synlig
       const previousScroll = { x: window.scrollX, y: window.scrollY };
       window.scrollTo(0, 0);
-      // Bruk html2canvas til å fange containeren
+      // #remark Bruk html2canvas til å fange containeren
       html2canvas(containerEl, { backgroundColor: null }).then(canvas => {
         canvas.toBlob(blob => {
           if (blob) {
@@ -1470,11 +1489,16 @@
           } else {
             alert('Failed to generate image');
           }
-          // Gjenopprett synlighet
+          // #remark Gjenopprett synlighet
           toHide.forEach(el => {
             el.style.visibility = originalDisplays.get(el) || '';
           });
-          // Gjenopprett scrollposisjon
+          // #adding Restore color pickers
+          colorReplacements.forEach(({ input, replacement }) => {
+            replacement.remove();
+            input.style.display = '';
+          });
+          // #remark Gjenopprett scrollposisjon
           window.scrollTo(previousScroll.x, previousScroll.y);
         });
       }).catch(err => {
@@ -1483,8 +1507,75 @@
         toHide.forEach(el => {
           el.style.visibility = originalDisplays.get(el) || '';
         });
+        // #adding Restore color pickers on error
+        colorReplacements.forEach(({ input, replacement }) => {
+          replacement.remove();
+          input.style.display = '';
+        });
         window.scrollTo(previousScroll.x, previousScroll.y);
       });
+    });
+
+    // #adding Export as text file functionality - with ranking starting at 1
+    document.getElementById('exportTextBtn').addEventListener('click', () => {
+      // #remark Update data model before export to ensure consistency
+      updateDataFromDOM();
+      
+      // #remark Build the text content with title and ranked items
+      let textContent = '';
+      
+      // #remark Add the page title at the top
+      textContent += pageTitle + '\n';
+      textContent += '='.repeat(pageTitle.length) + '\n\n';
+      
+      // #remark Start ranking from 1 (highest rank at top)
+      let currentRank = 1;
+      
+      // #remark Iterate through each tier and add items with ascending rank numbers
+      tiers.forEach((tier, tierIndex) => {
+        // #remark Skip empty tiers
+        if (tier.items.length === 0) return;
+        
+        // #remark Add tier name as section header
+        textContent += `${tier.name}\n`;
+        textContent += '-'.repeat(tier.name.length) + '\n';
+        
+        // #remark Add each item with its rank number
+        tier.items.forEach(item => {
+          textContent += `${currentRank}. ${item.text}`;
+          
+          // #remark Add extra fields if they exist and are configured to show
+          const extraArr = Array.isArray(item.extra) ? item.extra : [];
+          const extraParts = [];
+          for (let i = 0; i < MAX_EXTRA_COLS; i++) {
+            const value = extraArr[i];
+            if (value !== undefined && value !== null && String(value).trim()) {
+              const cfg = columnSettings[i] || { label: `Kol ${String.fromCharCode(66 + i)}`, showHover: true, showPermanent: false };
+              extraParts.push(`${cfg.label}: ${String(value).trim()}`);
+            }
+          }
+          if (extraParts.length > 0) {
+            textContent += ` (${extraParts.join(', ')})`;
+          }
+          
+          textContent += '\n';
+          currentRank++; // #remark Increase rank for next item
+        });
+        
+        textContent += '\n'; // #remark Add blank line between tiers
+      });
+      
+      // #remark Create blob and trigger download
+      const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const timestamp = new Date().toISOString().split('T')[0];
+      a.download = `tier_list_${timestamp}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     });
 
     // Klikk på importknappen åpner filvelgeren
