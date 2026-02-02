@@ -1,8 +1,8 @@
-What is the name of the main protagonist in The Legend of Zelda series?|Zelda|Link
-What is the name of the recurring main antagonist in the Zelda series?|Zelda|Ganon
-What is the name of the mystical golden triangles that are a central theme in the series?|Zelda|The Triforce|triforce
-In Ocarina of Time, what is the name of Link's horse?|Zelda|Epona
-What tribe is Ganondorf the king of?|Zelda|The Gerudo|gerudo
+What is the name of the main protagonist in The Legend of Zelda series?|Zelda|Link|Fiskebolle
+#What is the name of the recurring main antagonist in the Zelda series?|Zelda|Ganon
+#What is the name of the mystical golden triangles that are a central theme in the series?|Zelda|The Triforce|triforce
+#In Ocarina of Time, what is the name of Link's horse?|Zelda|Epona
+#What tribe is Ganondorf the king of?|Zelda|The Gerudo|gerudo
 What is the name of the sacred sword that Link often wields?|Zelda|The Master Sword|master sword
 In which game does Link travel to the parallel world of Lorule?|Zelda|A Link Between Worlds
 What is the name of the fairy that accompanies Link in Ocarina of Time?|Zelda|Navi
