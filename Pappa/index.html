@@ -2,53 +2,129 @@
 <html lang="no">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pappa-Quiz</title>
     <style>
-        :root { --accent: #455a64; --card: rgba(207, 216, 220, 0.7); --bg: rgba(255, 255, 255, 0.8); }
-        body, html { height: 100%; margin: 0; overflow: hidden; font-family: sans-serif; }
-        body { background: url('bakgrunn.jpg') center/cover no-repeat fixed; display: flex; justify-content: center; align-items: center; }
-        .quiz-container { width: 90%; max-width: 500px; max-height: 95vh; background: var(--bg); padding: 20px; border-radius: 25px; text-align: center; display: flex; flex-direction: column; backdrop-filter: blur(10px); box-sizing: border-box; }
-        .question-card { flex-grow: 1; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: bold; background: var(--card); border-radius: 20px; padding: 20px; margin: 15px 0; overflow: hidden; line-height: 1.3; }
-        .btn-group { display: flex; gap: 10px; margin-bottom: 15px; }
-        .player-btn { flex: 1; padding: 15px; border: 2px solid var(--accent); border-radius: 12px; cursor: pointer; background: white; font-weight: bold; }
+        :root { --accent: #455a64; --glass: rgba(255, 255, 255, 0.9); }
+        body, html { height: 100%; margin: 0; font-family: sans-serif; background: #cfd8dc; overflow: hidden; }
+
+        .main-layout { 
+            display: flex; 
+            height: 100vh; 
+            align-items: center; 
+            justify-content: space-between;
+            padding: 20px;
+            box-sizing: border-box;
+            gap: 20px;
+        }
+
+        .side-panel { flex: 1; display: flex; flex-direction: column; gap: 15px; }
+        .side-panel.left { text-align: left; }
+        .side-panel.right { text-align: right; }
+
+        .image-container {
+            flex: 0 0 350px; 
+            height: 85vh;
+            background: #90a4ae;
+            border-radius: 30px;
+            overflow: hidden;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+            border: 8px solid white;
+        }
+        
+        #current-img { width: 100%; height: 100%; object-fit: cover; }
+
+        .card { background: var(--glass); padding: 25px; border-radius: 20px; backdrop-filter: blur(10px); box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        
+        h2 { color: var(--accent); margin-top: 0; font-size: 1.8rem; }
+        
+        .btn-group { display: flex; flex-direction: column; gap: 10px; }
+        .player-btn { padding: 15px; border: 2px solid var(--accent); border-radius: 12px; cursor: pointer; background: white; font-weight: bold; font-size: 1.1rem; transition: 0.2s; }
         .player-btn.active { background: var(--accent); color: white; }
-        .next-btn { width: 100%; padding: 15px; border: none; border-radius: 12px; background: #333; color: white; cursor: pointer; font-weight: bold; }
-        .scoreboard { display: flex; justify-content: space-around; margin-top: 15px; border-top: 1px solid #ccc; padding-top: 10px; font-weight: bold; }
+        
+        .next-btn { padding: 15px; border: none; border-radius: 12px; background: #333; color: white; cursor: pointer; font-weight: bold; font-size: 1.1rem; }
+        
+        .score-box { font-size: 1.2rem; font-weight: bold; color: #444; }
+
+        @media (max-width: 800px) {
+            .main-layout { flex-direction: column; overflow-y: auto; height: auto; padding: 10px; }
+            .image-container { flex: 0 0 450px; width: 100%; }
+            .side-panel { width: 100%; }
+        }
     </style>
 </head>
 <body>
-<div class="quiz-container" id="qc">
-    <div style="color:var(--accent); font-weight:800;">HVEM KJENNER PAPPA BEST?</div>
-    <div class="question-card" id="q-text">Laster...</div>
-    <div class="btn-group">
-        <button class="player-btn" onclick="toggle('isak')" id="btn-isak">Isak</button>
-        <button class="player-btn" onclick="toggle('lilly')" id="btn-lilly">Lilly</button>
+
+<div class="main-layout" id="main-ui">
+    <div class="side-panel left">
+        <div class="card">
+            <div style="color:var(--accent); font-weight:bold; margin-bottom:10px; letter-spacing:1px;">HVEM KJENNER PAPPA BEST?</div>
+            <h2 id="q-text">Laster...</h2>
+        </div>
     </div>
-    <button class="next-btn" onclick="next()">Bekreft & Neste</button>
-    <div class="scoreboard">
-        <div>Isak: <span id="s-isak">0</span></div>
-        <div>Lilly: <span id="s-lilly">0</span></div>
+
+    <div class="image-container">
+        <img id="current-img" src="bakgrunn.jpg" alt="Pappa bilde">
+    </div>
+
+    <div class="side-panel right">
+        <div class="card">
+            <div class="score-box">Isak: <span id="s-isak">0</span> | Lilly: <span id="s-lilly">0</span></div>
+        </div>
+        
+        <div class="card">
+            <div class="btn-group">
+                <button class="player-btn" onclick="toggle('isak')" id="btn-isak">Isak</button>
+                <button class="player-btn" onclick="toggle('lilly')" id="btn-lilly">Lilly</button>
+            </div>
+            <button class="next-btn" onclick="next()" style="margin-top: 15px; width: 100%;">Bekreft & Neste</button>
+        </div>
     </div>
 </div>
+
 <script>
-    const qs = ["Favorittbil?", "Hva jobber han med?", "Favorittlag?", "Hva gjør ham sint?"];
+    // Du kan legge inn bilde-filnavn i 'img' her hvis du vil ha unike bilder
+    const quizData = [
+        { q: "Favorittbil?", img: "" },
+        { q: "Hva jobber han med?", img: "" },
+        { q: "Favorittlag?", img: "" },
+        { q: "Hva gjør ham sint?", img: "" }
+    ];
+
     let idx = 0, scores = {isak:0, lilly:0}, sel = {isak:false, lilly:false};
-    function toggle(p) { sel[p] = !sel[p]; document.getElementById('btn-'+p).classList.toggle('active'); }
-    function next() {
-        if(sel.isak) scores.isak++; if(sel.lilly) scores.lilly++;
-        document.getElementById('s-isak').innerText = scores.isak;
-        document.getElementById('s-lilly').innerText = scores.lilly;
+
+    function updateUI() {
+        const current = quizData[idx];
+        document.getElementById('q-text').innerText = current.q;
+        document.getElementById('current-img').src = current.img || "bakgrunn.jpg";
+        
         sel = {isak:false, lilly:false};
         document.querySelectorAll('.player-btn').forEach(b => b.classList.remove('active'));
+    }
+
+    function toggle(p) { 
+        sel[p] = !sel[p]; 
+        document.getElementById('btn-'+p).classList.toggle('active'); 
+    }
+
+    function next() {
+        if(sel.isak) scores.isak++; 
+        if(sel.lilly) scores.lilly++;
+        
+        document.getElementById('s-isak').innerText = scores.isak;
+        document.getElementById('s-lilly').innerText = scores.lilly;
+        
         idx++;
-        if(idx < qs.length) document.getElementById('q-text').innerText = qs[idx];
-        else {
+        if(idx < quizData.length) {
+            updateUI();
+        } else {
             let win = scores.isak > scores.lilly ? "Isak vant!" : (scores.lilly > scores.isak ? "Lilly vant!" : "Uavgjort!");
-            document.getElementById('qc').innerHTML = `<h1>${win}</h1><button class="next-btn" onclick="window.location.href='https://sarcasm.games'">Tilbake til start</button>`;
+            document.getElementById('main-ui').innerHTML = `<div class="card" style="text-align:center; margin:auto;"><h1>${win}</h1><button class="next-btn" onclick="window.location.reload()">Spill igjen</button></div>`;
         }
     }
-    document.getElementById('q-text').innerText = qs[0];
+
+    updateUI();
 </script>
+
 </body>
 </html>
