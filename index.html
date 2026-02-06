@@ -5,110 +5,91 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>sarcasm.games</title>
 <style>
-  :root{--bg:#0b0c10;--card:#1e1f25;--txt:#eaeaea;--bd:#2f313a}
+  :root{--bg:#0b0c10;--card:#1e1f25;--txt:#eaeaea;--bd:#2f313a;--accent:#4ecca3}
   @media (prefers-color-scheme: light){:root{--bg:#f7f7fb;--card:#ffffff;--txt:#111;--bd:#e7e7ef}}
-  body{margin:0;font:16px/1.4 system-ui,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--txt);display:grid;place-items:center;min-height:100dvh}
+  body{margin:0;font:16px/1.4 system-ui,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--txt);display:flex;flex-direction:column;align-items:center;min-height:100dvh}
+  
+  /* Login boks øverst */
+  .login-bar {width: 100%; background: var(--card); border-bottom: 1px solid var(--bd); padding: 10px; display: flex; justify-content: center; gap: 8px; z-index: 100;}
+  .login-bar input {background: var(--bg); border: 1px solid var(--bd); color: var(--txt); padding: 5px 10px; border-radius: 4px; font-size: 14px;}
+  .login-bar button {background: var(--accent); color: #000; border: none; padding: 5px 15px; border-radius: 4px; cursor: pointer; font-weight: bold;}
+
   .wrap{max-width:860px;width:100%;padding:28px}
   h1{margin:0 0 8px;font-size:32px}
   p{opacity:.8;margin:0 0 24px}
   .grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
-  a{display:block;text-decoration:none;padding:18px 20px;border-radius:12px;background:var(--card);color:inherit;border:1px solid var(--bd);transition:.15s; position: relative; }
+  a{display:block;text-decoration:none;padding:18px 20px;border-radius:12px;background:var(--card);color:inherit;border:1px solid var(--bd);transition:.15s; position: relative;}
 
-  /* New CSS for the tooltip */
-.tooltip-text {
-  visibility: hidden;
-  opacity: 0;
-  transition: opacity 0.3s;
-  position: absolute;
-  top: -35px; /* Adjust this value to position the tooltip above the link */
-  left: 50%;
-  transform: translateX(-50%);
-  background-color: var(--bd);
-  color: var(--txt);
-  text-align: center;
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 12px;
-  white-space: nowrap;
-}
+  .tooltip-text {
+    visibility: hidden; opacity: 0; transition: opacity 0.3s; position: absolute;
+    top: -35px; left: 50%; transform: translateX(-50%); background-color: var(--bd);
+    color: var(--txt); text-align: center; padding: 4px 8px; border-radius: 6px;
+    font-size: 12px; white-space: nowrap;
+  }
+  a:hover {transform: translateY(-1px); border-color: #767a88;}
+  a:hover .tooltip-text {visibility: visible; opacity: 1;}
 
-a:hover {
-  transform: translateY(-1px);
-  border-color: #767a88;
-}
-
-a:hover .tooltip-text {
-  visibility: visible;
-  opacity: 1;
-}
+  /* Skjuling av spesialknapp */
+  #morsdagsmeny { display: none; border: 2px solid var(--accent); }
 </style>
 </head>
 <body>
+
+<div class="login-bar" id="loginArea">
+  <input type="text" id="user" placeholder="Brukernavn">
+  <input type="password" id="pass" placeholder="Passord">
+  <button onclick="checkLogin()">Logg inn</button>
+</div>
+
 <div class="wrap">
   <h1>sarcasm.games</h1>
   <p>Where do you wanna go?</p>
-<div class="grid">
-  <a href="/tiermaker/">
-    Tier-maker
-    <span class="tooltip-text">Make your own tier list. </span>
-  </a>
-  <a href="/monstercatch/">
-    Monster catcher
-    <span class="tooltip-text">A local game for up to four players. Who can catch the monster first?!</span>
-  </a>
-  <a href="/achievements/">
-    Life Achievements
-    <span class="tooltip-text">Keep track of all your accomplishments</span>
-  </a>
-  <a href="/poketruefalse/">
-    Pokemon True or False
-    <span class="tooltip-text">A simple true or false game with pokémon facts! 
-      How many points can you score?</span>
-  </a>
-   <a href="/lighthousekeeper/">
-    Lighthouse Keeper
-    <span class="tooltip-text">Will you be able to keep the light on and survive the storm?</span>
-  </a>
-    </a>
-   <a href="/CosmicClick/">
-Cosmic clicker    <span class="tooltip-text">Incremental clicker game - my first!</span>
-  </a>
-    </a>
-
-    <a href="/orb/">
-    Orb Game
-    <span class="tooltip-text">Race to the finish line, avoid the obstacles!</span>
-  </a>
-   <a href="/CrystalClick/">
-Crystal Mining clicker    <span class="tooltip-text">Incremental clicker game - my second!</span>
-  </a>
-    </a>
-   <a href="/GalacticClick/">
-Galactic Mining Adventure    <span class="tooltip-text">Incremental clicker game - my third! Can't have too many, can we?</span>
-  </a>
-   <a href="/quizapp/">
-Quiz!
-     <span class="tooltip-text">Generate a quiz depending on the categories of your choice</span>
-  </a>
-   <a href="/memory/">
-Guess the mon!
-     <span class="tooltip-text">How fast can you guess the pokémon?</span>
-  </a>
-      <a href="https://sarcasmicsir.itch.io/3d-platformer-web-game?secret=WQUF1OFkyuFiCRZxn80b0p2rk">
-3D Platformer itch.io page       <span class="tooltip-text">First try in Godot, here's the itch.io page</span>
-    </a>
-
-      <a href="https://html.itch.zone/html/14908902/index.html">
-3D Platformer       <span class="tooltip-text">First try in Godot, playable in browser</span>
-    </a>
-
-<a href="/Mamma/">
-    Mamma
-    <span class="tooltip-text">Mamma!</span>
-  </a>
   
+  <div class="grid">
+    <a href="/tiermaker/">Tier-maker <span class="tooltip-text">Make your own tier list.</span></a>
+    <a href="/monstercatch/">Monster catcher <span class="tooltip-text">A local game for up to four players.</span></a>
+    <a href="/achievements/">Life Achievements <span class="tooltip-text">Keep track of all your accomplishments</span></a>
+    <a href="/poketruefalse/">Pokemon True or False <span class="tooltip-text">A simple true or false game!</span></a>
+    <a href="/lighthousekeeper/">Lighthouse Keeper <span class="tooltip-text">Keep the light on!</span></a>
+    <a href="/CosmicClick/">Cosmic clicker <span class="tooltip-text">Incremental clicker game - my first!</span></a>
+    <a href="/orb/">Orb Game <span class="tooltip-text">Race to the finish line!</span></a>
+    <a href="/CrystalClick/">Crystal Mining clicker <span class="tooltip-text">Incremental clicker game - my second!</span></a>
+    <a href="/GalacticClick/">Galactic Mining <span class="tooltip-text">Incremental clicker game - my third!</span></a>
+    <a href="/quizapp/">Quiz! <span class="tooltip-text">Generate a quiz</span></a>
+    <a href="/memory/">Guess the mon! <span class="tooltip-text">How fast can you guess?</span></a>
+    <a href="https://html.itch.zone/html/14908902/index.html">3D Platformer <span class="tooltip-text">Playable in browser</span></a>
+
+    <a href="#" id="morsdagsmeny" onclick="toggleMorsdag(event)">
+      🌸 Morsdagsquiz
+      <span class="tooltip-text">Mamma, Isak og Lilly sine sider</span>
+      <div id="morsdagSub" style="display:none; margin-top: 10px; font-size: 0.9em; border-top: 1px solid var(--bd); padding-top: 10px;">
+        <div onclick="window.location.href='/Mamma/'">👉 Mamma</div>
+        <div onclick="window.location.href='/Isak/'" style="margin-top:8px">👉 Isak</div>
+        <div onclick="window.location.href='/Lilly/'" style="margin-top:8px">👉 Lilly</div>
+      </div>
+    </a>
+  </div>
 </div>
-</div>
+
+<script>
+  function checkLogin() {
+    const u = document.getElementById('user').value;
+    const p = document.getElementById('pass').value;
+    
+    if(u === 'morsdag' && p === 'mamma2026') {
+      document.getElementById('morsdagsmeny').style.display = 'block';
+      document.getElementById('loginArea').style.display = 'none';
+    } else {
+      alert('Feil brukernavn eller passord');
+    }
+  }
+
+  function toggleMorsdag(e) {
+    e.preventDefault();
+    const sub = document.getElementById('morsdagSub');
+    sub.style.display = sub.style.display === 'none' ? 'block' : 'none';
+  }
+</script>
 
 </body>
 </html>
