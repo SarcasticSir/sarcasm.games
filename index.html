@@ -6,12 +6,23 @@
 <title>sarcasm.games</title>
 <style>
   :root{--bg:#0b0c10;--card:#1e1f25;--txt:#eaeaea;--bd:#2f313a;--accent:#4ecca3}
-  @media (prefers-color-scheme: light){:root{--bg:#f7f7fb;--card:#ffffff;--txt:#111;--bd:#e7e7ef}}
-  body{margin:0;font:16px/1.4 system-ui,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--txt);display:flex;flex-direction:column;align-items:center;min-height:100dvh}
   
-  .auth-bar {width: 100%; background: var(--card); border-bottom: 1px solid var(--bd); padding: 10px; display: flex; justify-content: center; gap: 8px; z-index: 100;}
-  .auth-bar input {background: var(--bg); border: 1px solid var(--bd); color: var(--txt); padding: 5px 10px; border-radius: 4px; font-size: 14px;}
+  /* Light mode tvungen via klasse */
+  body.light-mode {--bg:#f7f7fb;--card:#ffffff;--txt:#111;--bd:#e7e7ef}
+  
+  /* Auto-oppdagelse fra systemet som backup */
+  @media (prefers-color-scheme: light){
+    body:not(.dark-mode) {:root{--bg:#f7f7fb;--card:#ffffff;--txt:#111;--bd:#e7e7ef}}
+  }
+
+  body{margin:0;font:16px/1.4 system-ui,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--txt);display:flex;flex-direction:column;align-items:center;min-height:100dvh;transition: background 0.3s, color 0.3s;}
+  
+  .auth-bar {width: 100%; background: var(--card); border-bottom: 1px solid var(--bd); padding: 10px; display: flex; justify-content: center; align-items: center; gap: 12px; z-index: 100; min-height: 40px;}
+  .auth-bar input {background: var(--bg); border: 1px solid var(--bd); color: var(--txt); padding: 5px 10px; border-radius: 4px; font-size: 14px; outline: none;}
   .auth-bar button {background: var(--accent); color: #000; border: none; padding: 5px 15px; border-radius: 4px; cursor: pointer; font-weight: bold;}
+  
+  /* Theme Switcher */
+  .theme-toggle { cursor: pointer; font-size: 20px; user-select: none; padding: 0 10px; }
   .logout-btn { background: #ff4d4d !important; color: white !important; display: none; }
 
   .wrap{max-width:860px;width:100%;padding:28px; text-align: center;}
@@ -24,26 +35,26 @@
     visibility: hidden; opacity: 0; transition: opacity 0.3s; position: absolute;
     top: -35px; left: 50%; transform: translateX(-50%); background-color: var(--bd);
     color: var(--txt); text-align: center; padding: 4px 8px; border-radius: 6px;
-    font-size: 12px; white-space: nowrap;
+    font-size: 12px; white-space: nowrap; pointer-events: none;
   }
   a:hover {transform: translateY(-1px); border-color: #767a88;}
   a:hover .tooltip-text {visibility: visible; opacity: 1;}
 
-  /* Stil for Morsdags-visning */
-  #morsdagsContainer { display: none; max-width: 400px; margin: 40px auto; }
+  #morsdagsContainer { display: none; max-width: 400px; width: 90%; margin: 60px auto; text-align: center; }
   .morsdag-link { 
     display: block; background: var(--card); border: 2px solid var(--accent); 
-    padding: 20px; margin: 10px 0; border-radius: 15px; text-decoration: none; 
-    color: var(--txt); font-size: 1.2rem; font-weight: bold; transition: 0.2s;
+    padding: 25px; margin: 15px 0; border-radius: 15px; text-decoration: none; 
+    color: var(--txt); font-size: 1.4rem; font-weight: bold; transition: 0.2s;
   }
-  .morsdag-link:hover { transform: scale(1.05); background: var(--bd); }
+  .morsdag-link:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
 </style>
 </head>
 <body>
 
 <div class="auth-bar" id="authBar">
+  <div class="theme-toggle" onclick="toggleTheme()" id="themeIcon">🌙</div>
   <div id="loginFields">
-    <input type="text" id="user" placeholder="Brukernavn">
+    <input type="text" id="user" placeholder="Brukernavn" autocomplete="off">
     <input type="password" id="pass" placeholder="Passord">
     <button onclick="checkLogin()">Logg inn</button>
   </div>
@@ -55,14 +66,14 @@
   <p>Where do you wanna go?</p>
   <div class="grid">
     <a href="/tiermaker/">Tier-maker <span class="tooltip-text">Make your own tier list.</span></a>
-    <a href="/monstercatch/">Monster catcher <span class="tooltip-text">A local game for up to four.</span></a>
-    <a href="/achievements/">Life Achievements <span class="tooltip-text">Track your accomplishments</span></a>
-    <a href="/poketruefalse/">Pokemon True or False <span class="tooltip-text">A simple facts game!</span></a>
+    <a href="/monstercatch/">Monster catcher <span class="tooltip-text">A local game.</span></a>
+    <a href="/achievements/">Life Achievements <span class="tooltip-text">Track accomplishments</span></a>
+    <a href="/poketruefalse/">Pokemon True or False <span class="tooltip-text">Facts game!</span></a>
     <a href="/lighthousekeeper/">Lighthouse Keeper <span class="tooltip-text">Keep the light on!</span></a>
     <a href="/CosmicClick/">Cosmic clicker <span class="tooltip-text">Incremental clicker!</span></a>
     <a href="/orb/">Orb Game <span class="tooltip-text">Race to the finish!</span></a>
-    <a href="/CrystalClick/">Crystal Mining <span class="tooltip-text">My second clicker!</span></a>
-    <a href="/GalacticClick/">Galactic Mining <span class="tooltip-text">My third clicker!</span></a>
+    <a href="/CrystalClick/">Crystal Mining <span class="tooltip-text">Second clicker!</span></a>
+    <a href="/GalacticClick/">Galactic Mining <span class="tooltip-text">Third clicker!</span></a>
     <a href="/quizapp/">Quiz! <span class="tooltip-text">Generate a quiz</span></a>
     <a href="/memory/">Guess the mon! <span class="tooltip-text">How fast are you?</span></a>
     <a href="https://html.itch.zone/html/14908902/index.html">3D Platformer <span class="tooltip-text">Playable in browser</span></a>
@@ -70,31 +81,40 @@
 </div>
 
 <div id="morsdagsContainer">
-  <h1 style="color: var(--accent);">🌸 Morsdagsquiz 2026</h1>
-  <p>Velg din side:</p>
-  <a href="/Mamma/" class="morsdag-link">👉 Mamma</a>
-  <a href="/Isak/" class="morsdag-link">👉 Isak</a>
-  <a href="/Lilly/" class="morsdag-link">👉 Lilly</a>
-  <a href="/Pappa/" class="morsdag-link">👉 Pappa</a>
+  <h1 style="color: var(--accent); font-size: 40px;">🌸 Morsdag 2026</h1>
+  <p style="font-size: 18px;">Velkommen! Velg din quiz under:</p>
+  <a href="/Mamma/" class="morsdag-link">👸 Mamma</a>
+  <a href="/Isak/" class="morsdag-link">👦 Isak</a>
+  <a href="/Lilly/" class="morsdag-link">👧 Lilly</a>
+  <a href="/Pappa/" class="morsdag-link">🧔 Pappa</a>
 </div>
 
 <script>
   window.onload = function() {
+    // Sjekk innlogging
     if (localStorage.getItem('morsdag_innlogget') === 'true') {
       visInnloggetState();
     }
+    // Sjekk tema-preferanse
+    if (localStorage.getItem('theme') === 'light') {
+      document.body.classList.add('light-mode');
+      document.getElementById('themeIcon').innerText = '☀️';
+    }
   };
 
+  function toggleTheme() {
+    const isLight = document.body.classList.toggle('light-mode');
+    document.getElementById('themeIcon').innerText = isLight ? '☀️' : '🌙';
+    localStorage.setItem('theme', isLight ? 'light' : 'dark');
+  }
+
   function checkLogin() {
-    const u = document.getElementById('user').value;
+    const u = document.getElementById('user').value.toLowerCase();
     const p = document.getElementById('pass').value;
-    
     if(u === 'morsdag' && p === 'mamma2026') {
       localStorage.setItem('morsdag_innlogget', 'true');
       visInnloggetState();
-    } else {
-      alert('Feil brukernavn eller passord');
-    }
+    } else { alert('Feil brukernavn eller passord'); }
   }
 
   function logout() {
@@ -103,11 +123,8 @@
   }
 
   function visInnloggetState() {
-    // Skjul standard innhold
     document.getElementById('mainContent').style.display = 'none';
     document.getElementById('loginFields').style.display = 'none';
-    
-    // Vis morsdagsinnhold og logout
     document.getElementById('morsdagsContainer').style.display = 'block';
     document.getElementById('logoutBtn').style.display = 'block';
   }
