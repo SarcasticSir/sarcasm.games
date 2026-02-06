@@ -2,133 +2,53 @@
 <html lang="no">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Morsdag Quiz - Barna</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mamma-Quiz</title>
     <style>
-        :root {
-            --card-bg: rgba(252, 228, 236, 0.75); 
-            --container-bg: rgba(255, 255, 255, 0.75);
-            --medium-pink: #f8bbd0;
-            --accent-pink: #f06292;
-            --text-dark: #333;
-        }
-
-        body { 
-            background-image: url('bakgrunn.jpg'); 
-            background-size: cover;
-            background-position: center;
-            background-attachment: fixed;
-            background-color: #fff5f7;
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            min-height: 100vh; 
-            margin: 0; 
-            font-family: 'Segoe UI', Arial, sans-serif; 
-        }
-
-        .quiz-container { 
-            max-width: 600px; 
-            width: 90%;
-            background: var(--container-bg); 
-            padding: 30px 40px; 
-            border-radius: 25px; 
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            text-align: center;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255,255,255,0.3);
-        }
-
-        /* Tittel-stil */
-        .quiz-title {
-            font-size: 1.5rem;
-            color: var(--accent-pink);
-            margin-bottom: 20px;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-        }
-
-        .question-card { 
-            min-height: 200px; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            font-size: 1.8rem; 
-            font-weight: bold; 
-            margin-bottom: 30px; 
-            color: var(--text-dark);
-            background: var(--card-bg);
-            padding: 30px;
-            border-radius: 20px;
-            line-height: 1.4;
-        }
-
-        .btn-group { display: flex; gap: 15px; margin-bottom: 25px; }
-        .player-btn { padding: 20px; border: 2px solid var(--medium-pink); border-radius: 12px; cursor: pointer; background: rgba(255,255,255,0.7); font-size: 1.2rem; font-weight: bold; flex: 1; color: var(--text-dark); }
-        .player-btn.active { background: var(--accent-pink); color: white; border-color: var(--accent-pink); }
-        .next-btn { width: 100%; padding: 18px; border: none; border-radius: 12px; background: var(--text-dark); color: white; cursor: pointer; font-size: 1.1rem; font-weight: bold; }
-        .scoreboard { display: flex; justify-content: space-around; margin-top: 30px; font-size: 1.4rem; font-weight: bold; border-top: 2px solid rgba(0,0,0,0.1); padding-top: 20px; }
-        .score-val { color: var(--accent-pink); font-size: 1.8rem; }
+        :root { --accent: #f06292; --card: rgba(252, 228, 236, 0.7); --bg: rgba(255, 255, 255, 0.8); }
+        body, html { height: 100%; margin: 0; overflow: hidden; font-family: sans-serif; }
+        body { background: url('bakgrunn.jpg') center/cover no-repeat fixed; display: flex; justify-content: center; align-items: center; }
+        .quiz-container { width: 90%; max-width: 500px; max-height: 95vh; background: var(--bg); padding: 20px; border-radius: 25px; text-align: center; display: flex; flex-direction: column; backdrop-filter: blur(10px); box-sizing: border-box; }
+        .question-card { flex-grow: 1; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: bold; background: var(--card); border-radius: 20px; padding: 20px; margin: 15px 0; overflow: hidden; line-height: 1.3; }
+        .btn-group { display: flex; gap: 10px; margin-bottom: 15px; }
+        .player-btn { flex: 1; padding: 15px; border: 2px solid var(--accent); border-radius: 12px; cursor: pointer; background: white; font-weight: bold; }
+        .player-btn.active { background: var(--accent); color: white; }
+        .next-btn { width: 100%; padding: 15px; border: none; border-radius: 12px; background: #333; color: white; cursor: pointer; font-weight: bold; }
+        .scoreboard { display: flex; justify-content: space-around; margin-top: 15px; border-top: 1px solid #ccc; padding-top: 10px; font-weight: bold; }
     </style>
 </head>
 <body>
-
-<div class="quiz-container">
-    <div class="quiz-title">Hvem kjenner mamma best?</div>
-    <div id="quiz-content">
-        <div class="question-card" id="question-text">Laster...</div>
-        <div class="btn-group">
-            <button class="player-btn" onclick="togglePoint('isak')" id="btn-isak">Isak</button>
-            <button class="player-btn" onclick="togglePoint('lilly')" id="btn-lilly">Lilly</button>
-        </div>
-        <button class="next-btn" onclick="nextQuestion()">Bekreft & Neste</button>
+<div class="quiz-container" id="qc">
+    <div style="color:var(--accent); font-weight:800; letter-spacing:1px;">HVEM KJENNER MAMMA BEST?</div>
+    <div class="question-card" id="q-text">Laster...</div>
+    <div class="btn-group">
+        <button class="player-btn" onclick="toggle('isak')" id="btn-isak">Isak</button>
+        <button class="player-btn" onclick="toggle('lilly')" id="btn-lilly">Lilly</button>
     </div>
+    <button class="next-btn" onclick="next()">Bekreft & Neste</button>
     <div class="scoreboard">
-        <div>Isak: <span id="score-isak" class="score-val">0</span></div>
-        <div>Lilly: <span id="score-lilly" class="score-val">0</span></div>
+        <div>Isak: <span id="s-isak">0</span></div>
+        <div>Lilly: <span id="s-lilly">0</span></div>
     </div>
 </div>
-
 <script>
-    const questions = [
-        "Hva er mammas favoritt-farge?", "Hvilken by ble mamma født i?", "Hva er mammas favoritt-snop?", 
-        "Hva hater mamma å gjøre i huset?", "Hva er mammas favorittmiddag?", "Hvor mange søsken har mamma?",
-        "Hva er det første mamma gjør om morgenen?", "Hva heter favoritt-serien til mamma?",
-        "Hva er mamma mest redd for?", "Hva er mammas favoritt-drikke?"
-    ];
-
-    function shuffle(array) {
-        for (let i = array.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [array[i], array[j]] = [array[j], array[i]];
+    const qs = ["Favorittfarge?", "Favorittmat?", "Hva hater hun å gjøre?", "Hvor ble hun født?"];
+    let idx = 0, scores = {isak:0, lilly:0}, sel = {isak:false, lilly:false};
+    function toggle(p) { sel[p] = !sel[p]; document.getElementById('btn-'+p).classList.toggle('active'); }
+    function next() {
+        if(sel.isak) scores.isak++; if(sel.lilly) scores.lilly++;
+        document.getElementById('s-isak').innerText = scores.isak;
+        document.getElementById('s-lilly').innerText = scores.lilly;
+        sel = {isak:false, lilly:false};
+        document.querySelectorAll('.player-btn').forEach(b => b.classList.remove('active'));
+        idx++;
+        if(idx < qs.length) document.getElementById('q-text').innerText = qs[idx];
+        else {
+            let win = scores.isak > scores.lilly ? "Isak vant!" : (scores.lilly > scores.isak ? "Lilly vant!" : "Uavgjort!");
+            document.getElementById('qc').innerHTML = `<h1>${win}</h1><button class="next-btn" onclick="window.location.href='https://sarcasm.games'">Tilbake til start</button>`;
         }
     }
-    shuffle(questions);
-    let currentIdx = 0, scores = { isak: 0, lilly: 0 }, selectedThisRound = { isak: false, lilly: false };
-
-    function togglePoint(player) {
-        selectedThisRound[player] = !selectedThisRound[player];
-        document.getElementById(`btn-${player}`).classList.toggle('active');
-    }
-
-    function nextQuestion() {
-        if (selectedThisRound.isak) scores.isak++;
-        if (selectedThisRound.lilly) scores.lilly++;
-        document.getElementById('score-isak').innerText = scores.isak;
-        document.getElementById('score-lilly').innerText = scores.lilly;
-        selectedThisRound = { isak: false, lilly: false };
-        document.querySelectorAll('.player-btn').forEach(b => b.classList.remove('active'));
-        currentIdx++;
-        if (currentIdx < questions.length) document.getElementById('question-text').innerText = questions[currentIdx];
-        else showFinalScore();
-    }
-
-    function showFinalScore() {
-        let win = scores.isak > scores.lilly ? "Isak vant!" : (scores.lilly > scores.isak ? "Lilly vant!" : "Uavgjort!");
-        document.getElementById('quiz-content').innerHTML = `<div class="question-card">${win}</div><button class="next-btn" onclick="location.reload()">Start på nytt</button>`;
-    }
-    document.getElementById('question-text').innerText = questions[0];
+    document.getElementById('q-text').innerText = qs[0];
 </script>
 </body>
 </html>
