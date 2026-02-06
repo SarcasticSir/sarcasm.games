@@ -3,10 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Morsdag Quiz</title>
+    <title>Morsdag Quiz - Barna</title>
     <style>
         :root {
-            /* Gjennomsiktighet på 0.5 på begge lag for maksimal effekt */
             --card-bg: rgba(252, 228, 236, 0.75); 
             --container-bg: rgba(255, 255, 255, 0.75);
             --medium-pink: #f8bbd0;
@@ -32,16 +31,26 @@
             max-width: 600px; 
             width: 90%;
             background: var(--container-bg); 
-            padding: 40px; 
+            padding: 30px 40px; 
             border-radius: 25px; 
             box-shadow: 0 10px 30px rgba(0,0,0,0.1);
             text-align: center;
-            backdrop-filter: blur(10px); /* Dette gir en lekker glass-effekt */
+            backdrop-filter: blur(10px);
             border: 1px solid rgba(255,255,255,0.3);
         }
 
+        /* Tittel-stil */
+        .quiz-title {
+            font-size: 1.5rem;
+            color: var(--accent-pink);
+            margin-bottom: 20px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
         .question-card { 
-            min-height: 220px; 
+            min-height: 200px; 
             display: flex; 
             align-items: center; 
             justify-content: center; 
@@ -53,66 +62,27 @@
             padding: 30px;
             border-radius: 20px;
             line-height: 1.4;
-            border: 1px solid rgba(255,255,255,0.2);
         }
 
         .btn-group { display: flex; gap: 15px; margin-bottom: 25px; }
-
-        .player-btn { 
-            padding: 20px; 
-            border: 2px solid var(--medium-pink); 
-            border-radius: 12px; 
-            cursor: pointer; 
-            background: rgba(255,255,255,0.7); 
-            font-size: 1.2rem; 
-            font-weight: bold; 
-            flex: 1; 
-            transition: 0.2s;
-            color: var(--text-dark);
-        }
-
-        .player-btn.active { 
-            background: var(--accent-pink); 
-            color: white; 
-            border-color: var(--accent-pink); 
-        }
-        
-        .next-btn { 
-            width: 100%; 
-            padding: 18px; 
-            border: none; 
-            border-radius: 12px; 
-            background: var(--text-dark); 
-            color: white; 
-            cursor: pointer; 
-            font-size: 1.1rem; 
-            font-weight: bold;
-        }
-        
-        .scoreboard { 
-            display: flex; 
-            justify-content: space-around; 
-            margin-top: 30px; 
-            font-size: 1.4rem; 
-            font-weight: bold; 
-            border-top: 2px solid rgba(0,0,0,0.1); 
-            padding-top: 20px;
-            color: var(--text-dark);
-        }
-
+        .player-btn { padding: 20px; border: 2px solid var(--medium-pink); border-radius: 12px; cursor: pointer; background: rgba(255,255,255,0.7); font-size: 1.2rem; font-weight: bold; flex: 1; color: var(--text-dark); }
+        .player-btn.active { background: var(--accent-pink); color: white; border-color: var(--accent-pink); }
+        .next-btn { width: 100%; padding: 18px; border: none; border-radius: 12px; background: var(--text-dark); color: white; cursor: pointer; font-size: 1.1rem; font-weight: bold; }
+        .scoreboard { display: flex; justify-content: space-around; margin-top: 30px; font-size: 1.4rem; font-weight: bold; border-top: 2px solid rgba(0,0,0,0.1); padding-top: 20px; }
         .score-val { color: var(--accent-pink); font-size: 1.8rem; }
     </style>
 </head>
 <body>
 
 <div class="quiz-container">
+    <div class="quiz-title">Hvem kjenner mamma best?</div>
     <div id="quiz-content">
-        <div class="question-card" id="question-text">Gjør dere klare!</div>
+        <div class="question-card" id="question-text">Laster...</div>
         <div class="btn-group">
             <button class="player-btn" onclick="togglePoint('isak')" id="btn-isak">Isak</button>
             <button class="player-btn" onclick="togglePoint('lilly')" id="btn-lilly">Lilly</button>
         </div>
-        <button class="next-btn" onclick="nextQuestion()">Bekreft poeng & Neste</button>
+        <button class="next-btn" onclick="nextQuestion()">Bekreft & Neste</button>
     </div>
     <div class="scoreboard">
         <div>Isak: <span id="score-isak" class="score-val">0</span></div>
@@ -122,20 +92,10 @@
 
 <script>
     const questions = [
-        "Hva er mammas favoritt-farge?",
-        "Hvilken by ble mamma født i?",
-        "Hva er mammas favoritt-snop på lørdager?",
-        "Hva er det mamma hater aller mest å gjøre i huset?",
-        "Hva er mammas livrett (favorittmiddag)?",
-        "Hvor mange søsken har mamma?",
-        "Hva er det første mamma gjør når hun våkner om morgenen?",
-        "Hva heter favoritt-serien til mamma?",
-        "Hvilken sang er mammas favoritt å synge med på?",
-        "Hva er mamma mest redd for av småkryp?",
-        "Hvor gammel var mamma da hun fikk sertifikatet?",
-        "Hva er mammas favoritt-drikke?",
-        "Hvilken hobby ville mamma hatt hvis hun hadde mer tid?",
-        "Hvilket land drømmer mamma om å reise til?"
+        "Hva er mammas favoritt-farge?", "Hvilken by ble mamma født i?", "Hva er mammas favoritt-snop?", 
+        "Hva hater mamma å gjøre i huset?", "Hva er mammas favorittmiddag?", "Hvor mange søsken har mamma?",
+        "Hva er det første mamma gjør om morgenen?", "Hva heter favoritt-serien til mamma?",
+        "Hva er mamma mest redd for?", "Hva er mammas favoritt-drikke?"
     ];
 
     function shuffle(array) {
@@ -144,12 +104,8 @@
             [array[i], array[j]] = [array[j], array[i]];
         }
     }
-
     shuffle(questions);
-
-    let currentIdx = 0;
-    let scores = { isak: 0, lilly: 0 };
-    let selectedThisRound = { isak: false, lilly: false };
+    let currentIdx = 0, scores = { isak: 0, lilly: 0 }, selectedThisRound = { isak: false, lilly: false };
 
     function togglePoint(player) {
         selectedThisRound[player] = !selectedThisRound[player];
@@ -159,31 +115,20 @@
     function nextQuestion() {
         if (selectedThisRound.isak) scores.isak++;
         if (selectedThisRound.lilly) scores.lilly++;
-        
         document.getElementById('score-isak').innerText = scores.isak;
         document.getElementById('score-lilly').innerText = scores.lilly;
-
         selectedThisRound = { isak: false, lilly: false };
         document.querySelectorAll('.player-btn').forEach(b => b.classList.remove('active'));
-        
         currentIdx++;
-        if (currentIdx < questions.length) {
-            document.getElementById('question-text').innerText = questions[currentIdx];
-        } else {
-            showFinalScore();
-        }
+        if (currentIdx < questions.length) document.getElementById('question-text').innerText = questions[currentIdx];
+        else showFinalScore();
     }
 
     function showFinalScore() {
-        let winnerText = scores.isak > scores.lilly ? "Isak er Mamma-eksperten!" : (scores.lilly > scores.isak ? "Lilly er Mamma-eksperten!" : "Delt seier!");
-        document.getElementById('quiz-content').innerHTML = `
-            <div class="question-card">Ferdig!<br><br>${winnerText}</div>
-            <button class="next-btn" onclick="location.reload()">Start på nytt</button>
-        `;
+        let win = scores.isak > scores.lilly ? "Isak vant!" : (scores.lilly > scores.isak ? "Lilly vant!" : "Uavgjort!");
+        document.getElementById('quiz-content').innerHTML = `<div class="question-card">${win}</div><button class="next-btn" onclick="location.reload()">Start på nytt</button>`;
     }
-
     document.getElementById('question-text').innerText = questions[0];
 </script>
-
 </body>
 </html>
