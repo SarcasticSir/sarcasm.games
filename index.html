@@ -9,10 +9,11 @@
   @media (prefers-color-scheme: light){:root{--bg:#f7f7fb;--card:#ffffff;--txt:#111;--bd:#e7e7ef}}
   body{margin:0;font:16px/1.4 system-ui,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--txt);display:flex;flex-direction:column;align-items:center;min-height:100dvh}
   
-  /* Login boks øverst */
-  .login-bar {width: 100%; background: var(--card); border-bottom: 1px solid var(--bd); padding: 10px; display: flex; justify-content: center; gap: 8px; z-index: 100;}
-  .login-bar input {background: var(--bg); border: 1px solid var(--bd); color: var(--txt); padding: 5px 10px; border-radius: 4px; font-size: 14px;}
-  .login-bar button {background: var(--accent); color: #000; border: none; padding: 5px 15px; border-radius: 4px; cursor: pointer; font-weight: bold;}
+  /* Login & Logout bar */
+  .auth-bar {width: 100%; background: var(--card); border-bottom: 1px solid var(--bd); padding: 10px; display: flex; justify-content: center; gap: 8px; z-index: 100;}
+  .auth-bar input {background: var(--bg); border: 1px solid var(--bd); color: var(--txt); padding: 5px 10px; border-radius: 4px; font-size: 14px;}
+  .auth-bar button {background: var(--accent); color: #000; border: none; padding: 5px 15px; border-radius: 4px; cursor: pointer; font-weight: bold;}
+  .logout-btn { background: #ff4d4d !important; color: white !important; display: none; }
 
   .wrap{max-width:860px;width:100%;padding:28px}
   h1{margin:0 0 8px;font-size:32px}
@@ -29,16 +30,20 @@
   a:hover {transform: translateY(-1px); border-color: #767a88;}
   a:hover .tooltip-text {visibility: visible; opacity: 1;}
 
-  /* Skjuling av spesialknapp */
-  #morsdagsmeny { display: none; border: 2px solid var(--accent); }
+  #morsdagsmeny { display: none; border: 2px solid var(--accent); cursor: pointer; }
+  .sub-item { margin-top: 10px; padding: 8px; border-radius: 6px; background: var(--bg); border: 1px solid var(--bd); }
+  .sub-item:hover { background: var(--bd); }
 </style>
 </head>
 <body>
 
-<div class="login-bar" id="loginArea">
-  <input type="text" id="user" placeholder="Brukernavn">
-  <input type="password" id="pass" placeholder="Passord">
-  <button onclick="checkLogin()">Logg inn</button>
+<div class="auth-bar" id="authBar">
+  <div id="loginFields">
+    <input type="text" id="user" placeholder="Brukernavn">
+    <input type="password" id="pass" placeholder="Passord">
+    <button onclick="checkLogin()">Logg inn</button>
+  </div>
+  <button id="logoutBtn" class="logout-btn" onclick="logout()">Logg ut</button>
 </div>
 
 <div class="wrap">
@@ -49,46 +54,65 @@
     <a href="/tiermaker/">Tier-maker <span class="tooltip-text">Make your own tier list.</span></a>
     <a href="/monstercatch/">Monster catcher <span class="tooltip-text">A local game for up to four players.</span></a>
     <a href="/achievements/">Life Achievements <span class="tooltip-text">Keep track of all your accomplishments</span></a>
-    <a href="/poketruefalse/">Pokemon True or False <span class="tooltip-text">A simple true or false game!</span></a>
+    <a href="/poketruefalse/">Pokemon True or False <span class="tooltip-text">A simple facts game!</span></a>
     <a href="/lighthousekeeper/">Lighthouse Keeper <span class="tooltip-text">Keep the light on!</span></a>
-    <a href="/CosmicClick/">Cosmic clicker <span class="tooltip-text">Incremental clicker game - my first!</span></a>
-    <a href="/orb/">Orb Game <span class="tooltip-text">Race to the finish line!</span></a>
-    <a href="/CrystalClick/">Crystal Mining clicker <span class="tooltip-text">Incremental clicker game - my second!</span></a>
-    <a href="/GalacticClick/">Galactic Mining <span class="tooltip-text">Incremental clicker game - my third!</span></a>
+    <a href="/CosmicClick/">Cosmic clicker <span class="tooltip-text">Incremental clicker!</span></a>
+    <a href="/orb/">Orb Game <span class="tooltip-text">Race to the finish!</span></a>
+    <a href="/CrystalClick/">Crystal Mining <span class="tooltip-text">My second clicker!</span></a>
+    <a href="/GalacticClick/">Galactic Mining <span class="tooltip-text">My third clicker!</span></a>
     <a href="/quizapp/">Quiz! <span class="tooltip-text">Generate a quiz</span></a>
-    <a href="/memory/">Guess the mon! <span class="tooltip-text">How fast can you guess?</span></a>
+    <a href="/memory/">Guess the mon! <span class="tooltip-text">How fast are you?</span></a>
     <a href="https://html.itch.zone/html/14908902/index.html">3D Platformer <span class="tooltip-text">Playable in browser</span></a>
 
-    <a href="#" id="morsdagsmeny" onclick="toggleMorsdag(event)">
+    <div id="morsdagsmeny" class="a-style-div" style="display:none; text-decoration:none; padding:18px 20px; border-radius:12px; background:var(--card); border:2px solid var(--accent); transition:.15s;" onclick="toggleMorsdag(event)">
       🌸 Morsdagsquiz
-      <span class="tooltip-text">Mamma, Isak og Lilly sine sider</span>
+      <span class="tooltip-text">Mamma, Isak, Lilly og Pappa</span>
       <div id="morsdagSub" style="display:none; margin-top: 10px; font-size: 0.9em; border-top: 1px solid var(--bd); padding-top: 10px;">
-        <div onclick="window.location.href='/Mamma/'">👉 Mamma</div>
-        <div onclick="window.location.href='/Pappa/'" style="margin-top:8px">👉 Pappa</div>
-        <div onclick="window.location.href='/Isak/'" style="margin-top:8px">👉 Isak</div>
-        <div onclick="window.location.href='/Lilly/'" style="margin-top:8px">👉 Lilly</div>
+        <div class="sub-item" onclick="location.href='/Mamma/'">👉 Mamma</div>
+        <div class="sub-item" onclick="location.href='/Isak/'">👉 Isak</div>
+        <div class="sub-item" onclick="location.href='/Lilly/'">👉 Lilly</div>
+        <div class="sub-item" onclick="location.href='/Pappa/'">👉 Pappa</div>
       </div>
-    </a>
+    </div>
   </div>
 </div>
 
 <script>
+  window.onload = function() {
+    if (localStorage.getItem('morsdag_innlogget') === 'true') {
+      visInnloggetState();
+    }
+  };
+
   function checkLogin() {
     const u = document.getElementById('user').value;
     const p = document.getElementById('pass').value;
     
     if(u === 'morsdag' && p === 'mamma2026') {
-      document.getElementById('morsdagsmeny').style.display = 'block';
-      document.getElementById('loginArea').style.display = 'none';
+      localStorage.setItem('morsdag_innlogget', 'true');
+      visInnloggetState();
     } else {
       alert('Feil brukernavn eller passord');
     }
   }
 
+  function logout() {
+    localStorage.removeItem('morsdag_innlogget');
+    location.reload(); // Enkel refresh for å nullstille siden
+  }
+
+  function visInnloggetState() {
+    document.getElementById('morsdagsmeny').style.display = 'block';
+    document.getElementById('loginFields').style.display = 'none';
+    document.getElementById('logoutBtn').style.display = 'block';
+  }
+
   function toggleMorsdag(e) {
-    e.preventDefault();
     const sub = document.getElementById('morsdagSub');
-    sub.style.display = sub.style.display === 'none' ? 'block' : 'none';
+    // Hindre at klikk på underpunktene lukker menyen før de navigerer
+    if (e.target.className !== 'sub-item') {
+      sub.style.display = sub.style.display === 'none' ? 'block' : 'none';
+    }
   }
 </script>
 
