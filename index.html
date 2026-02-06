@@ -9,13 +9,12 @@
   @media (prefers-color-scheme: light){:root{--bg:#f7f7fb;--card:#ffffff;--txt:#111;--bd:#e7e7ef}}
   body{margin:0;font:16px/1.4 system-ui,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--txt);display:flex;flex-direction:column;align-items:center;min-height:100dvh}
   
-  /* Login & Logout bar */
   .auth-bar {width: 100%; background: var(--card); border-bottom: 1px solid var(--bd); padding: 10px; display: flex; justify-content: center; gap: 8px; z-index: 100;}
   .auth-bar input {background: var(--bg); border: 1px solid var(--bd); color: var(--txt); padding: 5px 10px; border-radius: 4px; font-size: 14px;}
   .auth-bar button {background: var(--accent); color: #000; border: none; padding: 5px 15px; border-radius: 4px; cursor: pointer; font-weight: bold;}
   .logout-btn { background: #ff4d4d !important; color: white !important; display: none; }
 
-  .wrap{max-width:860px;width:100%;padding:28px}
+  .wrap{max-width:860px;width:100%;padding:28px; text-align: center;}
   h1{margin:0 0 8px;font-size:32px}
   p{opacity:.8;margin:0 0 24px}
   .grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
@@ -30,9 +29,14 @@
   a:hover {transform: translateY(-1px); border-color: #767a88;}
   a:hover .tooltip-text {visibility: visible; opacity: 1;}
 
-  #morsdagsmeny { display: none; border: 2px solid var(--accent); cursor: pointer; }
-  .sub-item { margin-top: 10px; padding: 8px; border-radius: 6px; background: var(--bg); border: 1px solid var(--bd); }
-  .sub-item:hover { background: var(--bd); }
+  /* Stil for Morsdags-visning */
+  #morsdagsContainer { display: none; max-width: 400px; margin: 40px auto; }
+  .morsdag-link { 
+    display: block; background: var(--card); border: 2px solid var(--accent); 
+    padding: 20px; margin: 10px 0; border-radius: 15px; text-decoration: none; 
+    color: var(--txt); font-size: 1.2rem; font-weight: bold; transition: 0.2s;
+  }
+  .morsdag-link:hover { transform: scale(1.05); background: var(--bd); }
 </style>
 </head>
 <body>
@@ -46,14 +50,13 @@
   <button id="logoutBtn" class="logout-btn" onclick="logout()">Logg ut</button>
 </div>
 
-<div class="wrap">
+<div class="wrap" id="mainContent">
   <h1>sarcasm.games</h1>
   <p>Where do you wanna go?</p>
-  
   <div class="grid">
     <a href="/tiermaker/">Tier-maker <span class="tooltip-text">Make your own tier list.</span></a>
-    <a href="/monstercatch/">Monster catcher <span class="tooltip-text">A local game for up to four players.</span></a>
-    <a href="/achievements/">Life Achievements <span class="tooltip-text">Keep track of all your accomplishments</span></a>
+    <a href="/monstercatch/">Monster catcher <span class="tooltip-text">A local game for up to four.</span></a>
+    <a href="/achievements/">Life Achievements <span class="tooltip-text">Track your accomplishments</span></a>
     <a href="/poketruefalse/">Pokemon True or False <span class="tooltip-text">A simple facts game!</span></a>
     <a href="/lighthousekeeper/">Lighthouse Keeper <span class="tooltip-text">Keep the light on!</span></a>
     <a href="/CosmicClick/">Cosmic clicker <span class="tooltip-text">Incremental clicker!</span></a>
@@ -63,18 +66,16 @@
     <a href="/quizapp/">Quiz! <span class="tooltip-text">Generate a quiz</span></a>
     <a href="/memory/">Guess the mon! <span class="tooltip-text">How fast are you?</span></a>
     <a href="https://html.itch.zone/html/14908902/index.html">3D Platformer <span class="tooltip-text">Playable in browser</span></a>
-
-    <div id="morsdagsmeny" class="a-style-div" style="display:none; text-decoration:none; padding:18px 20px; border-radius:12px; background:var(--card); border:2px solid var(--accent); transition:.15s;" onclick="toggleMorsdag(event)">
-      🌸 Morsdagsquiz
-      <span class="tooltip-text">Mamma, Isak, Lilly og Pappa</span>
-      <div id="morsdagSub" style="display:none; margin-top: 10px; font-size: 0.9em; border-top: 1px solid var(--bd); padding-top: 10px;">
-        <div class="sub-item" onclick="location.href='/Mamma/'">👉 Mamma</div>
-        <div class="sub-item" onclick="location.href='/Isak/'">👉 Isak</div>
-        <div class="sub-item" onclick="location.href='/Lilly/'">👉 Lilly</div>
-        <div class="sub-item" onclick="location.href='/Pappa/'">👉 Pappa</div>
-      </div>
-    </div>
   </div>
+</div>
+
+<div id="morsdagsContainer">
+  <h1 style="color: var(--accent);">🌸 Morsdagsquiz 2026</h1>
+  <p>Velg din side:</p>
+  <a href="/Mamma/" class="morsdag-link">👉 Mamma</a>
+  <a href="/Isak/" class="morsdag-link">👉 Isak</a>
+  <a href="/Lilly/" class="morsdag-link">👉 Lilly</a>
+  <a href="/Pappa/" class="morsdag-link">👉 Pappa</a>
 </div>
 
 <script>
@@ -98,21 +99,17 @@
 
   function logout() {
     localStorage.removeItem('morsdag_innlogget');
-    location.reload(); // Enkel refresh for å nullstille siden
+    location.reload();
   }
 
   function visInnloggetState() {
-    document.getElementById('morsdagsmeny').style.display = 'block';
+    // Skjul standard innhold
+    document.getElementById('mainContent').style.display = 'none';
     document.getElementById('loginFields').style.display = 'none';
+    
+    // Vis morsdagsinnhold og logout
+    document.getElementById('morsdagsContainer').style.display = 'block';
     document.getElementById('logoutBtn').style.display = 'block';
-  }
-
-  function toggleMorsdag(e) {
-    const sub = document.getElementById('morsdagSub');
-    // Hindre at klikk på underpunktene lukker menyen før de navigerer
-    if (e.target.className !== 'sub-item') {
-      sub.style.display = sub.style.display === 'none' ? 'block' : 'none';
-    }
   }
 </script>
 
