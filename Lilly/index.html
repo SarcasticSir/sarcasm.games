@@ -2,73 +2,145 @@
 <html lang="no">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lillys Quiz</title>
     <style>
-        :root { --accent: #ab47bc; --card: rgba(243, 229, 245, 0.7); --bg: rgba(255, 255, 255, 0.8); }
-        body, html { height: 100%; margin: 0; overflow: hidden; font-family: sans-serif; }
-        body { background: url('bakgrunn.jpg') center/cover no-repeat fixed; display: flex; justify-content: center; align-items: center; }
-        .quiz-container { width: 90%; max-width: 500px; max-height: 95vh; background: var(--bg); padding: 20px; border-radius: 25px; text-align: center; display: flex; flex-direction: column; backdrop-filter: blur(10px); box-sizing: border-box; }
-        .question-card { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: bold; background: var(--card); border-radius: 20px; padding: 20px; margin: 15px 0; overflow: hidden; }
-        .fasit { color: var(--accent); margin-top: 10px; display: none; font-size: 1.2rem; border-top: 1px solid var(--accent); padding-top: 5px; }
-        .btn { width: 100%; padding: 15px; border: none; border-radius: 12px; cursor: pointer; font-weight: bold; color: white; margin-bottom: 5px; }
+        :root { --accent: #ab47bc; --glass: rgba(255, 255, 255, 0.9); }
+        body, html { height: 100%; margin: 0; font-family: sans-serif; background: #f3e5f5; overflow: hidden; }
+
+        .main-layout { 
+            display: flex; 
+            height: 100vh; 
+            align-items: center; 
+            justify-content: space-between;
+            padding: 20px;
+            box-sizing: border-box;
+            gap: 20px;
+        }
+
+        .side-panel { flex: 1; display: flex; flex-direction: column; gap: 15px; }
+        .side-panel.left { text-align: left; }
+        .side-panel.right { text-align: right; }
+
+        .image-container {
+            flex: 0 0 350px; 
+            height: 85vh;
+            background: #e1bee7;
+            border-radius: 30px;
+            overflow: hidden;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+            border: 8px solid white;
+        }
+        
+        #current-img { width: 100%; height: 100%; object-fit: cover; }
+
+        .card { background: var(--glass); padding: 25px; border-radius: 20px; backdrop-filter: blur(10px); box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        
+        h2 { color: var(--accent); margin-top: 0; font-size: 1.8rem; line-height: 1.2; }
+        
+        .fasit { color: #333; margin-top: 15px; display: none; font-size: 1.2rem; border-top: 2px solid var(--accent); padding-top: 10px; font-weight: bold; }
+
+        .btn { width: 100%; padding: 15px; border: none; border-radius: 12px; cursor: pointer; font-weight: bold; color: white; font-size: 1.1rem; }
         .main-btn { background: var(--accent); }
-        .wrong { background: #e57373; display: none; }
-        .correct { background: #81c784; display: none; }
+        .wrong { background: #e57373; display: none; flex: 1; }
+        .correct { background: #81c784; display: none; flex: 1; }
+        
+        .score-box { font-size: 1.2rem; font-weight: bold; color: #444; }
+
+        @media (max-width: 800px) {
+            .main-layout { flex-direction: column; overflow-y: auto; height: auto; padding: 10px; }
+            .image-container { flex: 0 0 450px; width: 100%; }
+            .side-panel { width: 100%; }
+        }
     </style>
 </head>
 <body>
-<div class="quiz-container" id="qc">
-    <div style="color:var(--accent); font-weight:800;">LILLYS QUIZ</div>
-    <div class="question-card">
-        <div id="q">Laster...</div>
-        <div id="f" class="fasit">Svar: <span id="ans"></span></div>
-    </div>
-    <div id="btns">
-        <button id="b-show" class="btn main-btn" onclick="reveal()">Se fasit</button>
-        <div style="display:flex; gap:10px;">
-            <button id="b-w" class="btn wrong" onclick="next(false)">Feil</button>
-            <button id="b-c" class="btn correct" onclick="next(true)">Riktig</button>
+
+<div class="main-layout" id="main-ui">
+    <div class="side-panel left">
+        <div class="card">
+            <div style="color:var(--accent); font-weight:bold; margin-bottom:10px; letter-spacing:1px;">LILLYS QUIZ</div>
+            <h2 id="q-text">Laster...</h2>
+            <div id="f" class="fasit">Svar: <span id="ans"></span></div>
         </div>
     </div>
-    <div style="font-weight:bold; color:var(--accent); margin-top:10px;">Poeng: <span id="s">0</span></div>
+
+    <div class="image-container">
+        <img id="current-img" src="bakgrunn.jpg" alt="Lilly bilde">
+    </div>
+
+    <div class="side-panel right">
+        <div class="card">
+            <div class="score-box">Poeng: <span id="s">0</span></div>
+        </div>
+        
+        <div class="card">
+            <button id="b-show" class="btn main-btn" onclick="reveal()">Se fasit</button>
+            <div style="display:flex; gap:10px;">
+                <button id="b-w" class="btn wrong" onclick="next(false)">Feil</button>
+                <button id="b-c" class="btn correct" onclick="next(true)">Riktig</button>
+            </div>
+        </div>
+    </div>
 </div>
+
 <script>
     const raw = [
-      "Hva er min favoritt farge?;Lilla",
-      "Hva er min favoritt ting å leke med?;Isak",
-      "Hva er mitt favorittfag på skolen?;Kunst og håndverk",
-      "Hva er min favoritt mat?;Burger",
-      "Hva er mitt favoritt spill?;Roblox",
-      "Hva er mitt favoritt dyr?;Kanin",
-      "Hva er min favoritt skjerm?;TV",
-      "Hva ønsker jeg meg?;Mer sminke",
-      "Hvilken av katt og hund liker jeg best?;Hund",
-      "Hva vil jeg bli når jeg blir stor?;Turnlærer"
-    ];    
-    const data = raw.map(v => ({q: v.split(';')[0], a: v.split(';')[1]}));
-    let i=0, score=0;
+      "Hva er min favoritt farge?;Lilla;",
+      "Hva er min favoritt ting å leke med?;Isak;",
+      "Hva er mitt favorittfag på skolen?;Kunst og håndverk;",
+      "Hva er min favoritt mat?;Burger;",
+      "Hva er mitt favoritt spill?;Roblox;",
+      "Hva er mitt favoritt dyr?;Kanin;",
+      "Hva er min favoritt skjerm?;TV;",
+      "Hva ønsker jeg meg?;Mer sminke;",
+      "Hvilken av katt og hund liker jeg best?;Hund;",
+      "Hva vil jeg bli når jeg blir stor?;Turnlærer;"
+    ];
+
+    const data = raw.map(v => {
+        const parts = v.split(';');
+        return { q: parts[0], a: parts[1], img: parts[2] || "" };
+    });
+
+    let i = 0, score = 0;
+
+    function updateUI() {
+        document.getElementById('q-text').innerText = data[i].q;
+        document.getElementById('current-img').src = data[i].img || "bakgrunn.jpg";
+        document.getElementById('f').style.display = "none";
+        document.getElementById('b-show').style.display = "block";
+        document.getElementById('b-w').style.display = "none";
+        document.getElementById('b-c').style.display = "none";
+    }
+
     function reveal() {
         document.getElementById('ans').innerText = data[i].a;
         document.getElementById('f').style.display = "block";
         document.getElementById('b-show').style.display = "none";
-        document.getElementById('b-w').style.display = "block";
-        document.getElementById('b-c').style.display = "block";
+        document.getElementById('b-w').style.display = "flex";
+        document.getElementById('b-c').style.display = "flex";
     }
+
     function next(pts) {
-        if(pts) score++; i++;
+        if(pts) score++;
+        i++;
         document.getElementById('s').innerText = score;
+        
         if(i < data.length) {
-            document.getElementById('q').innerText = data[i].q;
-            document.getElementById('f').style.display = "none";
-            document.getElementById('b-show').style.display = "block";
-            document.getElementById('b-w').style.display = "none";
-            document.getElementById('b-c').style.display = "none";
+            updateUI();
         } else {
-            document.getElementById('qc').innerHTML = `<h1>Ferdig!</h1><p>${score} av ${data.length} rett</p><button class="btn main-btn" onclick="window.location.href='https://sarcasm.games'">Tilbake til start</button>`;
+            document.getElementById('main-ui').innerHTML = `
+                <div class="card" style="text-align:center; margin:auto;">
+                    <h1>Ferdig!</h1>
+                    <p style="font-size:1.5rem;">${score} av ${data.length} rett</p>
+                    <button class="btn main-btn" onclick="window.location.href='https://sarcasm.games'">Tilbake til start</button>
+                </div>`;
         }
     }
-    document.getElementById('q').innerText = data[0].q;
+
+    updateUI();
 </script>
+
 </body>
 </html>
