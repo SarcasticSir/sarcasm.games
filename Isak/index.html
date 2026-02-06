@@ -85,7 +85,6 @@
 </div>
 
 <script>
-    // Lagt til 'img' felt. La den stå tom "" for å bruke bakgrunn.jpg
     const raw = [
       "Hva er min favoritt farge?;Rød;",
       "Hva er mitt favoritt dyr?;Ulv/hund;",
@@ -137,13 +136,12 @@
                 <div class="card" style="text-align:center; margin:auto;">
                     <h1>Ferdig!</h1>
                     <p style="font-size:1.5rem;">${score} av ${data.length} rett</p>
-                    <button class="btn main-btn" onclick="window.location.reload()">Start på nytt</button>
+                    <button class="btn main-btn" onclick="window.location.href='https://sarcasm.games'">Tilbake til start</button>
                 </div>`;
         }
     }
 
     updateUI();
 </script>
-
 </body>
 </html>
