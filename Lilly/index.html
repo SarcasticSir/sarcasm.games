@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lillys Quiz</title>
+    <style>
+        :root { --card-bg: rgba(243, 229, 245, 0.6); --container-bg: rgba(255, 255, 255, 0.7); --accent: #ab47bc; --text: #333; }
+        body { background-image: url('bakgrunn.jpg'); background-size: cover; background-attachment: fixed; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; font-family: sans-serif; }
+        .quiz-container { max-width: 600px; width: 90%; background: var(--container-bg); padding: 30px 40px; border-radius: 25px; text-align: center; backdrop-filter: blur(10px); }
+        .quiz-title { font-size: 1.5rem; color: var(--accent); margin-bottom: 20px; font-weight: 800; text-transform: uppercase; }
+        .question-card { min-height: 200px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 1.8rem; font-weight: bold; margin-bottom: 20px; color: var(--text); background: var(--card-bg); padding: 30px; border-radius: 20px; }
+        .fasit { margin-top: 15px; color: var(--accent); font-size: 1.4rem; display: none; border-top: 1px solid var(--accent); padding-top: 10px; width: 100%; }
+        .btn { width: 100%; padding: 20px; border: none; border-radius: 12px; background: var(--accent); color: white; cursor: pointer; font-size: 1.2rem; font-weight: bold; }
+    </style>
+</head>
+<body>
+<div class="quiz-container">
+    <div class="quiz-title">Lillys Quiz</div>
+    <div id="quiz-content">
+        <div class="question-card">
+            <div id="q-text">Laster...</div>
+            <div id="f-text" class="fasit">Svar: <span id="ans"></span></div>
+        </div>
+        <button id="main-btn" class="btn" onclick="handleBtn()">Se svar</button>
+    </div>
+</div>
+<script>
+    const data = [
+        {q: "Hva er Lillys favorittfarge?", a: "Lilla"},
+        {q: "Hva er Lillys største ønske?", a: "En hund"},
+        {q: "Hva er det beste Lilly vet?", a: "Is"}
+    ];
+    let idx = 0, state = "show";
+    function handleBtn() {
+        if (state === "show") {
+            document.getElementById('ans').innerText = data[idx].a;
+            document.getElementById('f-text').style.display = "block";
+            document.getElementById('main-btn').innerText = "Neste spørsmål";
+            state = "next";
+        } else {
+            idx++;
+            if (idx < data.length) {
+                document.getElementById('q-text').innerText = data[idx].q;
+                document.getElementById('f-text').style.display = "none";
+                document.getElementById('main-btn').innerText = "Se svar";
+                state = "show";
+            } else {
+                document.getElementById('quiz-content').innerHTML = '<div class="question-card">Ferdig!</div>';
+            }
+        }
+    }
+    document.getElementById('q-text').innerText = data[0].q;
+</script>
+</body>
+</html>
