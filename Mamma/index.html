@@ -18,15 +18,11 @@
             gap: 20px;
         }
 
-        /* Venstre side: Spørsmål */
         .side-panel.left { flex: 1; text-align: left; }
-        
-        /* Høyre side: Poeng og knapper */
         .side-panel.right { flex: 1; text-align: right; display: flex; flex-direction: column; gap: 15px; }
 
-        /* Midten: Portrettbildet */
         .image-container {
-            flex: 0 0 350px; /* Fast bredde på bildeområdet */
+            flex: 0 0 350px; 
             height: 85vh;
             background: #eee;
             border-radius: 30px;
@@ -45,11 +41,10 @@
         .player-btn { padding: 15px; border: 2px solid var(--accent); border-radius: 12px; cursor: pointer; background: white; font-weight: bold; font-size: 1.1rem; transition: 0.3s; }
         .player-btn.active { background: var(--accent); color: white; }
         
-        .next-btn { padding: 15px; border: none; border-radius: 12px; background: #333; color: white; cursor: pointer; font-weight: bold; font-size: 1.1rem; }
+        .next-btn { padding: 15px; border: none; border-radius: 12px; background: #333; color: white; cursor: pointer; font-weight: bold; font-size: 1.1rem; width: 100%; }
         
         .score-box { font-size: 1.2rem; font-weight: bold; color: #555; }
 
-        /* Responsivitet for mobil (stacker dem) */
         @media (max-width: 800px) {
             .main-layout { flex-direction: column; overflow-y: auto; height: auto; }
             .image-container { flex: 0 0 400px; width: 100%; }
@@ -81,14 +76,12 @@
                 <button class="player-btn" onclick="toggle('isak')" id="btn-isak">Isak svarte rett</button>
                 <button class="player-btn" onclick="toggle('lilly')" id="btn-lilly">Lilly svarte rett</button>
             </div>
-            <button class="next-btn" onclick="next()" style="margin-top: 15px; width: 100%;">Bekreft & Neste</button>
+            <button class="next-btn" onclick="next()" style="margin-top: 15px;">Bekreft & Neste</button>
         </div>
     </div>
 </div>
 
 <script>
-    // Konfigurasjon: Legg til bilde-filnavn her. 
-    // Hvis 'img' er tom, brukes 'bakgrunn.jpg'
     const quizData = [
         { q: "Favorittfarge?", img: "" },
         { q: "Favorittmat?", img: "" },
@@ -103,7 +96,6 @@
         document.getElementById('q-text').innerText = current.q;
         document.getElementById('current-img').src = current.img || "bakgrunn.jpg";
         
-        // Nullstill knapper
         sel = {isak:false, lilly:false};
         document.querySelectorAll('.player-btn').forEach(b => b.classList.remove('active'));
     }
@@ -125,11 +117,16 @@
             updateUI();
         } else {
             let win = scores.isak > scores.lilly ? "Isak vant!" : (scores.lilly > scores.isak ? "Lilly vant!" : "Uavgjort!");
-            document.getElementById('main-ui').innerHTML = `<div class="card" style="text-align:center; margin:auto;"><h1>${win}</h1><button class="next-btn" onclick="window.location.reload()">Spill igjen</button></div>`;
+            document.getElementById('main-ui').innerHTML = `
+                <div class="card" style="text-align:center; margin:auto;">
+                    <h1>Ferdig!</h1>
+                    <h2>${win}</h2>
+                    <p>Isak: ${scores.isak} | Lilly: ${scores.lilly}</p>
+                    <button class="next-btn" onclick="window.location.href='https://sarcasm.games'">Tilbake til start</button>
+                </div>`;
         }
     }
 
-    // Start
     updateUI();
 </script>
 
