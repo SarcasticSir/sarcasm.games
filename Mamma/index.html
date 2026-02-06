@@ -6,12 +6,12 @@
     <title>Morsdag Quiz</title>
     <style>
         :root {
-            /* Bakgrunnsfargen til spørsmålskortet - endre 0.85 for gjennomsiktighet */
-            --card-bg: rgba(252, 228, 236, 0.5); 
-            --container-bg: rgba(255, 255, 255, 0.52);
+            /* Gjennomsiktighet på 0.5 på begge lag for maksimal effekt */
+            --card-bg: rgba(252, 228, 236, 0.75); 
+            --container-bg: rgba(255, 255, 255, 0.75);
             --medium-pink: #f8bbd0;
             --accent-pink: #f06292;
-            --text-dark: #4a4a4a;
+            --text-dark: #333;
         }
 
         body { 
@@ -34,10 +34,10 @@
             background: var(--container-bg); 
             padding: 40px; 
             border-radius: 25px; 
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
             text-align: center;
-            backdrop-filter: blur(8px);
-            border: 1px solid var(--medium-pink);
+            backdrop-filter: blur(10px); /* Dette gir en lekker glass-effekt */
+            border: 1px solid rgba(255,255,255,0.3);
         }
 
         .question-card { 
@@ -53,7 +53,7 @@
             padding: 30px;
             border-radius: 20px;
             line-height: 1.4;
-            box-shadow: inset 0 0 10px rgba(0,0,0,0.05);
+            border: 1px solid rgba(255,255,255,0.2);
         }
 
         .btn-group { display: flex; gap: 15px; margin-bottom: 25px; }
@@ -63,7 +63,7 @@
             border: 2px solid var(--medium-pink); 
             border-radius: 12px; 
             cursor: pointer; 
-            background: white; 
+            background: rgba(255,255,255,0.7); 
             font-size: 1.2rem; 
             font-weight: bold; 
             flex: 1; 
@@ -75,7 +75,6 @@
             background: var(--accent-pink); 
             color: white; 
             border-color: var(--accent-pink); 
-            transform: translateY(-3px); 
         }
         
         .next-btn { 
@@ -96,7 +95,7 @@
             margin-top: 30px; 
             font-size: 1.4rem; 
             font-weight: bold; 
-            border-top: 2px solid var(--medium-pink); 
+            border-top: 2px solid rgba(0,0,0,0.1); 
             padding-top: 20px;
             color: var(--text-dark);
         }
@@ -176,11 +175,7 @@
     }
 
     function showFinalScore() {
-        let winnerText = "";
-        if (scores.isak > scores.lilly) winnerText = "Isak er Mamma-eksperten!";
-        else if (scores.lilly > scores.isak) winnerText = "Lilly er Mamma-eksperten!";
-        else winnerText = "Delt seier! Dere kjenner mamma like godt!";
-
+        let winnerText = scores.isak > scores.lilly ? "Isak er Mamma-eksperten!" : (scores.lilly > scores.isak ? "Lilly er Mamma-eksperten!" : "Delt seier!");
         document.getElementById('quiz-content').innerHTML = `
             <div class="question-card">Ferdig!<br><br>${winnerText}</div>
             <button class="next-btn" onclick="location.reload()">Start på nytt</button>
