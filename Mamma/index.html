@@ -3,43 +3,45 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Morsdag Quiz</title>
     <style>
         :root {
-            --soft-pink: rgba(252, 228, 236, 0.9);
+            /* Bakgrunnsfargen til spørsmålskortet - endre 0.85 for gjennomsiktighet */
+            --card-bg: rgba(252, 228, 236, 0.85); 
+            --container-bg: rgba(255, 255, 255, 0.92);
             --medium-pink: #f8bbd0;
             --accent-pink: #f06292;
             --text-dark: #4a4a4a;
         }
 
         body { 
-            /* Bytt ut 'bakgrunn.jpg' med ditt filnavn */
             background-image: url('bakgrunn.jpg'); 
             background-size: cover;
             background-position: center;
             background-attachment: fixed;
-            background-color: #fff5f7; /* Fallback */
+            background-color: #fff5f7;
             display: flex; 
             justify-content: center; 
             align-items: center; 
             min-height: 100vh; 
             margin: 0; 
-            font-family: sans-serif; 
+            font-family: 'Segoe UI', Arial, sans-serif; 
         }
 
         .quiz-container { 
             max-width: 600px; 
             width: 90%;
-            background: rgba(255, 255, 255, 0.92); 
+            background: var(--container-bg); 
             padding: 40px; 
             border-radius: 25px; 
-            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
             text-align: center;
             backdrop-filter: blur(8px);
             border: 1px solid var(--medium-pink);
         }
 
         .question-card { 
-            min-height: 200px; 
+            min-height: 220px; 
             display: flex; 
             align-items: center; 
             justify-content: center; 
@@ -47,32 +49,71 @@
             font-weight: bold; 
             margin-bottom: 30px; 
             color: var(--text-dark);
-            background: var(--soft-pink);
-            padding: 25px;
+            background: var(--card-bg);
+            padding: 30px;
             border-radius: 20px;
             line-height: 1.4;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.05);
         }
 
         .btn-group { display: flex; gap: 15px; margin-bottom: 25px; }
-        .player-btn { padding: 20px; border: 2px solid var(--medium-pink); border-radius: 12px; cursor: pointer; background: white; font-size: 1.2rem; font-weight: bold; flex: 1; transition: 0.2s; }
-        .player-btn.active { background: var(--accent-pink); color: white; border-color: var(--accent-pink); transform: translateY(-3px); }
+
+        .player-btn { 
+            padding: 20px; 
+            border: 2px solid var(--medium-pink); 
+            border-radius: 12px; 
+            cursor: pointer; 
+            background: white; 
+            font-size: 1.2rem; 
+            font-weight: bold; 
+            flex: 1; 
+            transition: 0.2s;
+            color: var(--text-dark);
+        }
+
+        .player-btn.active { 
+            background: var(--accent-pink); 
+            color: white; 
+            border-color: var(--accent-pink); 
+            transform: translateY(-3px); 
+        }
         
-        .next-btn { width: 100%; padding: 18px; border: none; border-radius: 12px; background: var(--text-dark); color: white; cursor: pointer; font-size: 1.1rem; font-weight: bold; }
+        .next-btn { 
+            width: 100%; 
+            padding: 18px; 
+            border: none; 
+            border-radius: 12px; 
+            background: var(--text-dark); 
+            color: white; 
+            cursor: pointer; 
+            font-size: 1.1rem; 
+            font-weight: bold;
+        }
         
-        .scoreboard { display: flex; justify-content: space-around; margin-top: 30px; font-size: 1.3rem; font-weight: bold; border-top: 2px solid var(--soft-pink); padding-top: 20px; }
-        .score-val { color: var(--accent-pink); }
+        .scoreboard { 
+            display: flex; 
+            justify-content: space-around; 
+            margin-top: 30px; 
+            font-size: 1.4rem; 
+            font-weight: bold; 
+            border-top: 2px solid var(--medium-pink); 
+            padding-top: 20px;
+            color: var(--text-dark);
+        }
+
+        .score-val { color: var(--accent-pink); font-size: 1.8rem; }
     </style>
 </head>
 <body>
 
 <div class="quiz-container">
     <div id="quiz-content">
-        <div class="question-card" id="question-text">Laster quiz...</div>
+        <div class="question-card" id="question-text">Gjør dere klare!</div>
         <div class="btn-group">
             <button class="player-btn" onclick="togglePoint('isak')" id="btn-isak">Isak</button>
             <button class="player-btn" onclick="togglePoint('lilly')" id="btn-lilly">Lilly</button>
         </div>
-        <button class="next-btn" onclick="nextQuestion()">Neste spørsmål</button>
+        <button class="next-btn" onclick="nextQuestion()">Bekreft poeng & Neste</button>
     </div>
     <div class="scoreboard">
         <div>Isak: <span id="score-isak" class="score-val">0</span></div>
@@ -82,23 +123,22 @@
 
 <script>
     const questions = [
-        "Hva er det mamma er aller flinkest til?",
-        "Hva pleier mamma å si når hun er skikkelig oppgitt?",
-        "Hvis mamma vant en million, hva ville hun brukt den på?",
-        "Hva er det rareste mamma pleier å spise?",
-        "Hva er mammas absolutte favorittgodteri?",
-        "Hva er mammas favoritt-serie på TV?",
-        "Hvis mamma var et dyr, hvilket dyr ville hun vært?",
-        "Hvilken matrett lager mamma som smaker aller best?",
-        "Hva er det morsomste mamma har gjort sammen med dere?",
-        "Hva er mamma mest redd for?",
-        "Hva gjør mamma når hun skal slappe ordentlig av?",
-        "Hva er den flaueste tingen mamma har gjort?",
-        "Hvilken farge liker mamma best?",
-        "Hva er det aller beste med mamma?"
+        "Hva er mammas favoritt-farge?",
+        "Hvilken by ble mamma født i?",
+        "Hva er mammas favoritt-snop på lørdager?",
+        "Hva er det mamma hater aller mest å gjøre i huset?",
+        "Hva er mammas livrett (favorittmiddag)?",
+        "Hvor mange søsken har mamma?",
+        "Hva er det første mamma gjør når hun våkner om morgenen?",
+        "Hva heter favoritt-serien til mamma?",
+        "Hvilken sang er mammas favoritt å synge med på?",
+        "Hva er mamma mest redd for av småkryp?",
+        "Hvor gammel var mamma da hun fikk sertifikatet?",
+        "Hva er mammas favoritt-drikke?",
+        "Hvilken hobby ville mamma hatt hvis hun hadde mer tid?",
+        "Hvilket land drømmer mamma om å reise til?"
     ];
 
-    // Shuffle-funksjon (Fisher-Yates)
     function shuffle(array) {
         for (let i = array.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
@@ -136,7 +176,11 @@
     }
 
     function showFinalScore() {
-        let winnerText = scores.isak > scores.lilly ? "Isak vant!" : (scores.lilly > scores.isak ? "Lilly vant!" : "Det ble uavgjort!");
+        let winnerText = "";
+        if (scores.isak > scores.lilly) winnerText = "Isak er Mamma-eksperten!";
+        else if (scores.lilly > scores.isak) winnerText = "Lilly er Mamma-eksperten!";
+        else winnerText = "Delt seier! Dere kjenner mamma like godt!";
+
         document.getElementById('quiz-content').innerHTML = `
             <div class="question-card">Ferdig!<br><br>${winnerText}</div>
             <button class="next-btn" onclick="location.reload()">Start på nytt</button>
