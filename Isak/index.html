@@ -34,8 +34,20 @@
     <div style="font-weight:bold; color:var(--accent); margin-top:10px;">Poeng: <span id="s">0</span></div>
 </div>
 <script>
-    const raw = ["Hva er Isaks favorittfarge?;Blå", "Hva er Isaks favorittmat?;Taco"];
-    const data = raw.map(v => ({q: v.split(';')[0], a: v.split(';')[1]}));
+const raw = [
+  "Hva er min favoritt farge?;Rød",
+  "Hva er mitt favoritt dyr?;Ulv/hund",
+  "Hva er mitt favoritt spill?;God of War/Roblox",
+  "Har jeg laget et spill i Roblox?;Ja",
+  "Når er min bursdag?;29. januar 2016",
+  "Hva er min favoritt knivtype?;Butterfly knife",
+  "Hva er min favoritt bok?;Edelmot",
+  "Hvem er min favoritt av mamma eller pappa?;Pappa og mamma",
+  "Hva er mitt favoritt konsoll?;VR eller PC",
+  "Hva er du mest irritert på meg for?;[Legg inn svar her]",
+  "Hvem er min favoritt i Marvel-universet?;Tor eller Iron Man",
+  "Hva er min favoritt mat?;Burger"
+];    const data = raw.map(v => ({q: v.split(';')[0], a: v.split(';')[1]}));
     let i=0, score=0;
     function reveal() {
         document.getElementById('ans').innerText = data[i].a;
