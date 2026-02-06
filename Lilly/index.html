@@ -34,18 +34,19 @@
     <div style="font-weight:bold; color:var(--accent); margin-top:10px;">Poeng: <span id="s">0</span></div>
 </div>
 <script>
-const rawLilly = [
-  "Hva er min favoritt farge?;Lilla",
-  "Hva er min favoritt ting å leke med?;Isak",
-  "Hva er mitt favorittfag på skolen?;Kunst og håndverk",
-  "Hva er min favoritt mat?;Burger",
-  "Hva er mitt favoritt spill?;Roblox",
-  "Hva er mitt favoritt dyr?;Kanin",
-  "Hva er min favoritt skjerm?;TV",
-  "Hva ønsker jeg meg?;Mer sminke",
-  "Hvilken av katt og hund liker jeg best?;Hund",
-  "Hva vil jeg bli når jeg blir stor?;Turnlærer"
-];    const data = raw.map(v => ({q: v.split(';')[0], a: v.split(';')[1]}));
+    const rawLilly = [
+      "Hva er min favoritt farge?;Lilla",
+      "Hva er min favoritt ting å leke med?;Isak",
+      "Hva er mitt favorittfag på skolen?;Kunst og håndverk",
+      "Hva er min favoritt mat?;Burger",
+      "Hva er mitt favoritt spill?;Roblox",
+      "Hva er mitt favoritt dyr?;Kanin",
+      "Hva er min favoritt skjerm?;TV",
+      "Hva ønsker jeg meg?;Mer sminke",
+      "Hvilken av katt og hund liker jeg best?;Hund",
+      "Hva vil jeg bli når jeg blir stor?;Turnlærer"
+    ];    
+    const data = raw.map(v => ({q: v.split(';')[0], a: v.split(';')[1]}));
     let i=0, score=0;
     function reveal() {
         document.getElementById('ans').innerText = data[i].a;
