@@ -1,53 +1,50 @@
 <!DOCTYPE html>
 <html lang="no">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>sarcasm.games</title>
-<style>
-  :root{--bg:#0b0c10;--card:#1e1f25;--txt:#eaeaea;--bd:#2f313a;--accent:#4ecca3}
-  
-  /* Light mode tvungen via klasse */
-  body.light-mode {--bg:#f7f7fb;--card:#ffffff;--txt:#111;--bd:#e7e7ef}
-  
-  /* Auto-oppdagelse fra systemet som backup */
-  @media (prefers-color-scheme: light){
-    body:not(.dark-mode) {:root{--bg:#f7f7fb;--card:#ffffff;--txt:#111;--bd:#e7e7ef}}
-  }
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>sarcasm.games</title>
+  <style>
+    :root{--bg:#0b0c10;--card:#1e1f25;--txt:#eaeaea;--bd:#2f313a;--accent:#4ecca3}
+    
+    body.light-mode {--bg:#f7f7fb;--card:#ffffff;--txt:#111;--bd:#e7e7ef}
+    
+    @media (prefers-color-scheme: light){
+      body:not(.dark-mode) {:root{--bg:#f7f7fb;--card:#ffffff;--txt:#111;--bd:#e7e7ef}}
+    }
 
-  body{margin:0;font:16px/1.4 system-ui,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--txt);display:flex;flex-direction:column;align-items:center;min-height:100dvh;transition: background 0.3s, color 0.3s;}
-  
-  .auth-bar {width: 100%; background: var(--card); border-bottom: 1px solid var(--bd); padding: 10px; display: flex; justify-content: center; align-items: center; gap: 12px; z-index: 100; min-height: 40px;}
-  .auth-bar input {background: var(--bg); border: 1px solid var(--bd); color: var(--txt); padding: 5px 10px; border-radius: 4px; font-size: 14px; outline: none;}
-  .auth-bar button {background: var(--accent); color: #000; border: none; padding: 5px 15px; border-radius: 4px; cursor: pointer; font-weight: bold;}
-  
-  /* Theme Switcher */
-  .theme-toggle { cursor: pointer; font-size: 20px; user-select: none; padding: 0 10px; }
-  .logout-btn { background: #ff4d4d !important; color: white !important; display: none; }
+    body{margin:0;font:16px/1.4 system-ui,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--txt);display:flex;flex-direction:column;align-items:center;min-height:100dvh;transition: background 0.3s, color 0.3s;}
+    
+    .auth-bar {width: 100%; background: var(--card); border-bottom: 1px solid var(--bd); padding: 10px; display: flex; justify-content: center; align-items: center; gap: 12px; z-index: 100; min-height: 40px;}
+    .auth-bar input {background: var(--bg); border: 1px solid var(--bd); color: var(--txt); padding: 5px 10px; border-radius: 4px; font-size: 14px; outline: none;}
+    .auth-bar button {background: var(--accent); color: #000; border: none; padding: 5px 15px; border-radius: 4px; cursor: pointer; font-weight: bold;}
+    
+    .theme-toggle { cursor: pointer; font-size: 20px; user-select: none; padding: 0 10px; }
+    .logout-btn { background: #ff4d4d !important; color: white !important; display: none; }
 
-  .wrap{max-width:860px;width:100%;padding:28px; text-align: center;}
-  h1{margin:0 0 8px;font-size:32px}
-  p{opacity:.8;margin:0 0 24px}
-  .grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
-  a{display:block;text-decoration:none;padding:18px 20px;border-radius:12px;background:var(--card);color:inherit;border:1px solid var(--bd);transition:.15s; position: relative;}
+    .wrap{max-width:860px;width:100%;padding:28px; text-align: center;}
+    h1{margin:0 0 8px;font-size:32px}
+    p{opacity:.8;margin:0 0 24px}
+    .grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+    a{display:block;text-decoration:none;padding:18px 20px;border-radius:12px;background:var(--card);color:inherit;border:1px solid var(--bd);transition:.15s; position: relative;}
 
-  .tooltip-text {
-    visibility: hidden; opacity: 0; transition: opacity 0.3s; position: absolute;
-    top: -35px; left: 50%; transform: translateX(-50%); background-color: var(--bd);
-    color: var(--txt); text-align: center; padding: 4px 8px; border-radius: 6px;
-    font-size: 12px; white-space: nowrap; pointer-events: none;
-  }
-  a:hover {transform: translateY(-1px); border-color: #767a88;}
-  a:hover .tooltip-text {visibility: visible; opacity: 1;}
+    .tooltip-text {
+      visibility: hidden; opacity: 0; transition: opacity 0.3s; position: absolute;
+      top: -35px; left: 50%; transform: translateX(-50%); background-color: var(--bd);
+      color: var(--txt); text-align: center; padding: 4px 8px; border-radius: 6px;
+      font-size: 12px; white-space: nowrap; pointer-events: none;
+    }
+    a:hover {transform: translateY(-1px); border-color: #767a88;}
+    a:hover .tooltip-text {visibility: visible; opacity: 1;}
 
-  #morsdagsContainer { display: none; max-width: 400px; width: 90%; margin: 60px auto; text-align: center; }
-  .morsdag-link { 
-    display: block; background: var(--card); border: 2px solid var(--accent); 
-    padding: 25px; margin: 15px 0; border-radius: 15px; text-decoration: none; 
-    color: var(--txt); font-size: 1.4rem; font-weight: bold; transition: 0.2s;
-  }
-  .morsdag-link:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
-</style>
+    #morsdagsContainer { display: none; max-width: 400px; width: 90%; margin: 60px auto; text-align: center; }
+    .morsdag-link { 
+      display: block; background: var(--card); border: 2px solid var(--accent); 
+      padding: 20px; margin: 10px 0; border-radius: 15px; text-decoration: none; 
+      color: var(--txt); font-size: 1.3rem; font-weight: bold; transition: 0.2s;
+    }
+    .morsdag-link:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+  </style>
 </head>
 <body>
 
@@ -87,15 +84,14 @@
   <a href="/Isak/" class="morsdag-link">👦 Isak</a>
   <a href="/Lilly/" class="morsdag-link">👧 Lilly</a>
   <a href="/Pappa/" class="morsdag-link">🧔 Pappa</a>
+  <a href="/Karusell/" class="morsdag-link" style="border-color: #767a88; opacity: 0.9;">📸 Karusell</a>
 </div>
 
 <script>
   window.onload = function() {
-    // Sjekk innlogging
     if (localStorage.getItem('morsdag_innlogget') === 'true') {
       visInnloggetState();
     }
-    // Sjekk tema-preferanse
     if (localStorage.getItem('theme') === 'light') {
       document.body.classList.add('light-mode');
       document.getElementById('themeIcon').innerText = '☀️';
