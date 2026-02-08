@@ -12,19 +12,19 @@
             display: flex; 
             height: 100vh; 
             align-items: center; 
-            justify-content: space-between;
+            justify-content: center; /* Endret til center for bedre flyt */
             padding: 20px;
             box-sizing: border-box;
             gap: 20px;
         }
 
-        .side-panel { flex: 1; display: flex; flex-direction: column; gap: 15px; }
+        .side-panel { flex: 1; display: flex; flex-direction: column; gap: 15px; min-width: 200px; }
         .side-panel.left { text-align: left; }
         .side-panel.right { text-align: right; }
 
         .image-container {
-            flex: 0 0 500px; 
-            height: 85vh; /* Fast høyde så det ikke blir for stort */
+            flex: 0 0 600px; /* Fast bredde når UI er synlig */
+            height: 85vh;
             background: #90a4ae;
             border-radius: 30px;
             overflow: hidden;
@@ -33,12 +33,13 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            transition: all 0.3s ease;
         }
         
         #current-img { 
             max-width: 100%; 
             max-height: 100%; 
-            object-fit: contain; /* Sikrer at hele bildet vises uten å strekkes ut */
+            object-fit: contain; 
             transition: opacity 0.3s; 
         }
 
@@ -50,9 +51,9 @@
 
         .counter { font-size: 1.1rem; font-weight: bold; color: #666; margin-top: 10px; }
 
-        /* Skjul UI - kun fjerne panelene og sentrere bildecontaineren */
+        /* Skjul UI - fjerner paneler og lar bilde-containeren sentrere seg */
         .ui-hidden .side-panel { display: none; }
-        .ui-hidden .main-layout { justify-content: center; }
+        .ui-hidden .image-container { flex: 0 0 80%; } /* Kan justeres hvis du vil ha det bredere i fullskjerm */
 
         @media (max-width: 800px) {
             .main-layout { flex-direction: column; overflow-y: auto; height: auto; padding: 10px; }
@@ -67,7 +68,7 @@
     <div class="side-panel left">
         <div class="card">
             <div style="color:var(--accent); font-weight:bold; margin-bottom:10px; letter-spacing:1px;">BILDEGALLERI</div>
-            <h2 id="img-title">Bilde 1</h2>
+            <h2 id="img-title">Laster...</h2>
             <div class="counter" id="counter">1 / 15</div>
         </div>
         <button class="nav-btn" onclick="prevImg()" id="prevBtn" style="background: #333;">Forrige</button>
@@ -79,7 +80,7 @@
 
     <div class="side-panel right">
         <div class="card">
-            <h2 style="font-size: 1.2rem;">H for å skjule meny</h2>
+            <h2 style="font-size: 1.2rem;">Trykk H for å skjule menyer</h2>
         </div>
         <button class="nav-btn" onclick="nextImg()" id="nextBtn">Neste bilde</button>
         <button class="nav-btn" onclick="window.location.href='https://sarcasm.games'" style="background:none; color:var(--accent); border:2px solid var(--accent); margin-top:10px;">Avslutt</button>
