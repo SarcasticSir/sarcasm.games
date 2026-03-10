@@ -114,8 +114,31 @@
 
     .view {
       min-height: 0;
+      overflow: hidden;
+      padding-right: 2px;
+    }
+
+    .setup-view-layout {
+      min-height: 0;
+      height: 100%;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 12px;
+    }
+
+    .category-grid-wrap {
+      min-height: 0;
       overflow: auto;
       padding-right: 2px;
+    }
+
+    .question-view-layout {
+      min-height: 0;
+      height: 100%;
+      display: grid;
+      grid-template-rows: auto auto auto 1fr;
+      gap: 10px;
+      align-content: start;
     }
 
     .mode-grid, .category-grid {
@@ -202,37 +225,43 @@
 
         <div class="views">
           <section id="setupView" class="view">
-            <div class="mode-grid" id="modeGrid"></div>
+            <div class="setup-view-layout">
+              <div class="mode-grid" id="modeGrid"></div>
 
-            <div class="section hidden" id="categorySection">
-              <h3 id="categoryTitle" style="margin-top:0"></h3>
-              <div class="category-grid" id="categoryGrid"></div>
-              <div style="margin-top:10px;max-width:220px;">
-                <label for="quizQuestionCount">Number of questions</label>
-                <input id="quizQuestionCount" type="number" min="1" value="10" />
+              <div class="section hidden" id="categorySection">
+                <h3 id="categoryTitle" style="margin-top:0"></h3>
+                <div class="category-grid-wrap">
+                  <div class="category-grid" id="categoryGrid"></div>
+                </div>
+                <div style="margin-top:10px;max-width:220px;">
+                  <label for="quizQuestionCount">Number of questions</label>
+                  <input id="quizQuestionCount" type="number" min="1" value="10" />
+                </div>
               </div>
-            </div>
 
-            <div class="section">
-              <div class="status" id="setupStatus"></div>
-              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
-                <button class="btn-primary" id="startQuizBtn" type="button">Start quiz</button>
-                <button class="btn-danger hidden" id="resetAllProgressBtn" type="button">Reset all progress</button>
+              <div class="section">
+                <div class="status" id="setupStatus"></div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+                  <button class="btn-primary" id="startQuizBtn" type="button">Start quiz</button>
+                  <button class="btn-danger hidden" id="resetAllProgressBtn" type="button">Reset all progress</button>
+                </div>
               </div>
             </div>
           </section>
 
           <section id="questionView" class="view hidden">
-            <div class="question">
-              <h2 id="questionTitle"></h2>
-              <div class="progress" id="questionProgress"></div>
+            <div class="question-view-layout">
+              <div class="question">
+                <h2 id="questionTitle"></h2>
+                <div class="progress" id="questionProgress"></div>
+              </div>
+              <input id="textAnswer" type="text" autocomplete="off" />
+              <div class="answer-actions">
+                <button class="btn-primary" id="submitAnswerBtn" type="button">Submit answer</button>
+                <button class="btn-primary hidden" id="nextQuestionBtn" type="button">Next question</button>
+              </div>
+              <div class="status" id="answerStatus"></div>
             </div>
-            <input id="textAnswer" type="text" autocomplete="off" />
-            <div class="answer-actions">
-              <button class="btn-primary" id="submitAnswerBtn" type="button">Submit answer</button>
-              <button class="btn-primary hidden" id="nextQuestionBtn" type="button">Next question</button>
-            </div>
-            <div class="status" id="answerStatus"></div>
           </section>
 
           <section id="resultView" class="view hidden">
