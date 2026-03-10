@@ -249,7 +249,7 @@
         title: '🧠 NY QUIZ',
         adminOnly: true,
         links: [
-          { label: 'Launch NY QUIZ', action: 'openQuiz' }
+          { label: 'Launch NY QUIZ', href: '/games/quiz/' }
         ]
       }
     ];
@@ -365,15 +365,7 @@
 
         for (const link of moduleConfig.links) {
           const anchor = document.createElement('a');
-          if (link.action === 'openQuiz') {
-            anchor.href = '#';
-            anchor.addEventListener('click', (event) => {
-              event.preventDefault();
-              openQuizModal();
-            });
-          } else {
-            anchor.href = link.href;
-          }
+          anchor.href = link.href;
           anchor.textContent = link.label;
           moduleGroup.appendChild(anchor);
         }
