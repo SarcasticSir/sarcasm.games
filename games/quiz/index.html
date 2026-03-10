@@ -28,26 +28,9 @@
     .hidden { display: none !important; }
 
     .page {
-      height: 100dvh;
-      display: grid;
-      grid-template-rows: auto 1fr;
+      min-height: 100dvh;
       padding: 14px;
-      gap: 12px;
     }
-
-    .topbar {
-      background: var(--card);
-      border: 1px solid var(--bd);
-      border-radius: 12px;
-      padding: 10px 12px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .topbar h1 { margin: 0; font-size: 1.1rem; }
-    .topbar-actions { display: flex; gap: 8px; }
 
     button, .btn-link {
       border: 0;
@@ -66,20 +49,20 @@
     .btn-danger { background: var(--danger); color: #fff; }
 
     .layout {
-      min-height: 0;
+      min-height: calc(100dvh - 28px);
       display: grid;
       place-items: center;
     }
 
     .quiz-card {
-      width: min(980px, 100%);
-      height: min(760px, 100%);
+      width: min(1180px, 100%);
+      min-height: min(780px, calc(100dvh - 28px));
       background: var(--card);
       border: 1px solid var(--bd);
       border-radius: 14px;
       padding: 16px;
       display: grid;
-      grid-template-rows: auto 1fr auto;
+      grid-template-rows: auto 1fr auto auto;
       gap: 12px;
       overflow: hidden;
     }
@@ -122,8 +105,9 @@
       min-height: 0;
       height: 100%;
       display: grid;
-      grid-template-rows: auto 1fr auto;
+      grid-template-rows: auto auto auto;
       gap: 12px;
+      align-content: start;
     }
 
     .category-grid-wrap {
@@ -155,6 +139,18 @@
       border: 1px solid var(--bd);
       border-radius: 10px;
       padding: 10px;
+    }
+
+    #categorySection {
+      min-height: 0;
+      display: grid;
+      grid-template-rows: auto auto auto;
+      gap: 10px;
+    }
+
+    .bottom-actions {
+      display: flex;
+      justify-content: flex-end;
     }
 
     .category-card {
@@ -221,7 +217,7 @@
 
     @media (max-width: 700px) {
       .toolbar { grid-template-columns: 1fr; }
-      .quiz-card { height: 100%; }
+      .quiz-card { min-height: calc(100dvh - 28px); }
       .mode-grid, .category-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 8px;
@@ -234,13 +230,6 @@
 </head>
 <body>
   <main class="page">
-    <header class="topbar">
-      <h1>🧠 NY QUIZ</h1>
-      <div class="topbar-actions">
-        <a class="btn-link btn-neutral" href="/">Tilbake</a>
-      </div>
-    </header>
-
     <section class="layout">
       <article class="quiz-card">
         <div class="toolbar">
@@ -264,7 +253,7 @@
                 <div class="category-grid-wrap">
                   <div class="category-grid" id="categoryGrid"></div>
                 </div>
-                <div style="margin-top:10px;max-width:220px;">
+                <div style="max-width:220px;">
                   <label for="quizQuestionCount">Number of questions</label>
                   <input id="quizQuestionCount" type="number" min="1" value="10" />
                 </div>
@@ -302,6 +291,9 @@
         </div>
 
         <div class="status" id="globalStatus"></div>
+        <div class="bottom-actions">
+          <a class="btn-link btn-neutral" href="/">Tilbake</a>
+        </div>
       </article>
     </section>
   </main>
