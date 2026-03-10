@@ -169,6 +169,7 @@ async function resetAllUserProgress(userId) {
 }
 
 module.exports = {
+  runQuery,
   getUserByEmail,
   getUserByUsername,
   insertUser,
