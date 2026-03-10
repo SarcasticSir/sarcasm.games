@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="no">
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -10,9 +10,9 @@
     body { margin:0; font:16px/1.4 system-ui, Segoe UI, Roboto, Arial; background:var(--bg); color:var(--txt); min-height:100dvh; }
     .hidden{display:none!important}
 
-    .auth-shell{position:fixed;inset:0;padding:24px;display:grid;place-items:center;background:rgba(0,0,0,.55);z-index:2000}
-    .auth-card{width:min(560px,100%);background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:20px;box-sizing:border-box;position:relative}
-    .auth-close{position:absolute;top:10px;right:10px;background:transparent;border:1px solid var(--bd);color:var(--txt);padding:6px 10px;border-radius:8px}
+    .auth-shell,.quiz-shell{position:fixed;inset:0;padding:24px;display:grid;place-items:center;background:rgba(0,0,0,.55);z-index:2000}
+    .auth-card,.quiz-card{width:min(700px,100%);background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:20px;box-sizing:border-box;position:relative;max-height:88vh;overflow:auto}
+    .auth-close,.quiz-close{position:absolute;top:10px;right:10px;background:transparent;border:1px solid var(--bd);color:var(--txt);padding:6px 10px;border-radius:8px}
     .auth-title{margin:0 0 8px;font-size:1.6rem}
     .auth-subtitle{margin:0 0 16px;color:var(--muted)}
     .auth-tabs{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
@@ -44,6 +44,16 @@
     .season-grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
     .module-group{border:1px dashed var(--bd);border-radius:10px;padding:10px}
     .module-group h4{margin:0 0 8px}
+
+    .quiz-mode-grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));margin-bottom:14px}
+    .quiz-section{border:1px solid var(--bd);border-radius:12px;padding:12px;margin-bottom:12px}
+    .quiz-category-list{display:grid;gap:8px;max-height:260px;overflow:auto;padding-right:4px}
+    .quiz-category-item{position:relative;display:block;gap:8px;border:1px solid var(--bd);border-radius:8px;padding:12px;cursor:pointer;user-select:none}
+    .quiz-category-item.selected{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+    .quiz-category-item.disabled{opacity:.55;cursor:not-allowed}
+    .quiz-answer-list{display:grid;gap:8px;margin-top:14px}
+    .quiz-progress{margin-top:8px;color:var(--muted)}
+    .quiz-result{font-size:1.1rem;font-weight:700;margin-bottom:10px}
   </style>
 </head>
 <body>
@@ -120,7 +130,7 @@
             <input id="registerUser" type="text" autocomplete="username" />
           </div>
           <div class="form-group">
-            <label for="registerEmail">E-post</label>
+            <label for="registerEmail">Email</label>
             <input id="registerEmail" type="email" autocomplete="email" />
           </div>
           <div class="form-group">
@@ -140,7 +150,7 @@
             <input id="resetUsername" type="text" />
           </div>
           <div class="form-group">
-            <label for="resetEmail">E-post</label>
+            <label for="resetEmail">Email</label>
             <input id="resetEmail" type="email" />
           </div>
           <div class="form-group">
@@ -165,6 +175,59 @@
         <div id="statusBox" class="status-box"></div>
       </div>
     </div>
+
+    <div id="quizShell" class="quiz-shell hidden">
+      <div class="quiz-card">
+        <button class="quiz-close" id="closeQuizBtn" type="button">✕</button>
+        <h2>NY QUIZ</h2>
+        <div class="form-group" style="max-width:180px;">
+          <label for="quizLanguage">Language</label>
+          <select id="quizLanguage" style="width:100%;background:var(--bg);border:1px solid var(--bd);color:var(--txt);padding:8px;border-radius:8px;">
+            <option value="en" selected>English</option>
+            <option value="no">Norsk</option>
+          </select>
+        </div>
+
+        <section id="quizSetupView">
+          <div class="quiz-mode-grid">
+            <button class="btn-primary" data-quiz-mode="random10">Random 10</button>
+            <button class="btn-neutral" data-quiz-mode="categories">Categories</button>
+            <button class="btn-neutral" data-quiz-mode="completionist">Completionist</button>
+          </div>
+
+          <div class="quiz-section hidden" id="quizCategorySection">
+            <h3 id="quizCategoryTitle">Choose categories</h3>
+            <div class="quiz-category-list" id="quizCategoryList"></div>
+            <div class="form-group">
+              <label for="quizQuestionCount">Number of questions</label>
+              <input id="quizQuestionCount" type="number" min="1" value="10" />
+            </div>
+            <div class="btn-row">
+              <button class="btn-primary" id="startCategoryQuizBtn">Start quiz</button>
+              <button class="btn-danger hidden" id="resetAllProgressBtn" type="button">Reset All Progress</button>
+            </div>
+          </div>
+
+          <div class="status-box" id="quizStatusBox"></div>
+          <div class="form-group hidden">
+            <label for="quizHoneypot">Website</label>
+            <input id="quizHoneypot" type="text" autocomplete="off" tabindex="-1" />
+          </div>
+        </section>
+
+        <section id="quizQuestionView" class="hidden">
+          <h3 id="quizQuestionTitle"></h3>
+          <div class="quiz-progress" id="quizProgress"></div>
+          <div class="quiz-answer-list" id="quizAnswerList"></div>
+          <div class="status-box" id="quizAnswerStatus"></div>
+        </section>
+
+        <section id="quizResultView" class="hidden">
+          <div class="quiz-result" id="quizResultSummary"></div>
+          <button class="btn-primary" id="restartQuizBtn">Back to setup</button>
+        </section>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -180,6 +243,14 @@
           { label: '🧔 Pappa', href: '/Pappa/' },
           { label: '📸 Karusell', href: '/Karusell/' }
         ]
+      },
+      {
+        id: 'ny-quiz',
+        title: '🧠 NY QUIZ',
+        adminOnly: true,
+        links: [
+          { label: 'Launch NY QUIZ', action: 'openQuiz' }
+        ]
       }
     ];
 
@@ -194,6 +265,18 @@
     let failedResetAttempts = 0;
     let currentUser = null;
 
+    const quizState = {
+      mode: null,
+      categories: [],
+      progressByCategory: [],
+      questions: [],
+      answers: [],
+      index: 0,
+      selectedCategories: new Set(),
+      language: 'en',
+      almostRetryUsed: false
+    };
+
     const statusBox = document.getElementById('statusBox');
     const authShell = document.getElementById('authShell');
     const welcomeText = document.getElementById('welcomeText');
@@ -206,18 +289,21 @@
     const resetInfoBtn = document.getElementById('resetInfoBtn');
     const logoutBtn = document.getElementById('logoutBtn');
     const toggleLoginBtn = document.getElementById('toggleLoginBtn');
-    const closeLoginBtn = document.getElementById('closeLoginBtn');
+    const quizShell = document.getElementById('quizShell');
+    const quizStatusBox = document.getElementById('quizStatusBox');
 
     function setStatus(message, isError = false) {
       statusBox.style.color = isError ? 'var(--danger)' : 'var(--muted)';
       statusBox.textContent = message;
     }
 
+    function setQuizStatus(message, isError = false) {
+      quizStatusBox.style.color = isError ? 'var(--danger)' : 'var(--muted)';
+      quizStatusBox.textContent = message;
+    }
 
     function toggleLoginPanel() {
-      if (currentUser) {
-        return;
-      }
+      if (currentUser) return;
       const isHidden = authShell.classList.contains('hidden');
       if (isHidden) {
         authShell.classList.remove('hidden');
@@ -228,12 +314,9 @@
       }
     }
 
-
     function closeLoginPanel() {
       authShell.classList.add('hidden');
-      if (!currentUser) {
-        toggleLoginBtn.textContent = 'Login';
-      }
+      if (!currentUser) toggleLoginBtn.textContent = 'Login';
     }
 
     function generateCaptchaQuestion() {
@@ -282,10 +365,19 @@
 
         for (const link of moduleConfig.links) {
           const anchor = document.createElement('a');
-          anchor.href = link.href;
+          if (link.action === 'openQuiz') {
+            anchor.href = '#';
+            anchor.addEventListener('click', (event) => {
+              event.preventDefault();
+              openQuizModal();
+            });
+          } else {
+            anchor.href = link.href;
+          }
           anchor.textContent = link.label;
           moduleGroup.appendChild(anchor);
         }
+
         featureModulesGrid.appendChild(moduleGroup);
       }
 
@@ -317,7 +409,7 @@
       memberList.innerHTML = '';
       for (const member of data.users || []) {
         const li = document.createElement('li');
-        li.textContent = `${member.username} (${member.email}) - role: ${member.role} - country: ${member.country || 'unknown'}`;
+        li.textContent = `${member.username} (${member.email}) - country: ${member.country || 'unknown'}`;
         memberList.appendChild(li);
       }
       memberListSection.classList.remove('hidden');
@@ -437,8 +529,347 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ honeypot: '' })
       });
+      closeQuizModal();
       await applyUserState(null);
       setStatus('Logged out.');
+    }
+
+    function closeQuizModal() {
+      quizShell.classList.add('hidden');
+      document.getElementById('quizSetupView').classList.remove('hidden');
+      document.getElementById('quizQuestionView').classList.add('hidden');
+      document.getElementById('quizResultView').classList.add('hidden');
+      setQuizStatus('');
+    }
+
+    async function openQuizModal() {
+      if (!currentUser || currentUser.role !== 'admin') {
+        setStatus('Only admin users can access NY QUIZ.', true);
+        return;
+      }
+      quizShell.classList.remove('hidden');
+      await loadQuizOverview();
+    }
+
+    async function loadQuizOverview() {
+      setQuizStatus('Loading categories...');
+      const response = await fetch('/api/quiz/overview', { credentials: 'include' });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        setQuizStatus(data.error || 'Could not load quiz overview.', true);
+        return;
+      }
+
+      const data = await response.json();
+      quizState.categories = data.categories || [];
+      quizState.progressByCategory = data.progress || [];
+      renderCategoryOptions('categories');
+      setQuizStatus('Choose a quiz mode to begin.');
+    }
+
+    function getCategoryProgress(categoryName) {
+      return quizState.progressByCategory.find((entry) => entry.category === categoryName) || { total: 0, correct: 0 };
+    }
+
+    function renderCategoryOptions(mode) {
+      const section = document.getElementById('quizCategorySection');
+      const list = document.getElementById('quizCategoryList');
+      const title = document.getElementById('quizCategoryTitle');
+      const resetAllBtn = document.getElementById('resetAllProgressBtn');
+      list.innerHTML = '';
+
+      const isCompletionist = mode === 'completionist';
+      title.textContent = isCompletionist ? 'Completionist category setup' : 'Category setup';
+      resetAllBtn.classList.toggle('hidden', !isCompletionist);
+
+      for (const item of quizState.categories) {
+        const progress = getCategoryProgress(item.category);
+        const isCompleted = isCompletionist && Number(progress.correct) >= Number(progress.total) && Number(progress.total) > 0;
+
+        const wrapper = document.createElement('div');
+        wrapper.className = `quiz-category-item${quizState.selectedCategories.has(item.category) ? ' selected' : ''}${isCompleted ? ' disabled' : ''}`;
+
+        const label = document.createElement('div');
+        label.textContent = isCompletionist
+          ? `${item.category} - Correct: ${progress.correct}/${progress.total}`
+          : `${item.category} (${item.total})`;
+
+        const resetBtn = document.createElement('button');
+        resetBtn.type = 'button';
+        resetBtn.className = 'btn-danger';
+        resetBtn.style.position = 'absolute';
+        resetBtn.style.top = '8px';
+        resetBtn.style.right = '8px';
+        resetBtn.style.padding = '6px 8px';
+        resetBtn.textContent = 'Reset';
+        resetBtn.classList.toggle('hidden', !isCompletionist);
+        resetBtn.addEventListener('click', (event) => {
+          event.stopPropagation();
+          resetCategoryProgress(item.category);
+        });
+
+        wrapper.addEventListener('click', () => {
+          if (isCompleted) return;
+          if (quizState.selectedCategories.has(item.category)) {
+            quizState.selectedCategories.delete(item.category);
+          } else {
+            quizState.selectedCategories.add(item.category);
+          }
+          renderCategoryOptions(mode);
+        });
+
+        wrapper.appendChild(label);
+        wrapper.appendChild(resetBtn);
+        list.appendChild(wrapper);
+      }
+
+      section.classList.remove('hidden');
+    }
+
+    function getSelectedCategories() {
+      return [...quizState.selectedCategories];
+    }
+
+    async function startQuiz(mode) {
+      if (!currentUser || currentUser.role !== 'admin') {
+        setQuizStatus('Only admin users can start NY QUIZ.', true);
+        return;
+      }
+
+      let count = 10;
+      let categories = [];
+
+      if (mode !== 'random10') {
+        categories = getSelectedCategories();
+        if (categories.length === 0) {
+          setQuizStatus('Select at least one category.', true);
+          return;
+        }
+
+        const rawCount = Number(document.getElementById('quizQuestionCount').value);
+        if (!Number.isFinite(rawCount) || rawCount < 1) {
+          setQuizStatus('Enter a valid question count.', true);
+          return;
+        }
+
+        const totalAvailable = categories.reduce((sum, category) => {
+          const categoryInfo = quizState.categories.find((item) => item.category === category);
+          if (!categoryInfo) return sum;
+          if (mode === 'completionist') {
+            const progress = getCategoryProgress(category);
+            return sum + Math.max(0, Number(progress.total) - Number(progress.correct));
+          }
+          return sum + Number(categoryInfo.total || 0);
+        }, 0);
+
+        if (rawCount > totalAvailable) {
+          setQuizStatus(`Count must be between 1 and ${totalAvailable}.`, true);
+          return;
+        }
+
+        count = rawCount;
+      }
+
+      const response = await fetch('/api/quiz/start', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mode,
+          count,
+          categories,
+          honeypot: document.getElementById('quizHoneypot').value
+        })
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        setQuizStatus(data.error || 'Failed to start quiz.', true);
+        return;
+      }
+
+      const data = await response.json();
+      if (!Array.isArray(data.questions) || data.questions.length === 0) {
+        setQuizStatus('No questions available for this setup.', true);
+        return;
+      }
+
+      quizState.mode = mode;
+      quizState.questions = data.questions;
+      quizState.answers = [];
+      quizState.index = 0;
+
+      document.getElementById('quizSetupView').classList.add('hidden');
+      document.getElementById('quizResultView').classList.add('hidden');
+      document.getElementById('quizQuestionView').classList.remove('hidden');
+      renderCurrentQuestion();
+    }
+
+    function renderCurrentQuestion() {
+      const question = quizState.questions[quizState.index];
+      if (!question) {
+        showQuizResults();
+        return;
+      }
+
+      const localizedQuestion = quizState.language === 'no' ? question.questionNo : question.questionEn;
+      document.getElementById('quizQuestionTitle').textContent = `${question.category}: ${localizedQuestion}`;
+      document.getElementById('quizProgress').textContent = `Question ${quizState.index + 1} of ${quizState.questions.length}`;
+      document.getElementById('quizAnswerStatus').textContent = '';
+      quizState.almostRetryUsed = false;
+
+      const list = document.getElementById('quizAnswerList');
+      list.innerHTML = '';
+
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.id = 'quizTextAnswer';
+      input.placeholder = quizState.language === 'no' ? 'Skriv svaret ditt' : 'Type your answer';
+      list.appendChild(input);
+
+      const submitBtn = document.createElement('button');
+      submitBtn.className = 'btn-primary';
+      submitBtn.textContent = quizState.language === 'no' ? 'Svar' : 'Submit answer';
+      submitBtn.addEventListener('click', () => submitQuizAnswer(question.id));
+      list.appendChild(submitBtn);
+
+      input.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          submitQuizAnswer(question.id);
+        }
+      });
+
+      setTimeout(() => input.focus(), 0);
+    }
+
+    async function submitQuizAnswer(questionId) {
+      const input = document.getElementById('quizTextAnswer');
+      const selectedAnswer = input ? input.value : '';
+
+      const response = await fetch('/api/quiz/answer', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          questionId,
+          selectedAnswer,
+          language: quizState.language,
+          retryUsed: quizState.almostRetryUsed,
+          honeypot: document.getElementById('quizHoneypot').value
+        })
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        document.getElementById('quizAnswerStatus').textContent = data.error || 'Could not submit answer.';
+        return;
+      }
+
+      const data = await response.json();
+
+      if (data.status === 'almost') {
+        quizState.almostRetryUsed = true;
+        document.getElementById('quizAnswerStatus').textContent = quizState.language === 'no'
+          ? 'Nesten! Prøv én gang til.'
+          : 'Almost! Try one more time.';
+        return;
+      }
+
+      if (data.status === 'correct') {
+        quizState.answers.push(true);
+        document.getElementById('quizAnswerStatus').textContent = quizState.language === 'no' ? 'Riktig ✅' : 'Correct ✅';
+        setTimeout(() => {
+          quizState.index += 1;
+          renderCurrentQuestion();
+        }, 450);
+        return;
+      }
+
+      quizState.answers.push(false);
+      const statusBox = document.getElementById('quizAnswerStatus');
+      statusBox.textContent = quizState.language === 'no'
+        ? `Feil ❌ (Riktig svar: ${data.correctAnswer})`
+        : `Incorrect ❌ (Correct answer: ${data.correctAnswer})`;
+
+      const list = document.getElementById('quizAnswerList');
+      const nextBtn = document.createElement('button');
+      nextBtn.className = 'btn-primary';
+      nextBtn.textContent = quizState.language === 'no' ? 'Neste spørsmål' : 'Next question';
+      nextBtn.addEventListener('click', () => {
+        quizState.index += 1;
+        renderCurrentQuestion();
+      });
+      list.appendChild(nextBtn);
+    }
+
+    function showQuizResults() {
+      const correct = quizState.answers.filter(Boolean).length;
+      const total = quizState.answers.length;
+      document.getElementById('quizQuestionView').classList.add('hidden');
+      document.getElementById('quizResultView').classList.remove('hidden');
+      document.getElementById('quizResultSummary').textContent = `Result: ${correct}/${total} correct`;
+      loadQuizOverview();
+    }
+
+    async function resetCategoryProgress(category) {
+      const response = await fetch('/api/quiz/reset-category', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ category, honeypot: document.getElementById('quizHoneypot').value })
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        setQuizStatus(data.error || 'Could not reset category progress.', true);
+        return;
+      }
+
+      setQuizStatus(`Progress reset for ${category}.`);
+      await loadQuizOverview();
+      renderCategoryOptions('completionist');
+    }
+
+    async function resetAllProgress() {
+      if (!confirm('Are you sure you want to reset ALL quiz progress?')) {
+        return;
+      }
+
+      const response = await fetch('/api/quiz/reset-all', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ honeypot: document.getElementById('quizHoneypot').value })
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        setQuizStatus(data.error || 'Could not reset all progress.', true);
+        return;
+      }
+
+      setQuizStatus('All progress was reset.');
+      await loadQuizOverview();
+      renderCategoryOptions('completionist');
+    }
+
+    async function showModeSelection(mode) {
+      quizState.mode = mode;
+      quizState.selectedCategories = new Set();
+      const section = document.getElementById('quizCategorySection');
+
+      if (mode === 'random10') {
+        section.classList.add('hidden');
+        await startQuiz('random10');
+        return;
+      }
+
+      renderCategoryOptions(mode);
+      section.classList.remove('hidden');
+      setQuizStatus(mode === 'completionist'
+        ? 'Select categories and amount. Only not-yet-correct questions will be used.'
+        : 'Select categories and amount for your quiz.');
     }
 
     async function init() {
@@ -459,8 +890,32 @@
       document.getElementById('themeToggle').addEventListener('click', toggleTheme);
       document.getElementById('toggleLoginBtn').addEventListener('click', toggleLoginPanel);
       document.getElementById('closeLoginBtn').addEventListener('click', closeLoginPanel);
+
+      document.getElementById('closeQuizBtn').addEventListener('click', closeQuizModal);
+      document.getElementById('quizLanguage').addEventListener('change', (event) => {
+        quizState.language = event.target.value === 'no' ? 'no' : 'en';
+        if (!document.getElementById('quizQuestionView').classList.contains('hidden')) {
+          renderCurrentQuestion();
+        }
+      });
+      document.getElementById('restartQuizBtn').addEventListener('click', () => {
+        document.getElementById('quizResultView').classList.add('hidden');
+        document.getElementById('quizSetupView').classList.remove('hidden');
+        document.getElementById('quizCategorySection').classList.add('hidden');
+        setQuizStatus('Choose a quiz mode to begin.');
+      });
+      document.getElementById('startCategoryQuizBtn').addEventListener('click', () => startQuiz(quizState.mode || 'categories'));
+      document.getElementById('resetAllProgressBtn').addEventListener('click', resetAllProgress);
+
+      document.querySelectorAll('[data-quiz-mode]').forEach((button) => {
+        button.addEventListener('click', () => showModeSelection(button.dataset.quizMode));
+      });
+
       document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape') closeLoginPanel();
+        if (event.key === 'Escape') {
+          closeLoginPanel();
+          closeQuizModal();
+        }
       });
 
       const submitOnEnter = (event) => {
