@@ -1,130 +1,866 @@
 <!DOCTYPE html>
-<html lang="no">
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>sarcasm.games</title>
   <style>
-    :root{--bg:#0b0c10;--card:#1e1f25;--txt:#eaeaea;--bd:#2f313a;--accent:#4ecca3}
-    
-    body.light-mode {--bg:#f7f7fb;--card:#ffffff;--txt:#111;--bd:#e7e7ef}
-    
-    @media (prefers-color-scheme: light){
-      body:not(.dark-mode) {:root{--bg:#f7f7fb;--card:#ffffff;--txt:#111;--bd:#e7e7ef}}
-    }
+    :root { --bg:#0b0c10; --card:#1e1f25; --txt:#eaeaea; --bd:#2f313a; --accent:#4ecca3; --danger:#ff6b6b; --muted:#9aa0ad; }
+    body.light-mode { --bg:#f7f7fb; --card:#fff; --txt:#111; --bd:#e7e7ef; --muted:#5d6470; }
+    body { margin:0; font:16px/1.4 system-ui, Segoe UI, Roboto, Arial; background:var(--bg); color:var(--txt); min-height:100dvh; }
+    .hidden{display:none!important}
 
-    body{margin:0;font:16px/1.4 system-ui,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--txt);display:flex;flex-direction:column;align-items:center;min-height:100dvh;transition: background 0.3s, color 0.3s;}
-    
-    .auth-bar {width: 100%; background: var(--card); border-bottom: 1px solid var(--bd); padding: 10px; display: flex; justify-content: center; align-items: center; gap: 12px; z-index: 100; min-height: 40px;}
-    .auth-bar input {background: var(--bg); border: 1px solid var(--bd); color: var(--txt); padding: 5px 10px; border-radius: 4px; font-size: 14px; outline: none;}
-    .auth-bar button {background: var(--accent); color: #000; border: none; padding: 5px 15px; border-radius: 4px; cursor: pointer; font-weight: bold;}
-    
-    .theme-toggle { cursor: pointer; font-size: 20px; user-select: none; padding: 0 10px; }
-    .logout-btn { background: #ff4d4d !important; color: white !important; display: none; }
+    .auth-shell,.quiz-shell{position:fixed;inset:0;padding:24px;display:grid;place-items:center;background:rgba(0,0,0,.55);z-index:2000}
+    .auth-card,.quiz-card{width:min(700px,100%);background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:20px;box-sizing:border-box;position:relative;max-height:88vh;overflow:auto}
+    .auth-close,.quiz-close{position:absolute;top:10px;right:10px;background:transparent;border:1px solid var(--bd);color:var(--txt);padding:6px 10px;border-radius:8px}
+    .auth-title{margin:0 0 8px;font-size:1.6rem}
+    .auth-subtitle{margin:0 0 16px;color:var(--muted)}
+    .auth-tabs{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+    .tab-btn{border:1px solid var(--bd);background:transparent;color:var(--txt);border-radius:8px;padding:8px 12px;cursor:pointer}
+    .tab-btn.active{background:var(--accent);color:#111;border-color:var(--accent);font-weight:700}
+    .form-group{margin-bottom:10px}
+    .form-group label{display:block;margin-bottom:4px;font-size:.9rem;color:var(--muted)}
+    input{width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--bd);color:var(--txt);padding:10px 12px;border-radius:8px;font-size:14px;outline:none}
+    .btn-row{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+    button{border:0;border-radius:8px;padding:10px 14px;cursor:pointer;font-weight:700}
+    .btn-primary{background:var(--accent);color:#111}
+    .btn-danger{background:var(--danger);color:#fff}
+    .btn-neutral{background:var(--bd);color:var(--txt)}
+    .status-box{margin-top:12px;min-height:20px;color:var(--muted);font-size:.92rem;word-break:break-word}
 
-    .wrap{max-width:860px;width:100%;padding:28px; text-align: center;}
+    .app-shell{display:flex;flex-direction:column;align-items:center;min-height:100dvh}
+    .top-bar{width:100%;background:var(--card);border-bottom:1px solid var(--bd);padding:10px 14px;display:flex;justify-content:space-between;align-items:center;box-sizing:border-box;gap:10px;flex-wrap:wrap}
+    .top-bar .right{display:flex;gap:8px;flex-wrap:wrap}
+    .wrap{max-width:860px;width:100%;padding:28px;text-align:center;box-sizing:border-box}
     h1{margin:0 0 8px;font-size:32px}
-    p{opacity:.8;margin:0 0 24px}
+    p{opacity:.85;margin:0 0 24px}
     .grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
-    a{display:block;text-decoration:none;padding:18px 20px;border-radius:12px;background:var(--card);color:inherit;border:1px solid var(--bd);transition:.15s; position: relative;}
+    a{display:block;text-decoration:none;padding:18px 20px;border-radius:12px;background:var(--card);color:inherit;border:1px solid var(--bd);transition:.15s;position:relative}
+    .tooltip-text{visibility:hidden;opacity:0;transition:opacity .3s;position:absolute;top:-35px;left:50%;transform:translateX(-50%);background-color:var(--bd);color:var(--txt);text-align:center;padding:4px 8px;border-radius:6px;font-size:12px;white-space:nowrap;pointer-events:none}
+    a:hover{transform:translateY(-1px);border-color:#767a88}
+    a:hover .tooltip-text{visibility:visible;opacity:1}
 
-    .tooltip-text {
-      visibility: hidden; opacity: 0; transition: opacity 0.3s; position: absolute;
-      top: -35px; left: 50%; transform: translateX(-50%); background-color: var(--bd);
-      color: var(--txt); text-align: center; padding: 4px 8px; border-radius: 6px;
-      font-size: 12px; white-space: nowrap; pointer-events: none;
-    }
-    a:hover {transform: translateY(-1px); border-color: #767a88;}
-    a:hover .tooltip-text {visibility: visible; opacity: 1;}
+    .season-card,.member-list{margin-top:24px;background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;text-align:left}
+    .season-grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+    .module-group{border:1px dashed var(--bd);border-radius:10px;padding:10px}
+    .module-group h4{margin:0 0 8px}
 
-    #morsdagsContainer { display: none; max-width: 400px; width: 90%; margin: 60px auto; text-align: center; }
-    .morsdag-link { 
-      display: block; background: var(--card); border: 2px solid var(--accent); 
-      padding: 20px; margin: 10px 0; border-radius: 15px; text-decoration: none; 
-      color: var(--txt); font-size: 1.3rem; font-weight: bold; transition: 0.2s;
-    }
-    .morsdag-link:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+    .quiz-mode-grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));margin-bottom:14px}
+    .quiz-section{border:1px solid var(--bd);border-radius:12px;padding:12px;margin-bottom:12px}
+    .quiz-category-list{display:grid;gap:8px;max-height:260px;overflow:auto;padding-right:4px}
+    .quiz-category-item{display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid var(--bd);border-radius:8px;padding:8px}
+    .quiz-answer-list{display:grid;gap:8px;margin-top:14px}
+    .quiz-progress{margin-top:8px;color:var(--muted)}
+    .quiz-result{font-size:1.1rem;font-weight:700;margin-bottom:10px}
   </style>
 </head>
 <body>
+  <div id="appShell" class="app-shell">
+    <div class="top-bar">
+      <strong id="welcomeText">Logged in as: Guest</strong>
+      <div class="right">
+        <button class="btn-neutral" id="themeToggle">🌓 Theme</button>
+        <button class="btn-neutral" id="toggleLoginBtn">Login</button>
+        <button class="btn-danger hidden" id="logoutBtn">Logout</button>
+      </div>
+    </div>
 
-<div class="auth-bar" id="authBar">
-  <div class="theme-toggle" onclick="toggleTheme()" id="themeIcon">🌙</div>
-  <div id="loginFields">
-    <input type="text" id="user" placeholder="Brukernavn" autocomplete="off">
-    <input type="password" id="pass" placeholder="Passord">
-    <button onclick="checkLogin()">Logg inn</button>
+    <div class="wrap">
+      <h1>sarcasm.games</h1>
+      <p>Where do you want to go?</p>
+      <div class="grid">
+        <a href="/tiermaker/">Tier-maker <span class="tooltip-text">Make your own tier list.</span></a>
+        <a href="/monstercatch/">Monster catcher <span class="tooltip-text">A local game.</span></a>
+        <a href="/achievements/">Life Achievements <span class="tooltip-text">Track accomplishments</span></a>
+        <a href="/poketruefalse/">Pokemon True or False <span class="tooltip-text">Facts game!</span></a>
+        <a href="/lighthousekeeper/">Lighthouse Keeper <span class="tooltip-text">Keep the light on!</span></a>
+        <a href="/CosmicClick/">Cosmic clicker <span class="tooltip-text">Incremental clicker!</span></a>
+        <a href="/orb/">Orb Game <span class="tooltip-text">Race to the finish!</span></a>
+        <a href="/CrystalClick/">Crystal Mining <span class="tooltip-text">Second clicker!</span></a>
+        <a href="/GalacticClick/">Galactic Mining <span class="tooltip-text">Third clicker!</span></a>
+        <a href="/quizapp/">Quiz! <span class="tooltip-text">Generate a quiz</span></a>
+        <a href="/memory/">Guess the mon! <span class="tooltip-text">How fast are you?</span></a>
+        <a href="https://html.itch.zone/html/14908902/index.html">3D Platformer <span class="tooltip-text">Playable in browser</span></a>
+      </div>
+
+      <section class="season-card hidden" id="featureModulesSection">
+        <h3 id="featureModulesTitle">Admin modules</h3>
+        <div class="season-grid" id="featureModulesGrid"></div>
+      </section>
+
+      <section id="memberListSection" class="member-list hidden">
+        <h3>Member list (admin only)</h3>
+        <ul id="memberList"></ul>
+      </section>
+    </div>
+
+    <div id="authShell" class="auth-shell hidden">
+      <div class="auth-card">
+        <button class="auth-close" id="closeLoginBtn" type="button">✕</button>
+        <h2 class="auth-title">Optional login</h2>
+        <p class="auth-subtitle">Log in for personal or admin-only features.</p>
+
+        <div class="auth-tabs">
+          <button class="tab-btn active" data-tab="login">Login</button>
+          <button class="tab-btn" data-tab="register">Create account</button>
+          <button class="tab-btn" data-tab="reset">Forgot password?</button>
+        </div>
+
+        <section id="loginTab" class="tab-content">
+          <div class="form-group">
+            <label for="loginUsername">Username</label>
+            <input id="loginUsername" type="text" autocomplete="username" />
+          </div>
+          <div class="form-group">
+            <label for="loginPassword">Password</label>
+            <input id="loginPassword" type="password" autocomplete="current-password" />
+          </div>
+          <div class="form-group hidden">
+            <label for="loginWebsite">Website</label>
+            <input id="loginWebsite" type="text" autocomplete="off" tabindex="-1" />
+          </div>
+          <div class="btn-row"><button class="btn-primary" id="loginBtn">Login</button></div>
+        </section>
+
+        <section id="registerTab" class="tab-content hidden">
+          <div class="form-group">
+            <label for="registerUser">Username</label>
+            <input id="registerUser" type="text" autocomplete="username" />
+          </div>
+          <div class="form-group">
+            <label for="registerEmail">Email</label>
+            <input id="registerEmail" type="email" autocomplete="email" />
+          </div>
+          <div class="form-group">
+            <label for="registerPassword">Password</label>
+            <input id="registerPassword" type="password" autocomplete="new-password" />
+          </div>
+          <div class="form-group hidden">
+            <label for="registerWebsite">Website</label>
+            <input id="registerWebsite" type="text" autocomplete="off" tabindex="-1" />
+          </div>
+          <div class="btn-row"><button class="btn-primary" id="registerBtn">Create account</button></div>
+        </section>
+
+        <section id="resetTab" class="tab-content hidden">
+          <div class="form-group">
+            <label for="resetUsername">Username</label>
+            <input id="resetUsername" type="text" />
+          </div>
+          <div class="form-group">
+            <label for="resetEmail">Email</label>
+            <input id="resetEmail" type="email" />
+          </div>
+          <div class="form-group">
+            <label for="resetNewPassword">New password</label>
+            <input id="resetNewPassword" type="password" autocomplete="new-password" />
+          </div>
+          <div class="form-group hidden">
+            <label for="resetWebsite">Website</label>
+            <input id="resetWebsite" type="text" autocomplete="off" tabindex="-1" />
+          </div>
+          <div class="form-group">
+            <label for="resetCaptchaAnswer" id="captchaQuestion">Security question</label>
+            <input id="resetCaptchaAnswer" type="text" />
+          </div>
+          <div class="btn-row">
+            <button class="btn-primary" id="resetBtn">Update password</button>
+            <button class="btn-neutral" id="newCaptchaBtn" type="button">New question</button>
+            <button class="btn-neutral hidden" id="resetInfoBtn" type="button">Info</button>
+          </div>
+        </section>
+
+        <div id="statusBox" class="status-box"></div>
+      </div>
+    </div>
+
+    <div id="quizShell" class="quiz-shell hidden">
+      <div class="quiz-card">
+        <button class="quiz-close" id="closeQuizBtn" type="button">✕</button>
+        <h2>NY QUIZ</h2>
+
+        <section id="quizSetupView">
+          <div class="quiz-mode-grid">
+            <button class="btn-primary" data-quiz-mode="random10">Random 10</button>
+            <button class="btn-neutral" data-quiz-mode="categories">Categories</button>
+            <button class="btn-neutral" data-quiz-mode="completionist">Completionist</button>
+          </div>
+
+          <div class="quiz-section hidden" id="quizCategorySection">
+            <h3 id="quizCategoryTitle">Choose categories</h3>
+            <div class="quiz-category-list" id="quizCategoryList"></div>
+            <div class="form-group">
+              <label for="quizQuestionCount">Number of questions</label>
+              <input id="quizQuestionCount" type="number" min="1" value="10" />
+            </div>
+            <div class="btn-row">
+              <button class="btn-primary" id="startCategoryQuizBtn">Start quiz</button>
+              <button class="btn-danger hidden" id="resetAllProgressBtn" type="button">Reset All Progress</button>
+            </div>
+          </div>
+
+          <div class="status-box" id="quizStatusBox"></div>
+          <div class="form-group hidden">
+            <label for="quizHoneypot">Website</label>
+            <input id="quizHoneypot" type="text" autocomplete="off" tabindex="-1" />
+          </div>
+        </section>
+
+        <section id="quizQuestionView" class="hidden">
+          <h3 id="quizQuestionTitle"></h3>
+          <div class="quiz-progress" id="quizProgress"></div>
+          <div class="quiz-answer-list" id="quizAnswerList"></div>
+          <div class="status-box" id="quizAnswerStatus"></div>
+        </section>
+
+        <section id="quizResultView" class="hidden">
+          <div class="quiz-result" id="quizResultSummary"></div>
+          <button class="btn-primary" id="restartQuizBtn">Back to setup</button>
+        </section>
+      </div>
+    </div>
   </div>
-  <button id="logoutBtn" class="logout-btn" onclick="logout()">Logg ut</button>
-</div>
 
-<div class="wrap" id="mainContent">
-  <h1>sarcasm.games</h1>
-  <p>Where do you wanna go?</p>
-  <div class="grid">
-    <a href="/tiermaker/">Tier-maker <span class="tooltip-text">Make your own tier list.</span></a>
-    <a href="/monstercatch/">Monster catcher <span class="tooltip-text">A local game.</span></a>
-    <a href="/achievements/">Life Achievements <span class="tooltip-text">Track accomplishments</span></a>
-    <a href="/poketruefalse/">Pokemon True or False <span class="tooltip-text">Facts game!</span></a>
-    <a href="/lighthousekeeper/">Lighthouse Keeper <span class="tooltip-text">Keep the light on!</span></a>
-    <a href="/CosmicClick/">Cosmic clicker <span class="tooltip-text">Incremental clicker!</span></a>
-    <a href="/orb/">Orb Game <span class="tooltip-text">Race to the finish!</span></a>
-    <a href="/CrystalClick/">Crystal Mining <span class="tooltip-text">Second clicker!</span></a>
-    <a href="/GalacticClick/">Galactic Mining <span class="tooltip-text">Third clicker!</span></a>
-    <a href="/quizapp/">Quiz! <span class="tooltip-text">Generate a quiz</span></a>
-    <a href="/memory/">Guess the mon! <span class="tooltip-text">How fast are you?</span></a>
-    <a href="https://html.itch.zone/html/14908902/index.html">3D Platformer <span class="tooltip-text">Playable in browser</span></a>
-  </div>
-</div>
+  <script>
+    const FEATURE_MODULES = [
+      {
+        id: 'morsdag-2026',
+        title: '🌸 Morsdag 2026',
+        adminOnly: true,
+        links: [
+          { label: '👸 Mamma', href: '/Mamma/' },
+          { label: '👦 Isak', href: '/Isak/' },
+          { label: '👧 Lilly', href: '/Lilly/' },
+          { label: '🧔 Pappa', href: '/Pappa/' },
+          { label: '📸 Karusell', href: '/Karusell/' }
+        ]
+      },
+      {
+        id: 'ny-quiz',
+        title: '🧠 NY QUIZ',
+        adminOnly: true,
+        links: [
+          { label: 'Launch NY QUIZ', action: 'openQuiz' }
+        ]
+      }
+    ];
 
-<div id="morsdagsContainer">
-  <h1 style="color: var(--accent); font-size: 40px;">🌸 Morsdag 2026</h1>
-  <p style="font-size: 18px;">Velkommen! Velg din quiz under:</p>
-  <a href="/Mamma/" class="morsdag-link">👸 Mamma</a>
-  <a href="/Isak/" class="morsdag-link">👦 Isak</a>
-  <a href="/Lilly/" class="morsdag-link">👧 Lilly</a>
-  <a href="/Pappa/" class="morsdag-link">🧔 Pappa</a>
-  <a href="/Karusell/" class="morsdag-link" style="border-color: #767a88; opacity: 0.9;">📸 Karusell</a>
-</div>
+    const CAPTCHA_POOL = [
+      { id: 'site_first_word', question: 'What is the first word in this website name?' },
+      { id: 'bil_reverse', question: 'Type the word BIL backwards' },
+      { id: 'color_sky', question: 'What color is the sky on a clear day?' },
+      { id: 'two_plus_three', question: 'What is 2 + 3?' }
+    ];
 
-<script>
-  window.onload = function() {
-    if (localStorage.getItem('morsdag_innlogget') === 'true') {
-      visInnloggetState();
+    let currentCaptcha = null;
+    let failedResetAttempts = 0;
+    let currentUser = null;
+
+    const quizState = {
+      mode: null,
+      categories: [],
+      progressByCategory: [],
+      questions: [],
+      answers: [],
+      index: 0
+    };
+
+    const statusBox = document.getElementById('statusBox');
+    const authShell = document.getElementById('authShell');
+    const welcomeText = document.getElementById('welcomeText');
+    const memberListSection = document.getElementById('memberListSection');
+    const memberList = document.getElementById('memberList');
+    const featureModulesSection = document.getElementById('featureModulesSection');
+    const featureModulesTitle = document.getElementById('featureModulesTitle');
+    const featureModulesGrid = document.getElementById('featureModulesGrid');
+    const captchaQuestion = document.getElementById('captchaQuestion');
+    const resetInfoBtn = document.getElementById('resetInfoBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const toggleLoginBtn = document.getElementById('toggleLoginBtn');
+    const quizShell = document.getElementById('quizShell');
+    const quizStatusBox = document.getElementById('quizStatusBox');
+
+    function setStatus(message, isError = false) {
+      statusBox.style.color = isError ? 'var(--danger)' : 'var(--muted)';
+      statusBox.textContent = message;
     }
-    if (localStorage.getItem('theme') === 'light') {
-      document.body.classList.add('light-mode');
-      document.getElementById('themeIcon').innerText = '☀️';
+
+    function setQuizStatus(message, isError = false) {
+      quizStatusBox.style.color = isError ? 'var(--danger)' : 'var(--muted)';
+      quizStatusBox.textContent = message;
     }
-  };
 
-  function toggleTheme() {
-    const isLight = document.body.classList.toggle('light-mode');
-    document.getElementById('themeIcon').innerText = isLight ? '☀️' : '🌙';
-    localStorage.setItem('theme', isLight ? 'light' : 'dark');
-  }
+    function toggleLoginPanel() {
+      if (currentUser) return;
+      const isHidden = authShell.classList.contains('hidden');
+      if (isHidden) {
+        authShell.classList.remove('hidden');
+        toggleLoginBtn.textContent = 'Hide login';
+      } else {
+        authShell.classList.add('hidden');
+        toggleLoginBtn.textContent = 'Login';
+      }
+    }
 
-  function checkLogin() {
-    const u = document.getElementById('user').value.toLowerCase();
-    const p = document.getElementById('pass').value;
-    if(u === 'morsdag' && p === 'mamma2026') {
-      localStorage.setItem('morsdag_innlogget', 'true');
-      visInnloggetState();
-    } else { alert('Feil brukernavn eller passord'); }
-  }
+    function closeLoginPanel() {
+      authShell.classList.add('hidden');
+      if (!currentUser) toggleLoginBtn.textContent = 'Login';
+    }
 
-  function logout() {
-    localStorage.removeItem('morsdag_innlogget');
-    location.reload();
-  }
+    function generateCaptchaQuestion() {
+      const index = Math.floor(Math.random() * CAPTCHA_POOL.length);
+      currentCaptcha = CAPTCHA_POOL[index];
+      captchaQuestion.textContent = currentCaptcha.question;
+      document.getElementById('resetCaptchaAnswer').value = '';
+    }
 
-  function visInnloggetState() {
-    document.getElementById('mainContent').style.display = 'none';
-    document.getElementById('loginFields').style.display = 'none';
-    document.getElementById('morsdagsContainer').style.display = 'block';
-    document.getElementById('logoutBtn').style.display = 'block';
-  }
-</script>
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-btn').forEach((btn) => btn.classList.toggle('active', btn.dataset.tab === tabName));
+      document.querySelectorAll('.tab-content').forEach((section) => section.classList.add('hidden'));
+      document.getElementById(`${tabName}Tab`).classList.remove('hidden');
+      if (tabName === 'reset' && !currentCaptcha) generateCaptchaQuestion();
+      setStatus('');
+    }
 
+    function setThemeFromStorage() {
+      if (localStorage.getItem('theme') === 'light') document.body.classList.add('light-mode');
+    }
+
+    function toggleTheme() {
+      const isLight = document.body.classList.toggle('light-mode');
+      localStorage.setItem('theme', isLight ? 'light' : 'dark');
+    }
+
+    function renderFeatureModules(user) {
+      const role = user?.role || 'guest';
+      const visibleModules = FEATURE_MODULES.filter((moduleConfig) => !(moduleConfig.adminOnly && role !== 'admin'));
+      if (visibleModules.length === 0) {
+        featureModulesSection.classList.add('hidden');
+        featureModulesGrid.innerHTML = '';
+        return;
+      }
+
+      const containsPublicModules = visibleModules.some((moduleConfig) => !moduleConfig.adminOnly);
+      featureModulesTitle.textContent = containsPublicModules ? 'Extra modules' : 'Admin modules';
+      featureModulesGrid.innerHTML = '';
+
+      for (const moduleConfig of visibleModules) {
+        const moduleGroup = document.createElement('div');
+        moduleGroup.className = 'module-group';
+        const heading = document.createElement('h4');
+        heading.textContent = moduleConfig.title;
+        moduleGroup.appendChild(heading);
+
+        for (const link of moduleConfig.links) {
+          const anchor = document.createElement('a');
+          if (link.action === 'openQuiz') {
+            anchor.href = '#';
+            anchor.addEventListener('click', (event) => {
+              event.preventDefault();
+              openQuizModal();
+            });
+          } else {
+            anchor.href = link.href;
+          }
+          anchor.textContent = link.label;
+          moduleGroup.appendChild(anchor);
+        }
+
+        featureModulesGrid.appendChild(moduleGroup);
+      }
+
+      featureModulesSection.classList.remove('hidden');
+    }
+
+    async function fetchSession() {
+      const response = await fetch('/api/auth/session', { credentials: 'include' });
+      if (!response.ok) return null;
+      const data = await response.json();
+      return data.user || null;
+    }
+
+    async function renderMemberList(user) {
+      if (!user || user.role !== 'admin') {
+        memberListSection.classList.add('hidden');
+        memberList.innerHTML = '';
+        return;
+      }
+
+      const response = await fetch('/api/admin/users', { credentials: 'include' });
+      if (!response.ok) {
+        memberListSection.classList.add('hidden');
+        memberList.innerHTML = '';
+        return;
+      }
+
+      const data = await response.json();
+      memberList.innerHTML = '';
+      for (const member of data.users || []) {
+        const li = document.createElement('li');
+        li.textContent = `${member.username} (${member.email}) - country: ${member.country || 'unknown'}`;
+        memberList.appendChild(li);
+      }
+      memberListSection.classList.remove('hidden');
+    }
+
+    async function applyUserState(user) {
+      currentUser = user;
+      if (user) {
+        welcomeText.textContent = `Logged in as: ${user.username}`;
+        closeLoginPanel();
+        logoutBtn.classList.remove('hidden');
+        toggleLoginBtn.classList.add('hidden');
+      } else {
+        welcomeText.textContent = 'Logged in as: Guest';
+        closeLoginPanel();
+        logoutBtn.classList.add('hidden');
+        toggleLoginBtn.classList.remove('hidden');
+        toggleLoginBtn.textContent = 'Login';
+      }
+      renderFeatureModules(user);
+      await renderMemberList(user);
+    }
+
+    async function login() {
+      const username = document.getElementById('loginUsername').value.trim().toLowerCase();
+      const password = document.getElementById('loginPassword').value;
+      const honeypot = document.getElementById('loginWebsite').value;
+
+      if (!username || !password) {
+        setStatus('Please enter both username and password.', true);
+        return;
+      }
+
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ username, password, honeypot })
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        setStatus(data.error || 'Login failed.', true);
+        return;
+      }
+
+      const data = await response.json();
+      await applyUserState(data.user);
+      setStatus('');
+    }
+
+    async function registerUser() {
+      const username = document.getElementById('registerUser').value.trim().toLowerCase();
+      const email = document.getElementById('registerEmail').value.trim().toLowerCase();
+      const password = document.getElementById('registerPassword').value;
+      const honeypot = document.getElementById('registerWebsite').value;
+
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, email, password, honeypot })
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        setStatus(data.error || 'Registration failed.', true);
+        return;
+      }
+
+      setStatus('Account created. Log in with username and password.');
+      switchTab('login');
+      document.getElementById('loginUsername').value = username;
+      document.getElementById('loginPassword').value = '';
+    }
+
+    async function selfResetPassword() {
+      if (!currentCaptcha) generateCaptchaQuestion();
+
+      const payload = {
+        username: document.getElementById('resetUsername').value.trim().toLowerCase(),
+        email: document.getElementById('resetEmail').value.trim().toLowerCase(),
+        newPassword: document.getElementById('resetNewPassword').value,
+        honeypot: document.getElementById('resetWebsite').value,
+        captchaId: currentCaptcha.id,
+        captchaAnswer: document.getElementById('resetCaptchaAnswer').value.trim()
+      };
+
+      const response = await fetch('/api/auth/self-reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        failedResetAttempts += 1;
+        if (failedResetAttempts >= 3) resetInfoBtn.classList.remove('hidden');
+        const data = await response.json().catch(() => ({}));
+        setStatus(data.error || 'Could not update password.', true);
+        generateCaptchaQuestion();
+        return;
+      }
+
+      failedResetAttempts = 0;
+      resetInfoBtn.classList.add('hidden');
+      setStatus('Password updated. You can now log in.');
+      switchTab('login');
+    }
+
+    function showResetHelpInfo() {
+      setStatus('Forgot your password? Contact admin at xxxx@gmail.com');
+    }
+
+    async function logout() {
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ honeypot: '' })
+      });
+      closeQuizModal();
+      await applyUserState(null);
+      setStatus('Logged out.');
+    }
+
+    function closeQuizModal() {
+      quizShell.classList.add('hidden');
+      document.getElementById('quizSetupView').classList.remove('hidden');
+      document.getElementById('quizQuestionView').classList.add('hidden');
+      document.getElementById('quizResultView').classList.add('hidden');
+      setQuizStatus('');
+    }
+
+    async function openQuizModal() {
+      if (!currentUser || currentUser.role !== 'admin') {
+        setStatus('Only admin users can access NY QUIZ.', true);
+        return;
+      }
+      quizShell.classList.remove('hidden');
+      await loadQuizOverview();
+    }
+
+    async function loadQuizOverview() {
+      setQuizStatus('Loading categories...');
+      const response = await fetch('/api/quiz/overview', { credentials: 'include' });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        setQuizStatus(data.error || 'Could not load quiz overview.', true);
+        return;
+      }
+
+      const data = await response.json();
+      quizState.categories = data.categories || [];
+      quizState.progressByCategory = data.progress || [];
+      renderCategoryOptions('categories');
+      setQuizStatus('Choose a quiz mode to begin.');
+    }
+
+    function getCategoryProgress(categoryName) {
+      return quizState.progressByCategory.find((entry) => entry.category === categoryName) || { total: 0, correct: 0 };
+    }
+
+    function renderCategoryOptions(mode) {
+      const section = document.getElementById('quizCategorySection');
+      const list = document.getElementById('quizCategoryList');
+      const title = document.getElementById('quizCategoryTitle');
+      const resetAllBtn = document.getElementById('resetAllProgressBtn');
+      list.innerHTML = '';
+
+      const isCompletionist = mode === 'completionist';
+      title.textContent = isCompletionist ? 'Completionist category setup' : 'Category setup';
+      resetAllBtn.classList.toggle('hidden', !isCompletionist);
+
+      for (const item of quizState.categories) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'quiz-category-item';
+
+        const left = document.createElement('div');
+        const progress = getCategoryProgress(item.category);
+        if (isCompletionist) {
+          left.textContent = `${item.category} - Correct: ${progress.correct}/${progress.total}`;
+        } else {
+          left.textContent = `${item.category} (${item.total})`;
+        }
+
+        const right = document.createElement('div');
+        right.style.display = 'flex';
+        right.style.gap = '6px';
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.value = item.category;
+        checkbox.dataset.categorySelector = 'true';
+        right.appendChild(checkbox);
+
+        if (isCompletionist) {
+          const resetBtn = document.createElement('button');
+          resetBtn.type = 'button';
+          resetBtn.className = 'btn-danger';
+          resetBtn.style.padding = '6px 8px';
+          resetBtn.textContent = 'Reset';
+          resetBtn.addEventListener('click', () => resetCategoryProgress(item.category));
+          right.appendChild(resetBtn);
+        }
+
+        wrapper.appendChild(left);
+        wrapper.appendChild(right);
+        list.appendChild(wrapper);
+      }
+
+      section.classList.remove('hidden');
+    }
+
+    function getSelectedCategories() {
+      return [...document.querySelectorAll('input[data-category-selector="true"]:checked')].map((el) => el.value);
+    }
+
+    async function startQuiz(mode) {
+      if (!currentUser || currentUser.role !== 'admin') {
+        setQuizStatus('Only admin users can start NY QUIZ.', true);
+        return;
+      }
+
+      let count = 10;
+      let categories = [];
+
+      if (mode !== 'random10') {
+        categories = getSelectedCategories();
+        if (categories.length === 0) {
+          setQuizStatus('Select at least one category.', true);
+          return;
+        }
+
+        const rawCount = Number(document.getElementById('quizQuestionCount').value);
+        if (!Number.isFinite(rawCount) || rawCount < 1) {
+          setQuizStatus('Enter a valid question count.', true);
+          return;
+        }
+
+        const totalAvailable = categories.reduce((sum, category) => {
+          const categoryInfo = quizState.categories.find((item) => item.category === category);
+          if (!categoryInfo) return sum;
+          if (mode === 'completionist') {
+            const progress = getCategoryProgress(category);
+            return sum + Math.max(0, Number(progress.total) - Number(progress.correct));
+          }
+          return sum + Number(categoryInfo.total || 0);
+        }, 0);
+
+        if (rawCount > totalAvailable) {
+          setQuizStatus(`Count must be between 1 and ${totalAvailable}.`, true);
+          return;
+        }
+
+        count = rawCount;
+      }
+
+      const response = await fetch('/api/quiz/start', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mode,
+          count,
+          categories,
+          honeypot: document.getElementById('quizHoneypot').value
+        })
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        setQuizStatus(data.error || 'Failed to start quiz.', true);
+        return;
+      }
+
+      const data = await response.json();
+      if (!Array.isArray(data.questions) || data.questions.length === 0) {
+        setQuizStatus('No questions available for this setup.', true);
+        return;
+      }
+
+      quizState.mode = mode;
+      quizState.questions = data.questions;
+      quizState.answers = [];
+      quizState.index = 0;
+
+      document.getElementById('quizSetupView').classList.add('hidden');
+      document.getElementById('quizResultView').classList.add('hidden');
+      document.getElementById('quizQuestionView').classList.remove('hidden');
+      renderCurrentQuestion();
+    }
+
+    function renderCurrentQuestion() {
+      const question = quizState.questions[quizState.index];
+      if (!question) {
+        showQuizResults();
+        return;
+      }
+
+      document.getElementById('quizQuestionTitle').textContent = `${question.category}: ${question.questionText}`;
+      document.getElementById('quizProgress').textContent = `Question ${quizState.index + 1} of ${quizState.questions.length}`;
+      document.getElementById('quizAnswerStatus').textContent = '';
+
+      const list = document.getElementById('quizAnswerList');
+      list.innerHTML = '';
+
+      for (const option of question.options) {
+        const button = document.createElement('button');
+        button.className = 'btn-neutral';
+        button.textContent = option;
+        button.addEventListener('click', () => submitQuizAnswer(question.id, option));
+        list.appendChild(button);
+      }
+    }
+
+    async function submitQuizAnswer(questionId, selectedAnswer) {
+      const response = await fetch('/api/quiz/answer', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          questionId,
+          selectedAnswer,
+          honeypot: document.getElementById('quizHoneypot').value
+        })
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        document.getElementById('quizAnswerStatus').textContent = data.error || 'Could not submit answer.';
+        return;
+      }
+
+      const data = await response.json();
+      quizState.answers.push(data.isCorrect);
+      document.getElementById('quizAnswerStatus').textContent = data.isCorrect
+        ? 'Correct ✅'
+        : `Incorrect ❌ (Correct: ${data.correctAnswer})`;
+
+      setTimeout(() => {
+        quizState.index += 1;
+        renderCurrentQuestion();
+      }, 650);
+    }
+
+    function showQuizResults() {
+      const correct = quizState.answers.filter(Boolean).length;
+      const total = quizState.answers.length;
+      document.getElementById('quizQuestionView').classList.add('hidden');
+      document.getElementById('quizResultView').classList.remove('hidden');
+      document.getElementById('quizResultSummary').textContent = `Result: ${correct}/${total} correct`;
+      loadQuizOverview();
+    }
+
+    async function resetCategoryProgress(category) {
+      const response = await fetch('/api/quiz/reset-category', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ category, honeypot: document.getElementById('quizHoneypot').value })
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        setQuizStatus(data.error || 'Could not reset category progress.', true);
+        return;
+      }
+
+      setQuizStatus(`Progress reset for ${category}.`);
+      await loadQuizOverview();
+      renderCategoryOptions('completionist');
+    }
+
+    async function resetAllProgress() {
+      if (!confirm('Are you sure you want to reset ALL quiz progress?')) {
+        return;
+      }
+
+      const response = await fetch('/api/quiz/reset-all', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ honeypot: document.getElementById('quizHoneypot').value })
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        setQuizStatus(data.error || 'Could not reset all progress.', true);
+        return;
+      }
+
+      setQuizStatus('All progress was reset.');
+      await loadQuizOverview();
+      renderCategoryOptions('completionist');
+    }
+
+    async function showModeSelection(mode) {
+      quizState.mode = mode;
+      const section = document.getElementById('quizCategorySection');
+
+      if (mode === 'random10') {
+        section.classList.add('hidden');
+        await startQuiz('random10');
+        return;
+      }
+
+      renderCategoryOptions(mode);
+      section.classList.remove('hidden');
+      setQuizStatus(mode === 'completionist'
+        ? 'Select categories and amount. Only not-yet-correct questions will be used.'
+        : 'Select categories and amount for your quiz.');
+    }
+
+    async function init() {
+      setThemeFromStorage();
+      generateCaptchaQuestion();
+
+      await applyUserState(null);
+      const user = await fetchSession();
+      if (user) await applyUserState(user);
+
+      document.querySelectorAll('.tab-btn').forEach((btn) => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
+      document.getElementById('loginBtn').addEventListener('click', login);
+      document.getElementById('registerBtn').addEventListener('click', registerUser);
+      document.getElementById('resetBtn').addEventListener('click', selfResetPassword);
+      document.getElementById('newCaptchaBtn').addEventListener('click', generateCaptchaQuestion);
+      document.getElementById('resetInfoBtn').addEventListener('click', showResetHelpInfo);
+      document.getElementById('logoutBtn').addEventListener('click', logout);
+      document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+      document.getElementById('toggleLoginBtn').addEventListener('click', toggleLoginPanel);
+      document.getElementById('closeLoginBtn').addEventListener('click', closeLoginPanel);
+
+      document.getElementById('closeQuizBtn').addEventListener('click', closeQuizModal);
+      document.getElementById('restartQuizBtn').addEventListener('click', () => {
+        document.getElementById('quizResultView').classList.add('hidden');
+        document.getElementById('quizSetupView').classList.remove('hidden');
+        document.getElementById('quizCategorySection').classList.add('hidden');
+        setQuizStatus('Choose a quiz mode to begin.');
+      });
+      document.getElementById('startCategoryQuizBtn').addEventListener('click', () => startQuiz(quizState.mode || 'categories'));
+      document.getElementById('resetAllProgressBtn').addEventListener('click', resetAllProgress);
+
+      document.querySelectorAll('[data-quiz-mode]').forEach((button) => {
+        button.addEventListener('click', () => showModeSelection(button.dataset.quizMode));
+      });
+
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+          closeLoginPanel();
+          closeQuizModal();
+        }
+      });
+
+      const submitOnEnter = (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          login();
+        }
+      };
+      document.getElementById('loginUsername').addEventListener('keydown', submitOnEnter);
+      document.getElementById('loginPassword').addEventListener('keydown', submitOnEnter);
+    }
+
+    init();
+  </script>
 </body>
 </html>
