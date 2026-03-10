@@ -10,8 +10,9 @@
     body { margin:0; font:16px/1.4 system-ui, Segoe UI, Roboto, Arial; background:var(--bg); color:var(--txt); min-height:100dvh; }
     .hidden{display:none!important}
 
-    .auth-shell{padding:24px;display:grid;place-items:center}
-    .auth-card{width:min(560px,100%);background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:20px;box-sizing:border-box}
+    .auth-shell{position:fixed;inset:0;padding:24px;display:grid;place-items:center;background:rgba(0,0,0,.55);z-index:2000}
+    .auth-card{width:min(560px,100%);background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:20px;box-sizing:border-box;position:relative}
+    .auth-close{position:absolute;top:10px;right:10px;background:transparent;border:1px solid var(--bd);color:var(--txt);padding:6px 10px;border-radius:8px}
     .auth-title{margin:0 0 8px;font-size:1.6rem}
     .auth-subtitle{margin:0 0 16px;color:var(--muted)}
     .auth-tabs{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
@@ -87,6 +88,7 @@
 
     <div id="authShell" class="auth-shell hidden">
       <div class="auth-card">
+        <button class="auth-close" id="closeLoginBtn" type="button">✕</button>
         <h2 class="auth-title">Optional login</h2>
         <p class="auth-subtitle">Log in for personal or admin-only features.</p>
 
@@ -204,6 +206,7 @@
     const resetInfoBtn = document.getElementById('resetInfoBtn');
     const logoutBtn = document.getElementById('logoutBtn');
     const toggleLoginBtn = document.getElementById('toggleLoginBtn');
+    const closeLoginBtn = document.getElementById('closeLoginBtn');
 
     function setStatus(message, isError = false) {
       statusBox.style.color = isError ? 'var(--danger)' : 'var(--muted)';
@@ -221,6 +224,14 @@
         toggleLoginBtn.textContent = 'Hide login';
       } else {
         authShell.classList.add('hidden');
+        toggleLoginBtn.textContent = 'Login';
+      }
+    }
+
+
+    function closeLoginPanel() {
+      authShell.classList.add('hidden');
+      if (!currentUser) {
         toggleLoginBtn.textContent = 'Login';
       }
     }
@@ -316,12 +327,12 @@
       currentUser = user;
       if (user) {
         welcomeText.textContent = `Logged in as: ${user.username}`;
-        authShell.classList.add('hidden');
+        closeLoginPanel();
         logoutBtn.classList.remove('hidden');
         toggleLoginBtn.classList.add('hidden');
       } else {
         welcomeText.textContent = 'Logged in as: Guest';
-        authShell.classList.add('hidden');
+        closeLoginPanel();
         logoutBtn.classList.add('hidden');
         toggleLoginBtn.classList.remove('hidden');
         toggleLoginBtn.textContent = 'Login';
@@ -447,6 +458,10 @@
       document.getElementById('logoutBtn').addEventListener('click', logout);
       document.getElementById('themeToggle').addEventListener('click', toggleTheme);
       document.getElementById('toggleLoginBtn').addEventListener('click', toggleLoginPanel);
+      document.getElementById('closeLoginBtn').addEventListener('click', closeLoginPanel);
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') closeLoginPanel();
+      });
 
       const submitOnEnter = (event) => {
         if (event.key === 'Enter') {
