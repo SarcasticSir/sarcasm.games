@@ -124,6 +124,7 @@
       display: grid;
       grid-template-rows: auto 1fr auto;
       gap: 12px;
+      overflow: hidden;
     }
 
     .category-grid-wrap {
@@ -155,6 +156,31 @@
       border: 1px solid var(--bd);
       border-radius: 10px;
       padding: 10px;
+    }
+
+    #categorySection {
+      min-height: 0;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 10px;
+    }
+
+    .category-pager {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .category-page-label {
+      color: var(--muted);
+      font-size: .9rem;
+      min-width: 90px;
+      text-align: center;
+    }
+
+    .pager-btn {
+      min-width: 84px;
     }
 
     .category-card {
@@ -264,7 +290,12 @@
                 <div class="category-grid-wrap">
                   <div class="category-grid" id="categoryGrid"></div>
                 </div>
-                <div style="margin-top:10px;max-width:220px;">
+                <div class="category-pager">
+                  <button class="btn-neutral pager-btn" id="categoryPrevBtn" type="button">Previous</button>
+                  <span class="category-page-label" id="categoryPageLabel">Page 1/1</span>
+                  <button class="btn-neutral pager-btn" id="categoryNextBtn" type="button">Next</button>
+                </div>
+                <div style="max-width:220px;">
                   <label for="quizQuestionCount">Number of questions</label>
                   <input id="quizQuestionCount" type="number" min="1" value="10" />
                 </div>
@@ -324,7 +355,8 @@
       answers: [],
       index: 0,
       almostRetryUsed: false,
-      isQuestionLocked: false
+      isQuestionLocked: false,
+      categoryPage: 0
     };
 
     function setText(id, text, isError = false) {
@@ -344,6 +376,10 @@
       return state.progressByCategory.find((entry) => entry.category === categoryName) || { total: 0, correct: 0 };
     }
 
+    function getCategoriesPerPage() {
+      return window.innerWidth <= 700 ? 6 : 8;
+    }
+
     function renderModes() {
       const modeGrid = document.getElementById('modeGrid');
       modeGrid.innerHTML = '';
@@ -356,6 +392,7 @@
         button.addEventListener('click', () => {
           state.mode = mode;
           state.selectedCategories = new Set();
+          state.categoryPage = 0;
           renderModes();
           renderCategoryGrid();
           syncSetupState();
@@ -368,6 +405,9 @@
       const section = document.getElementById('categorySection');
       const title = document.getElementById('categoryTitle');
       const grid = document.getElementById('categoryGrid');
+      const prevBtn = document.getElementById('categoryPrevBtn');
+      const nextBtn = document.getElementById('categoryNextBtn');
+      const pageLabel = document.getElementById('categoryPageLabel');
       grid.innerHTML = '';
 
       if (state.mode === 'random10') {
@@ -379,7 +419,13 @@
       title.textContent = isCompletionist ? 'Choose completionist categories' : 'Choose categories';
       section.classList.remove('hidden');
 
-      for (const entry of state.categories) {
+      const perPage = getCategoriesPerPage();
+      const totalPages = Math.max(1, Math.ceil(state.categories.length / perPage));
+      state.categoryPage = Math.min(state.categoryPage, totalPages - 1);
+      const startIndex = state.categoryPage * perPage;
+      const visibleEntries = state.categories.slice(startIndex, startIndex + perPage);
+
+      for (const entry of visibleEntries) {
         const progress = getCategoryProgress(entry.category);
         const isCompleted = isCompletionist && Number(progress.total) > 0 && Number(progress.correct) >= Number(progress.total);
 
@@ -425,6 +471,10 @@
 
         grid.appendChild(card);
       }
+
+      pageLabel.textContent = `Page ${state.categoryPage + 1}/${totalPages}`;
+      prevBtn.disabled = state.categoryPage === 0;
+      nextBtn.disabled = state.categoryPage >= totalPages - 1;
     }
 
     function syncSetupState() {
@@ -691,6 +741,17 @@
       });
 
       document.getElementById('resetAllProgressBtn').addEventListener('click', resetAll);
+      document.getElementById('categoryPrevBtn').addEventListener('click', () => {
+        state.categoryPage = Math.max(0, state.categoryPage - 1);
+        renderCategoryGrid();
+      });
+      document.getElementById('categoryNextBtn').addEventListener('click', () => {
+        state.categoryPage += 1;
+        renderCategoryGrid();
+      });
+      window.addEventListener('resize', () => {
+        if (state.mode !== 'random10') renderCategoryGrid();
+      });
 
       document.getElementById('textAnswer').addEventListener('keydown', (event) => {
         if (event.key === 'Enter') {
