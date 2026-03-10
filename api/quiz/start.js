@@ -19,27 +19,13 @@ function parseBody(body) {
   return {};
 }
 
-function shuffle(items) {
-  const copy = [...items];
-  for (let i = copy.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [copy[i], copy[j]] = [copy[j], copy[i]];
-  }
-  return copy;
-}
-
 function sanitizeQuestions(rows) {
-  return rows.map((row) => {
-    const wrongAnswers = Array.isArray(row.wrong_answers) ? row.wrong_answers : [];
-    const options = shuffle([row.correct_answer, ...wrongAnswers]);
-    return {
-      id: row.id,
-      category: row.category,
-      questionText: row.question_text,
-      difficulty: row.difficulty,
-      options
-    };
-  });
+  return rows.map((row) => ({
+    id: row.id,
+    category: row.category,
+    questionNo: row.question_no,
+    questionEn: row.question_en
+  }));
 }
 
 async function getEvenlyDistributedQuestions({ categories, count, mode, userId }) {
@@ -108,12 +94,6 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const parsedCount = Number(count);
-    if (!Number.isFinite(parsedCount) || parsedCount < 1 || parsedCount > 200) {
-      res.status(400).json({ error: 'Count must be between 1 and 200' });
-      return;
-    }
-
     const quizMode = String(mode || '').toLowerCase();
     if (!['random10', 'categories', 'completionist'].includes(quizMode)) {
       res.status(400).json({ error: 'Invalid mode' });
@@ -125,6 +105,11 @@ module.exports = async function handler(req, res) {
     if (quizMode === 'random10') {
       rows = await getRandomQuizQuestions(10);
     } else {
+      const parsedCount = Number(count);
+      if (!Number.isFinite(parsedCount) || parsedCount < 1 || parsedCount > 400) {
+        res.status(400).json({ error: 'Count must be between 1 and 400' });
+        return;
+      }
       const requestedCategories = Array.isArray(categories) ? categories : [];
       rows = await getEvenlyDistributedQuestions({
         categories: requestedCategories,
@@ -139,7 +124,7 @@ module.exports = async function handler(req, res) {
 
     res.status(200).json({
       mode: quizMode,
-      requested: quizMode === 'random10' ? 10 : parsedCount,
+      requested: quizMode === 'random10' ? 10 : Number(count),
       totalAvailable,
       questionCount: rows.length,
       questions: sanitizeQuestions(rows)

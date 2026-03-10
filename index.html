@@ -48,7 +48,9 @@
     .quiz-mode-grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));margin-bottom:14px}
     .quiz-section{border:1px solid var(--bd);border-radius:12px;padding:12px;margin-bottom:12px}
     .quiz-category-list{display:grid;gap:8px;max-height:260px;overflow:auto;padding-right:4px}
-    .quiz-category-item{display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid var(--bd);border-radius:8px;padding:8px}
+    .quiz-category-item{position:relative;display:block;gap:8px;border:1px solid var(--bd);border-radius:8px;padding:12px;cursor:pointer;user-select:none}
+    .quiz-category-item.selected{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+    .quiz-category-item.disabled{opacity:.55;cursor:not-allowed}
     .quiz-answer-list{display:grid;gap:8px;margin-top:14px}
     .quiz-progress{margin-top:8px;color:var(--muted)}
     .quiz-result{font-size:1.1rem;font-weight:700;margin-bottom:10px}
@@ -178,6 +180,13 @@
       <div class="quiz-card">
         <button class="quiz-close" id="closeQuizBtn" type="button">✕</button>
         <h2>NY QUIZ</h2>
+        <div class="form-group" style="max-width:180px;">
+          <label for="quizLanguage">Language</label>
+          <select id="quizLanguage" style="width:100%;background:var(--bg);border:1px solid var(--bd);color:var(--txt);padding:8px;border-radius:8px;">
+            <option value="en" selected>English</option>
+            <option value="no">Norsk</option>
+          </select>
+        </div>
 
         <section id="quizSetupView">
           <div class="quiz-mode-grid">
@@ -262,7 +271,10 @@
       progressByCategory: [],
       questions: [],
       answers: [],
-      index: 0
+      index: 0,
+      selectedCategories: new Set(),
+      language: 'en',
+      almostRetryUsed: false
     };
 
     const statusBox = document.getElementById('statusBox');
@@ -571,39 +583,43 @@
       resetAllBtn.classList.toggle('hidden', !isCompletionist);
 
       for (const item of quizState.categories) {
-        const wrapper = document.createElement('div');
-        wrapper.className = 'quiz-category-item';
-
-        const left = document.createElement('div');
         const progress = getCategoryProgress(item.category);
-        if (isCompletionist) {
-          left.textContent = `${item.category} - Correct: ${progress.correct}/${progress.total}`;
-        } else {
-          left.textContent = `${item.category} (${item.total})`;
-        }
+        const isCompleted = isCompletionist && Number(progress.correct) >= Number(progress.total) && Number(progress.total) > 0;
 
-        const right = document.createElement('div');
-        right.style.display = 'flex';
-        right.style.gap = '6px';
+        const wrapper = document.createElement('div');
+        wrapper.className = `quiz-category-item${quizState.selectedCategories.has(item.category) ? ' selected' : ''}${isCompleted ? ' disabled' : ''}`;
 
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.value = item.category;
-        checkbox.dataset.categorySelector = 'true';
-        right.appendChild(checkbox);
+        const label = document.createElement('div');
+        label.textContent = isCompletionist
+          ? `${item.category} - Correct: ${progress.correct}/${progress.total}`
+          : `${item.category} (${item.total})`;
 
-        if (isCompletionist) {
-          const resetBtn = document.createElement('button');
-          resetBtn.type = 'button';
-          resetBtn.className = 'btn-danger';
-          resetBtn.style.padding = '6px 8px';
-          resetBtn.textContent = 'Reset';
-          resetBtn.addEventListener('click', () => resetCategoryProgress(item.category));
-          right.appendChild(resetBtn);
-        }
+        const resetBtn = document.createElement('button');
+        resetBtn.type = 'button';
+        resetBtn.className = 'btn-danger';
+        resetBtn.style.position = 'absolute';
+        resetBtn.style.top = '8px';
+        resetBtn.style.right = '8px';
+        resetBtn.style.padding = '6px 8px';
+        resetBtn.textContent = 'Reset';
+        resetBtn.classList.toggle('hidden', !isCompletionist);
+        resetBtn.addEventListener('click', (event) => {
+          event.stopPropagation();
+          resetCategoryProgress(item.category);
+        });
 
-        wrapper.appendChild(left);
-        wrapper.appendChild(right);
+        wrapper.addEventListener('click', () => {
+          if (isCompleted) return;
+          if (quizState.selectedCategories.has(item.category)) {
+            quizState.selectedCategories.delete(item.category);
+          } else {
+            quizState.selectedCategories.add(item.category);
+          }
+          renderCategoryOptions(mode);
+        });
+
+        wrapper.appendChild(label);
+        wrapper.appendChild(resetBtn);
         list.appendChild(wrapper);
       }
 
@@ -611,7 +627,7 @@
     }
 
     function getSelectedCategories() {
-      return [...document.querySelectorAll('input[data-category-selector="true"]:checked')].map((el) => el.value);
+      return [...quizState.selectedCategories];
     }
 
     async function startQuiz(mode) {
@@ -696,23 +712,41 @@
         return;
       }
 
-      document.getElementById('quizQuestionTitle').textContent = `${question.category}: ${question.questionText}`;
+      const localizedQuestion = quizState.language === 'no' ? question.questionNo : question.questionEn;
+      document.getElementById('quizQuestionTitle').textContent = `${question.category}: ${localizedQuestion}`;
       document.getElementById('quizProgress').textContent = `Question ${quizState.index + 1} of ${quizState.questions.length}`;
       document.getElementById('quizAnswerStatus').textContent = '';
+      quizState.almostRetryUsed = false;
 
       const list = document.getElementById('quizAnswerList');
       list.innerHTML = '';
 
-      for (const option of question.options) {
-        const button = document.createElement('button');
-        button.className = 'btn-neutral';
-        button.textContent = option;
-        button.addEventListener('click', () => submitQuizAnswer(question.id, option));
-        list.appendChild(button);
-      }
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.id = 'quizTextAnswer';
+      input.placeholder = quizState.language === 'no' ? 'Skriv svaret ditt' : 'Type your answer';
+      list.appendChild(input);
+
+      const submitBtn = document.createElement('button');
+      submitBtn.className = 'btn-primary';
+      submitBtn.textContent = quizState.language === 'no' ? 'Svar' : 'Submit answer';
+      submitBtn.addEventListener('click', () => submitQuizAnswer(question.id));
+      list.appendChild(submitBtn);
+
+      input.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          submitQuizAnswer(question.id);
+        }
+      });
+
+      setTimeout(() => input.focus(), 0);
     }
 
-    async function submitQuizAnswer(questionId, selectedAnswer) {
+    async function submitQuizAnswer(questionId) {
+      const input = document.getElementById('quizTextAnswer');
+      const selectedAnswer = input ? input.value : '';
+
       const response = await fetch('/api/quiz/answer', {
         method: 'POST',
         credentials: 'include',
@@ -720,6 +754,8 @@
         body: JSON.stringify({
           questionId,
           selectedAnswer,
+          language: quizState.language,
+          retryUsed: quizState.almostRetryUsed,
           honeypot: document.getElementById('quizHoneypot').value
         })
       });
@@ -731,15 +767,40 @@
       }
 
       const data = await response.json();
-      quizState.answers.push(data.isCorrect);
-      document.getElementById('quizAnswerStatus').textContent = data.isCorrect
-        ? 'Correct ✅'
-        : `Incorrect ❌ (Correct: ${data.correctAnswer})`;
 
-      setTimeout(() => {
+      if (data.status === 'almost') {
+        quizState.almostRetryUsed = true;
+        document.getElementById('quizAnswerStatus').textContent = quizState.language === 'no'
+          ? 'Nesten! Prøv én gang til.'
+          : 'Almost! Try one more time.';
+        return;
+      }
+
+      if (data.status === 'correct') {
+        quizState.answers.push(true);
+        document.getElementById('quizAnswerStatus').textContent = quizState.language === 'no' ? 'Riktig ✅' : 'Correct ✅';
+        setTimeout(() => {
+          quizState.index += 1;
+          renderCurrentQuestion();
+        }, 450);
+        return;
+      }
+
+      quizState.answers.push(false);
+      const statusBox = document.getElementById('quizAnswerStatus');
+      statusBox.textContent = quizState.language === 'no'
+        ? `Feil ❌ (Riktig svar: ${data.correctAnswer})`
+        : `Incorrect ❌ (Correct answer: ${data.correctAnswer})`;
+
+      const list = document.getElementById('quizAnswerList');
+      const nextBtn = document.createElement('button');
+      nextBtn.className = 'btn-primary';
+      nextBtn.textContent = quizState.language === 'no' ? 'Neste spørsmål' : 'Next question';
+      nextBtn.addEventListener('click', () => {
         quizState.index += 1;
         renderCurrentQuestion();
-      }, 650);
+      });
+      list.appendChild(nextBtn);
     }
 
     function showQuizResults() {
@@ -795,6 +856,7 @@
 
     async function showModeSelection(mode) {
       quizState.mode = mode;
+      quizState.selectedCategories = new Set();
       const section = document.getElementById('quizCategorySection');
 
       if (mode === 'random10') {
@@ -830,6 +892,12 @@
       document.getElementById('closeLoginBtn').addEventListener('click', closeLoginPanel);
 
       document.getElementById('closeQuizBtn').addEventListener('click', closeQuizModal);
+      document.getElementById('quizLanguage').addEventListener('change', (event) => {
+        quizState.language = event.target.value === 'no' ? 'no' : 'en';
+        if (!document.getElementById('quizQuestionView').classList.contains('hidden')) {
+          renderCurrentQuestion();
+        }
+      });
       document.getElementById('restartQuizBtn').addEventListener('click', () => {
         document.getElementById('quizResultView').classList.add('hidden');
         document.getElementById('quizSetupView').classList.remove('hidden');

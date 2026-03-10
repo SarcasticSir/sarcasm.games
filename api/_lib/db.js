@@ -88,7 +88,7 @@ async function getQuizCategoryProgress(userId) {
 
 async function getRandomQuizQuestions(limit) {
   const result = await runQuery(
-    `SELECT id, category, question_text, correct_answer, wrong_answers, difficulty
+    `SELECT id, category, question_no, question_en, answers_no, answers_en
      FROM quiz_questions
      ORDER BY RANDOM()
      LIMIT $1`,
@@ -99,7 +99,7 @@ async function getRandomQuizQuestions(limit) {
 
 async function getRandomQuizQuestionsByCategories(categories, limit) {
   const result = await runQuery(
-    `SELECT id, category, question_text, correct_answer, wrong_answers, difficulty
+    `SELECT id, category, question_no, question_en, answers_no, answers_en
      FROM quiz_questions
      WHERE category = ANY($1)
      ORDER BY RANDOM()
@@ -111,7 +111,7 @@ async function getRandomQuizQuestionsByCategories(categories, limit) {
 
 async function getCompletionistQuizQuestionsByCategories(userId, categories, limit) {
   const result = await runQuery(
-    `SELECT q.id, q.category, q.question_text, q.correct_answer, q.wrong_answers, q.difficulty
+    `SELECT q.id, q.category, q.question_no, q.question_en, q.answers_no, q.answers_en
      FROM quiz_questions q
      WHERE q.category = ANY($2)
        AND NOT EXISTS (
@@ -130,7 +130,7 @@ async function getCompletionistQuizQuestionsByCategories(userId, categories, lim
 
 async function getQuizQuestionById(questionId) {
   const result = await runQuery(
-    `SELECT id, category, question_text, correct_answer
+    `SELECT id, category, question_no, question_en, answers_no, answers_en
      FROM quiz_questions
      WHERE id = $1
      LIMIT 1`,
