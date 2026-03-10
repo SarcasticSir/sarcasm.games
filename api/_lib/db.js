@@ -29,6 +29,14 @@ async function insertUser({ username, email, passwordHash, role = 'user', countr
   return result.rows[0];
 }
 
+async function updatePasswordByUserId(userId, passwordHash) {
+  await sql`
+    UPDATE users
+    SET password_hash = ${passwordHash}
+    WHERE id = ${userId}
+  `;
+}
+
 async function getUsersForAdminList() {
   const result = await sql`
     SELECT id, username, email, role, country, created_at, updated_at
@@ -42,5 +50,6 @@ module.exports = {
   getUserByEmail,
   getUserByUsername,
   insertUser,
+  updatePasswordByUserId,
   getUsersForAdminList
 };

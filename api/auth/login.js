@@ -1,5 +1,5 @@
 const bcrypt = require('bcryptjs');
-const { getUserByEmail } = require('../_lib/db');
+const { getUserByUsername } = require('../_lib/db');
 const { setSessionCookie, signSessionToken } = require('../_lib/auth');
 
 function parseRequestBody(body) {
@@ -11,9 +11,7 @@ function parseRequestBody(body) {
       return {};
     }
   }
-  if (typeof body === 'object') {
-    return body;
-  }
+  if (typeof body === 'object') return body;
   return {};
 }
 
@@ -26,29 +24,26 @@ module.exports = async function handler(req, res) {
   try {
     if (!process.env.AUTH_SECRET && !process.env.NEXTAUTH_SECRET) {
       console.error('[auth/login] Missing AUTH_SECRET or NEXTAUTH_SECRET environment variable.');
-      res.status(500).json({
-        error: 'Server auth secret is not configured. Set AUTH_SECRET (or NEXTAUTH_SECRET).'
-      });
+      res.status(500).json({ error: 'Server auth secret is not configured.' });
       return;
     }
 
-    const { email, password } = parseRequestBody(req.body);
-    if (!email || !password) {
-      res.status(400).json({ error: 'email and password are required' });
+    const { username, password } = parseRequestBody(req.body);
+    if (!username || !password) {
+      res.status(400).json({ error: 'username and password are required' });
       return;
     }
 
-    const normalizedEmail = String(email).trim().toLowerCase();
-    const user = await getUserByEmail(normalizedEmail);
-
+    const normalizedUsername = String(username).trim().toLowerCase();
+    const user = await getUserByUsername(normalizedUsername);
     if (!user || !user.password_hash) {
-      res.status(401).json({ error: 'Invalid email or password' });
+      res.status(401).json({ error: 'Invalid username or password' });
       return;
     }
 
     const passwordOk = await bcrypt.compare(String(password), user.password_hash);
     if (!passwordOk) {
-      res.status(401).json({ error: 'Invalid email or password' });
+      res.status(401).json({ error: 'Invalid username or password' });
       return;
     }
 

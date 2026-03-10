@@ -11,7 +11,7 @@
     .hidden{display:none!important}
 
     .auth-shell{min-height:100dvh;display:grid;place-items:center;padding:24px}
-    .auth-card{width:min(520px,100%);background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:20px;box-sizing:border-box}
+    .auth-card{width:min(560px,100%);background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:20px;box-sizing:border-box}
     .auth-title{margin:0 0 8px;font-size:1.6rem}
     .auth-subtitle{margin:0 0 16px;color:var(--muted)}
     .auth-tabs{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
@@ -54,12 +54,13 @@
       <div class="auth-tabs">
         <button class="tab-btn active" data-tab="login">Logg inn</button>
         <button class="tab-btn" data-tab="register">Opprett bruker</button>
+        <button class="tab-btn" data-tab="reset">Glemt passord?</button>
       </div>
 
       <section id="loginTab" class="tab-content">
         <div class="form-group">
-          <label for="loginEmail">E-post</label>
-          <input id="loginEmail" type="email" autocomplete="email" />
+          <label for="loginUsername">Bruker-ID</label>
+          <input id="loginUsername" type="text" autocomplete="username" />
         </div>
         <div class="form-group">
           <label for="loginPassword">Passord</label>
@@ -82,6 +83,34 @@
           <input id="registerPassword" type="password" autocomplete="new-password" />
         </div>
         <div class="btn-row"><button class="btn-primary" id="registerBtn">Opprett bruker</button></div>
+      </section>
+
+      <section id="resetTab" class="tab-content hidden">
+        <div class="form-group">
+          <label for="resetUsername">Bruker-ID</label>
+          <input id="resetUsername" type="text" />
+        </div>
+        <div class="form-group">
+          <label for="resetEmail">E-post</label>
+          <input id="resetEmail" type="email" />
+        </div>
+        <div class="form-group">
+          <label for="resetNewPassword">Nytt passord</label>
+          <input id="resetNewPassword" type="password" autocomplete="new-password" />
+        </div>
+        <div class="form-group hidden">
+          <label for="resetWebsite">Website</label>
+          <input id="resetWebsite" type="text" autocomplete="off" tabindex="-1" />
+        </div>
+        <div class="form-group">
+          <label for="resetCaptchaAnswer" id="captchaQuestion">Sikkerhetsspørsmål</label>
+          <input id="resetCaptchaAnswer" type="text" />
+        </div>
+        <div class="btn-row">
+          <button class="btn-primary" id="resetBtn">Oppdater passord</button>
+          <button class="btn-neutral" id="newCaptchaBtn" type="button">Nytt spørsmål</button>
+          <button class="btn-neutral hidden" id="resetInfoBtn" type="button">Info</button>
+        </div>
       </section>
 
       <div id="statusBox" class="status-box"></div>
@@ -141,9 +170,17 @@
           { label: '📸 Karusell', href: '/Karusell/' }
         ]
       }
-      // Add more modules here, e.g. farsquiz:
-      // { id: 'farsquiz-2027', title: '🎉 Farsquiz 2027', adminOnly: true, links: [{ label: 'Start', href: '/farsquiz/' }] }
     ];
+
+    const CAPTCHA_POOL = [
+      { id: 'site_first_word', question: 'Hva er det første ordet i navnet på denne nettsiden?' },
+      { id: 'bil_reverse', question: 'Skriv ordet BIL baklengs' },
+      { id: 'color_sky', question: 'Hvilken farge har himmelen på en klar dag?' },
+      { id: 'two_plus_three', question: 'Hva er 2 + 3?' }
+    ];
+
+    let currentCaptcha = null;
+    let failedResetAttempts = 0;
 
     const statusBox = document.getElementById('statusBox');
     const authShell = document.getElementById('authShell');
@@ -154,23 +191,33 @@
     const featureModulesSection = document.getElementById('featureModulesSection');
     const featureModulesTitle = document.getElementById('featureModulesTitle');
     const featureModulesGrid = document.getElementById('featureModulesGrid');
+    const captchaQuestion = document.getElementById('captchaQuestion');
+    const resetInfoBtn = document.getElementById('resetInfoBtn');
 
     function setStatus(message, isError = false) {
       statusBox.style.color = isError ? 'var(--danger)' : 'var(--muted)';
       statusBox.textContent = message;
     }
 
+    function generateCaptchaQuestion() {
+      const index = Math.floor(Math.random() * CAPTCHA_POOL.length);
+      currentCaptcha = CAPTCHA_POOL[index];
+      captchaQuestion.textContent = currentCaptcha.question;
+      document.getElementById('resetCaptchaAnswer').value = '';
+    }
+
     function switchTab(tabName) {
       document.querySelectorAll('.tab-btn').forEach((btn) => btn.classList.toggle('active', btn.dataset.tab === tabName));
       document.querySelectorAll('.tab-content').forEach((section) => section.classList.add('hidden'));
       document.getElementById(`${tabName}Tab`).classList.remove('hidden');
+      if (tabName === 'reset' && !currentCaptcha) {
+        generateCaptchaQuestion();
+      }
       setStatus('');
     }
 
     function setThemeFromStorage() {
-      if (localStorage.getItem('theme') === 'light') {
-        document.body.classList.add('light-mode');
-      }
+      if (localStorage.getItem('theme') === 'light') document.body.classList.add('light-mode');
     }
 
     function toggleTheme() {
@@ -251,10 +298,10 @@
     }
 
     async function login() {
-      const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+      const username = document.getElementById('loginUsername').value.trim().toLowerCase();
       const password = document.getElementById('loginPassword').value;
-      if (!email || !password) {
-        setStatus('Fyll inn både e-post og passord.', true);
+      if (!username || !password) {
+        setStatus('Fyll inn både bruker-ID og passord.', true);
         return;
       }
 
@@ -262,7 +309,7 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ username, password })
       });
 
       if (!response.ok) {
@@ -293,10 +340,49 @@
         return;
       }
 
-      setStatus('Bruker opprettet. Logg inn med e-post og passord.');
+      setStatus('Bruker opprettet. Logg inn med bruker-ID og passord.');
       switchTab('login');
-      document.getElementById('loginEmail').value = email;
+      document.getElementById('loginUsername').value = username;
       document.getElementById('loginPassword').value = '';
+    }
+
+    async function selfResetPassword() {
+      if (!currentCaptcha) generateCaptchaQuestion();
+
+      const payload = {
+        username: document.getElementById('resetUsername').value.trim().toLowerCase(),
+        email: document.getElementById('resetEmail').value.trim().toLowerCase(),
+        newPassword: document.getElementById('resetNewPassword').value,
+        honeypot: document.getElementById('resetWebsite').value,
+        captchaId: currentCaptcha.id,
+        captchaAnswer: document.getElementById('resetCaptchaAnswer').value.trim()
+      };
+
+      const response = await fetch('/api/auth/self-reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        failedResetAttempts += 1;
+        if (failedResetAttempts >= 3) {
+          resetInfoBtn.classList.remove('hidden');
+        }
+        const data = await response.json().catch(() => ({}));
+        setStatus(data.error || 'Kunne ikke oppdatere passord.', true);
+        generateCaptchaQuestion();
+        return;
+      }
+
+      failedResetAttempts = 0;
+      resetInfoBtn.classList.add('hidden');
+      setStatus('Passord oppdatert. Du kan nå logge inn.');
+      switchTab('login');
+    }
+
+    function showResetHelpInfo() {
+      setStatus('Har du glemt ditt passord, kontakt admin på epost xxxx@gmail.com');
     }
 
     async function logout() {
@@ -308,12 +394,17 @@
 
     async function init() {
       setThemeFromStorage();
+      generateCaptchaQuestion();
+
       const user = await fetchSession();
       if (user) await showApp(user);
 
       document.querySelectorAll('.tab-btn').forEach((btn) => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
       document.getElementById('loginBtn').addEventListener('click', login);
       document.getElementById('registerBtn').addEventListener('click', registerUser);
+      document.getElementById('resetBtn').addEventListener('click', selfResetPassword);
+      document.getElementById('newCaptchaBtn').addEventListener('click', generateCaptchaQuestion);
+      document.getElementById('resetInfoBtn').addEventListener('click', showResetHelpInfo);
       document.getElementById('logoutBtn').addEventListener('click', logout);
       document.getElementById('themeToggle').addEventListener('click', toggleTheme);
     }
