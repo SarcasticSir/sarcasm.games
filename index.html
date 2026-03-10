@@ -10,7 +10,7 @@
     body { margin:0; font:16px/1.4 system-ui, Segoe UI, Roboto, Arial; background:var(--bg); color:var(--txt); min-height:100dvh; }
     .hidden{display:none!important}
 
-    .auth-shell{min-height:100dvh;display:grid;place-items:center;padding:24px}
+    .auth-shell{padding:24px;display:grid;place-items:center}
     .auth-card{width:min(560px,100%);background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:20px;box-sizing:border-box}
     .auth-title{margin:0 0 8px;font-size:1.6rem}
     .auth-subtitle{margin:0 0 16px;color:var(--muted)}
@@ -46,89 +46,19 @@
   </style>
 </head>
 <body>
-  <div id="authShell" class="auth-shell">
-    <div class="auth-card">
-      <h1 class="auth-title">sarcasm.games login</h1>
-      <p class="auth-subtitle">Databasestyrt innlogging med Vercel + Neon.</p>
-
-      <div class="auth-tabs">
-        <button class="tab-btn active" data-tab="login">Logg inn</button>
-        <button class="tab-btn" data-tab="register">Opprett bruker</button>
-        <button class="tab-btn" data-tab="reset">Glemt passord?</button>
-      </div>
-
-      <section id="loginTab" class="tab-content">
-        <div class="form-group">
-          <label for="loginUsername">Bruker-ID</label>
-          <input id="loginUsername" type="text" autocomplete="username" />
-        </div>
-        <div class="form-group">
-          <label for="loginPassword">Passord</label>
-          <input id="loginPassword" type="password" autocomplete="current-password" />
-        </div>
-        <div class="btn-row"><button class="btn-primary" id="loginBtn">Logg inn</button></div>
-      </section>
-
-      <section id="registerTab" class="tab-content hidden">
-        <div class="form-group">
-          <label for="registerUser">Bruker-ID</label>
-          <input id="registerUser" type="text" autocomplete="username" />
-        </div>
-        <div class="form-group">
-          <label for="registerEmail">E-post</label>
-          <input id="registerEmail" type="email" autocomplete="email" />
-        </div>
-        <div class="form-group">
-          <label for="registerPassword">Passord</label>
-          <input id="registerPassword" type="password" autocomplete="new-password" />
-        </div>
-        <div class="btn-row"><button class="btn-primary" id="registerBtn">Opprett bruker</button></div>
-      </section>
-
-      <section id="resetTab" class="tab-content hidden">
-        <div class="form-group">
-          <label for="resetUsername">Bruker-ID</label>
-          <input id="resetUsername" type="text" />
-        </div>
-        <div class="form-group">
-          <label for="resetEmail">E-post</label>
-          <input id="resetEmail" type="email" />
-        </div>
-        <div class="form-group">
-          <label for="resetNewPassword">Nytt passord</label>
-          <input id="resetNewPassword" type="password" autocomplete="new-password" />
-        </div>
-        <div class="form-group hidden">
-          <label for="resetWebsite">Website</label>
-          <input id="resetWebsite" type="text" autocomplete="off" tabindex="-1" />
-        </div>
-        <div class="form-group">
-          <label for="resetCaptchaAnswer" id="captchaQuestion">Sikkerhetsspørsmål</label>
-          <input id="resetCaptchaAnswer" type="text" />
-        </div>
-        <div class="btn-row">
-          <button class="btn-primary" id="resetBtn">Oppdater passord</button>
-          <button class="btn-neutral" id="newCaptchaBtn" type="button">Nytt spørsmål</button>
-          <button class="btn-neutral hidden" id="resetInfoBtn" type="button">Info</button>
-        </div>
-      </section>
-
-      <div id="statusBox" class="status-box"></div>
-    </div>
-  </div>
-
-  <div id="appShell" class="app-shell hidden">
+  <div id="appShell" class="app-shell">
     <div class="top-bar">
-      <strong id="welcomeText">Innlogget</strong>
+      <strong id="welcomeText">Logged in as: Guest</strong>
       <div class="right">
-        <button class="btn-neutral" id="themeToggle">🌓 Tema</button>
-        <button class="btn-danger" id="logoutBtn">Logg ut</button>
+        <button class="btn-neutral" id="themeToggle">🌓 Theme</button>
+        <button class="btn-neutral" id="toggleLoginBtn">Login</button>
+        <button class="btn-danger hidden" id="logoutBtn">Logout</button>
       </div>
     </div>
 
     <div class="wrap">
       <h1>sarcasm.games</h1>
-      <p>Where do you wanna go?</p>
+      <p>Where do you want to go?</p>
       <div class="grid">
         <a href="/tiermaker/">Tier-maker <span class="tooltip-text">Make your own tier list.</span></a>
         <a href="/monstercatch/">Monster catcher <span class="tooltip-text">A local game.</span></a>
@@ -145,14 +75,93 @@
       </div>
 
       <section class="season-card hidden" id="featureModulesSection">
-        <h3 id="featureModulesTitle">Admin-moduler</h3>
+        <h3 id="featureModulesTitle">Admin modules</h3>
         <div class="season-grid" id="featureModulesGrid"></div>
       </section>
 
       <section id="memberListSection" class="member-list hidden">
-        <h3>Medlemsliste (kun admin)</h3>
+        <h3>Member list (admin only)</h3>
         <ul id="memberList"></ul>
       </section>
+    </div>
+
+    <div id="authShell" class="auth-shell hidden">
+      <div class="auth-card">
+        <h2 class="auth-title">Optional login</h2>
+        <p class="auth-subtitle">Log in for personal or admin-only features.</p>
+
+        <div class="auth-tabs">
+          <button class="tab-btn active" data-tab="login">Login</button>
+          <button class="tab-btn" data-tab="register">Create account</button>
+          <button class="tab-btn" data-tab="reset">Forgot password?</button>
+        </div>
+
+        <section id="loginTab" class="tab-content">
+          <div class="form-group">
+            <label for="loginUsername">Username</label>
+            <input id="loginUsername" type="text" autocomplete="username" />
+          </div>
+          <div class="form-group">
+            <label for="loginPassword">Password</label>
+            <input id="loginPassword" type="password" autocomplete="current-password" />
+          </div>
+          <div class="form-group hidden">
+            <label for="loginWebsite">Website</label>
+            <input id="loginWebsite" type="text" autocomplete="off" tabindex="-1" />
+          </div>
+          <div class="btn-row"><button class="btn-primary" id="loginBtn">Login</button></div>
+        </section>
+
+        <section id="registerTab" class="tab-content hidden">
+          <div class="form-group">
+            <label for="registerUser">Username</label>
+            <input id="registerUser" type="text" autocomplete="username" />
+          </div>
+          <div class="form-group">
+            <label for="registerEmail">E-post</label>
+            <input id="registerEmail" type="email" autocomplete="email" />
+          </div>
+          <div class="form-group">
+            <label for="registerPassword">Password</label>
+            <input id="registerPassword" type="password" autocomplete="new-password" />
+          </div>
+          <div class="form-group hidden">
+            <label for="registerWebsite">Website</label>
+            <input id="registerWebsite" type="text" autocomplete="off" tabindex="-1" />
+          </div>
+          <div class="btn-row"><button class="btn-primary" id="registerBtn">Create account</button></div>
+        </section>
+
+        <section id="resetTab" class="tab-content hidden">
+          <div class="form-group">
+            <label for="resetUsername">Username</label>
+            <input id="resetUsername" type="text" />
+          </div>
+          <div class="form-group">
+            <label for="resetEmail">E-post</label>
+            <input id="resetEmail" type="email" />
+          </div>
+          <div class="form-group">
+            <label for="resetNewPassword">New password</label>
+            <input id="resetNewPassword" type="password" autocomplete="new-password" />
+          </div>
+          <div class="form-group hidden">
+            <label for="resetWebsite">Website</label>
+            <input id="resetWebsite" type="text" autocomplete="off" tabindex="-1" />
+          </div>
+          <div class="form-group">
+            <label for="resetCaptchaAnswer" id="captchaQuestion">Security question</label>
+            <input id="resetCaptchaAnswer" type="text" />
+          </div>
+          <div class="btn-row">
+            <button class="btn-primary" id="resetBtn">Update password</button>
+            <button class="btn-neutral" id="newCaptchaBtn" type="button">New question</button>
+            <button class="btn-neutral hidden" id="resetInfoBtn" type="button">Info</button>
+          </div>
+        </section>
+
+        <div id="statusBox" class="status-box"></div>
+      </div>
     </div>
   </div>
 
@@ -173,18 +182,18 @@
     ];
 
     const CAPTCHA_POOL = [
-      { id: 'site_first_word', question: 'Hva er det første ordet i navnet på denne nettsiden?' },
-      { id: 'bil_reverse', question: 'Skriv ordet BIL baklengs' },
-      { id: 'color_sky', question: 'Hvilken farge har himmelen på en klar dag?' },
-      { id: 'two_plus_three', question: 'Hva er 2 + 3?' }
+      { id: 'site_first_word', question: 'What is the first word in this website name?' },
+      { id: 'bil_reverse', question: 'Type the word BIL backwards' },
+      { id: 'color_sky', question: 'What color is the sky on a clear day?' },
+      { id: 'two_plus_three', question: 'What is 2 + 3?' }
     ];
 
     let currentCaptcha = null;
     let failedResetAttempts = 0;
+    let currentUser = null;
 
     const statusBox = document.getElementById('statusBox');
     const authShell = document.getElementById('authShell');
-    const appShell = document.getElementById('appShell');
     const welcomeText = document.getElementById('welcomeText');
     const memberListSection = document.getElementById('memberListSection');
     const memberList = document.getElementById('memberList');
@@ -193,10 +202,27 @@
     const featureModulesGrid = document.getElementById('featureModulesGrid');
     const captchaQuestion = document.getElementById('captchaQuestion');
     const resetInfoBtn = document.getElementById('resetInfoBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const toggleLoginBtn = document.getElementById('toggleLoginBtn');
 
     function setStatus(message, isError = false) {
       statusBox.style.color = isError ? 'var(--danger)' : 'var(--muted)';
       statusBox.textContent = message;
+    }
+
+
+    function toggleLoginPanel() {
+      if (currentUser) {
+        return;
+      }
+      const isHidden = authShell.classList.contains('hidden');
+      if (isHidden) {
+        authShell.classList.remove('hidden');
+        toggleLoginBtn.textContent = 'Hide login';
+      } else {
+        authShell.classList.add('hidden');
+        toggleLoginBtn.textContent = 'Login';
+      }
     }
 
     function generateCaptchaQuestion() {
@@ -210,9 +236,7 @@
       document.querySelectorAll('.tab-btn').forEach((btn) => btn.classList.toggle('active', btn.dataset.tab === tabName));
       document.querySelectorAll('.tab-content').forEach((section) => section.classList.add('hidden'));
       document.getElementById(`${tabName}Tab`).classList.remove('hidden');
-      if (tabName === 'reset' && !currentCaptcha) {
-        generateCaptchaQuestion();
-      }
+      if (tabName === 'reset' && !currentCaptcha) generateCaptchaQuestion();
       setStatus('');
     }
 
@@ -226,7 +250,8 @@
     }
 
     function renderFeatureModules(user) {
-      const visibleModules = FEATURE_MODULES.filter((moduleConfig) => !(moduleConfig.adminOnly && user.role !== 'admin'));
+      const role = user?.role || 'guest';
+      const visibleModules = FEATURE_MODULES.filter((moduleConfig) => !(moduleConfig.adminOnly && role !== 'admin'));
       if (visibleModules.length === 0) {
         featureModulesSection.classList.add('hidden');
         featureModulesGrid.innerHTML = '';
@@ -234,13 +259,12 @@
       }
 
       const containsPublicModules = visibleModules.some((moduleConfig) => !moduleConfig.adminOnly);
-      featureModulesTitle.textContent = containsPublicModules ? 'Ekstra moduler' : 'Admin-moduler';
+      featureModulesTitle.textContent = containsPublicModules ? 'Extra modules' : 'Admin modules';
       featureModulesGrid.innerHTML = '';
 
       for (const moduleConfig of visibleModules) {
         const moduleGroup = document.createElement('div');
         moduleGroup.className = 'module-group';
-
         const heading = document.createElement('h4');
         heading.textContent = moduleConfig.title;
         moduleGroup.appendChild(heading);
@@ -251,7 +275,6 @@
           anchor.textContent = link.label;
           moduleGroup.appendChild(anchor);
         }
-
         featureModulesGrid.appendChild(moduleGroup);
       }
 
@@ -289,10 +312,20 @@
       memberListSection.classList.remove('hidden');
     }
 
-    async function showApp(user) {
-      welcomeText.textContent = `Innlogget som ${user.username} (${user.role})`;
-      authShell.classList.add('hidden');
-      appShell.classList.remove('hidden');
+    async function applyUserState(user) {
+      currentUser = user;
+      if (user) {
+        welcomeText.textContent = `Logged in as: ${user.username}`;
+        authShell.classList.add('hidden');
+        logoutBtn.classList.remove('hidden');
+        toggleLoginBtn.classList.add('hidden');
+      } else {
+        welcomeText.textContent = 'Logged in as: Guest';
+        authShell.classList.add('hidden');
+        logoutBtn.classList.add('hidden');
+        toggleLoginBtn.classList.remove('hidden');
+        toggleLoginBtn.textContent = 'Login';
+      }
       renderFeatureModules(user);
       await renderMemberList(user);
     }
@@ -300,8 +333,10 @@
     async function login() {
       const username = document.getElementById('loginUsername').value.trim().toLowerCase();
       const password = document.getElementById('loginPassword').value;
+      const honeypot = document.getElementById('loginWebsite').value;
+
       if (!username || !password) {
-        setStatus('Fyll inn både bruker-ID og passord.', true);
+        setStatus('Please enter both username and password.', true);
         return;
       }
 
@@ -309,17 +344,17 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ username, password })
+        body: JSON.stringify({ username, password, honeypot })
       });
 
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
-        setStatus(data.error || 'Innlogging feilet.', true);
+        setStatus(data.error || 'Login failed.', true);
         return;
       }
 
       const data = await response.json();
-      await showApp(data.user);
+      await applyUserState(data.user);
       setStatus('');
     }
 
@@ -327,20 +362,21 @@
       const username = document.getElementById('registerUser').value.trim().toLowerCase();
       const email = document.getElementById('registerEmail').value.trim().toLowerCase();
       const password = document.getElementById('registerPassword').value;
+      const honeypot = document.getElementById('registerWebsite').value;
 
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, email, password })
+        body: JSON.stringify({ username, email, password, honeypot })
       });
 
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
-        setStatus(data.error || 'Registrering feilet.', true);
+        setStatus(data.error || 'Registration failed.', true);
         return;
       }
 
-      setStatus('Bruker opprettet. Logg inn med bruker-ID og passord.');
+      setStatus('Account created. Log in with username and password.');
       switchTab('login');
       document.getElementById('loginUsername').value = username;
       document.getElementById('loginPassword').value = '';
@@ -366,38 +402,41 @@
 
       if (!response.ok) {
         failedResetAttempts += 1;
-        if (failedResetAttempts >= 3) {
-          resetInfoBtn.classList.remove('hidden');
-        }
+        if (failedResetAttempts >= 3) resetInfoBtn.classList.remove('hidden');
         const data = await response.json().catch(() => ({}));
-        setStatus(data.error || 'Kunne ikke oppdatere passord.', true);
+        setStatus(data.error || 'Could not update password.', true);
         generateCaptchaQuestion();
         return;
       }
 
       failedResetAttempts = 0;
       resetInfoBtn.classList.add('hidden');
-      setStatus('Passord oppdatert. Du kan nå logge inn.');
+      setStatus('Password updated. You can now log in.');
       switchTab('login');
     }
 
     function showResetHelpInfo() {
-      setStatus('Har du glemt ditt passord, kontakt admin på epost xxxx@gmail.com');
+      setStatus('Forgot your password? Contact admin at xxxx@gmail.com');
     }
 
     async function logout() {
-      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
-      appShell.classList.add('hidden');
-      authShell.classList.remove('hidden');
-      setStatus('Logget ut.');
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ honeypot: '' })
+      });
+      await applyUserState(null);
+      setStatus('Logged out.');
     }
 
     async function init() {
       setThemeFromStorage();
       generateCaptchaQuestion();
 
+      await applyUserState(null);
       const user = await fetchSession();
-      if (user) await showApp(user);
+      if (user) await applyUserState(user);
 
       document.querySelectorAll('.tab-btn').forEach((btn) => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
       document.getElementById('loginBtn').addEventListener('click', login);
@@ -407,6 +446,16 @@
       document.getElementById('resetInfoBtn').addEventListener('click', showResetHelpInfo);
       document.getElementById('logoutBtn').addEventListener('click', logout);
       document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+      document.getElementById('toggleLoginBtn').addEventListener('click', toggleLoginPanel);
+
+      const submitOnEnter = (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          login();
+        }
+      };
+      document.getElementById('loginUsername').addEventListener('keydown', submitOnEnter);
+      document.getElementById('loginPassword').addEventListener('keydown', submitOnEnter);
     }
 
     init();

@@ -1,4 +1,4 @@
-const { requireSession } = require('../_lib/auth');
+const { isRateLimited } = require('../_lib/rate-limit');
 
 module.exports = async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -6,6 +6,12 @@ module.exports = async function handler(req, res) {
     return;
   }
 
+  if (isRateLimited(req, 'auth:session')) {
+    res.status(429).json({ error: 'Too many requests. Please wait a minute.' });
+    return;
+  }
+
+  const { requireSession } = require('../_lib/auth');
   const session = await requireSession(req, res);
   if (!session) return;
 

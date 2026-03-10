@@ -1,21 +1,16 @@
-const bcrypt = require('bcryptjs');
-const { getUserByUsername, updatePasswordByUserId } = require('../_lib/db');
+const { isRateLimited } = require('../_lib/rate-limit');
 
 const CAPTCHA_QUESTIONS = {
   site_first_word: {
-    question: 'Hva er det første ordet i navnet på denne nettsiden?',
     answer: 'sarcasm'
   },
   bil_reverse: {
-    question: 'Skriv ordet BIL baklengs',
     answer: 'lib'
   },
   color_sky: {
-    question: 'Hvilken farge har himmelen på en klar dag?',
     answer: 'blå'
   },
   two_plus_three: {
-    question: 'Hva er 2 + 3?',
     answer: '5'
   }
 };
@@ -39,6 +34,11 @@ module.exports = async function handler(req, res) {
     return;
   }
 
+  if (isRateLimited(req, 'auth:self-reset')) {
+    res.status(429).json({ error: 'Too many requests. Please wait a minute.' });
+    return;
+  }
+
   try {
     const { username, email, newPassword, honeypot, captchaId, captchaAnswer } = parseRequestBody(req.body);
 
@@ -52,21 +52,42 @@ module.exports = async function handler(req, res) {
       return;
     }
 
+    const trimmedUsername = String(username).trim();
+    const trimmedEmail = String(email).trim();
+    const rawPassword = String(newPassword);
+    const normalizedCaptchaAnswer = String(captchaAnswer).trim().toLowerCase();
+
+    if (trimmedUsername.length < 3 || trimmedUsername.length > 40) {
+      res.status(400).json({ error: 'Invalid username length' });
+      return;
+    }
+
+    if (trimmedEmail.length < 5 || trimmedEmail.length > 254) {
+      res.status(400).json({ error: 'Invalid email length' });
+      return;
+    }
+
+    if (rawPassword.length < 8 || rawPassword.length > 128) {
+      res.status(400).json({ error: 'Password must be 8-128 characters' });
+      return;
+    }
+
     const captcha = CAPTCHA_QUESTIONS[captchaId];
     if (!captcha) {
       res.status(400).json({ error: 'Invalid captcha challenge' });
       return;
     }
 
-    const normalizedCaptchaAnswer = String(captchaAnswer).trim().toLowerCase();
-    const expectedAnswer = String(captcha.answer).trim().toLowerCase();
-    if (normalizedCaptchaAnswer !== expectedAnswer) {
+    if (normalizedCaptchaAnswer !== String(captcha.answer).toLowerCase()) {
       res.status(400).json({ error: 'Invalid captcha answer' });
       return;
     }
 
-    const normalizedUsername = String(username).trim().toLowerCase();
-    const normalizedEmail = String(email).trim().toLowerCase();
+    const bcrypt = require('bcryptjs');
+    const { getUserByUsername, updatePasswordByUserId } = require('../_lib/db');
+
+    const normalizedUsername = trimmedUsername.toLowerCase();
+    const normalizedEmail = trimmedEmail.toLowerCase();
 
     const user = await getUserByUsername(normalizedUsername);
     if (!user || String(user.email).toLowerCase() !== normalizedEmail) {
@@ -79,12 +100,7 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    if (String(newPassword).length < 8) {
-      res.status(400).json({ error: 'Password must be at least 8 characters' });
-      return;
-    }
-
-    const passwordHash = await bcrypt.hash(String(newPassword), 12);
+    const passwordHash = await bcrypt.hash(rawPassword, 12);
     await updatePasswordByUserId(user.id, passwordHash);
 
     res.status(200).json({ ok: true });
