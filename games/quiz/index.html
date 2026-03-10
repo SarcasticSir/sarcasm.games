@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>sarcasm.games — Quiz</title>
+  <style>
+    :root {
+      --bg: #0b0c10;
+      --card: #1e1f25;
+      --txt: #eaeaea;
+      --bd: #2f313a;
+      --accent: #4ecca3;
+      --danger: #ff6b6b;
+      --muted: #9aa0ad;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font: 16px/1.4 system-ui, Segoe UI, Roboto, Arial;
+      background: var(--bg);
+      color: var(--txt);
+      height: 100dvh;
+      overflow: hidden;
+    }
+
+    .hidden { display: none !important; }
+
+    .page {
+      height: 100dvh;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      padding: 14px;
+      gap: 12px;
+    }
+
+    .topbar {
+      background: var(--card);
+      border: 1px solid var(--bd);
+      border-radius: 12px;
+      padding: 10px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .topbar h1 { margin: 0; font-size: 1.1rem; }
+    .topbar-actions { display: flex; gap: 8px; }
+
+    button, .btn-link {
+      border: 0;
+      border-radius: 8px;
+      padding: 10px 12px;
+      cursor: pointer;
+      font-weight: 700;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn-primary { background: var(--accent); color: #111; }
+    .btn-neutral { background: var(--bd); color: var(--txt); }
+    .btn-danger { background: var(--danger); color: #fff; }
+
+    .layout {
+      min-height: 0;
+      display: grid;
+      place-items: center;
+    }
+
+    .quiz-card {
+      width: min(980px, 100%);
+      height: min(760px, 100%);
+      background: var(--card);
+      border: 1px solid var(--bd);
+      border-radius: 14px;
+      padding: 16px;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 12px;
+      overflow: hidden;
+    }
+
+    .toolbar {
+      display: grid;
+      grid-template-columns: 180px 1fr;
+      gap: 10px;
+      align-items: end;
+    }
+
+    label { display: block; margin-bottom: 4px; color: var(--muted); font-size: .92rem; }
+
+    input, select {
+      width: 100%;
+      background: #080a11;
+      border: 1px solid var(--bd);
+      color: var(--txt);
+      border-radius: 8px;
+      padding: 10px;
+      font-size: 1rem;
+    }
+
+    .views {
+      min-height: 0;
+      overflow: hidden;
+      border: 1px solid var(--bd);
+      border-radius: 12px;
+      padding: 12px;
+      display: grid;
+    }
+
+    .view {
+      min-height: 0;
+      overflow: auto;
+      padding-right: 2px;
+    }
+
+    .mode-grid, .category-grid {
+      display: grid;
+      gap: 10px;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    }
+
+    .mode-btn { border: 1px solid var(--bd); background: transparent; color: var(--txt); }
+    .mode-btn.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+
+    .section {
+      margin-top: 12px;
+      border: 1px solid var(--bd);
+      border-radius: 10px;
+      padding: 10px;
+    }
+
+    .category-card {
+      border: 1px solid var(--bd);
+      border-radius: 10px;
+      padding: 10px;
+      background: #12141d;
+      cursor: pointer;
+      text-align: left;
+      position: relative;
+      min-height: 88px;
+    }
+
+    .category-card.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+    .category-card.disabled { opacity: .5; cursor: not-allowed; }
+
+    .category-reset {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      border: 1px solid var(--bd);
+      border-radius: 6px;
+      font-size: .72rem;
+      padding: 4px 6px;
+      background: #0d1018;
+      color: var(--muted);
+      cursor: pointer;
+    }
+
+    .question h2 { margin: 0 0 4px; }
+    .question .progress { color: var(--muted); margin-bottom: 12px; }
+    .answer-actions { margin-top: 10px; display: grid; gap: 10px; }
+
+    .status {
+      min-height: 22px;
+      color: var(--muted);
+      font-size: .95rem;
+      word-break: break-word;
+    }
+
+    @media (max-width: 700px) {
+      .toolbar { grid-template-columns: 1fr; }
+      .quiz-card { height: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="topbar">
+      <h1>🧠 NY QUIZ</h1>
+      <div class="topbar-actions">
+        <a class="btn-link btn-neutral" href="/">Tilbake</a>
+      </div>
+    </header>
+
+    <section class="layout">
+      <article class="quiz-card">
+        <div class="toolbar">
+          <div>
+            <label for="quizLanguage">Language</label>
+            <select id="quizLanguage">
+              <option value="en" selected>English</option>
+              <option value="no">Norsk</option>
+            </select>
+          </div>
+          <div class="status" id="accessStatus"></div>
+        </div>
+
+        <div class="views">
+          <section id="setupView" class="view">
+            <div class="mode-grid" id="modeGrid"></div>
+
+            <div class="section hidden" id="categorySection">
+              <h3 id="categoryTitle" style="margin-top:0"></h3>
+              <div class="category-grid" id="categoryGrid"></div>
+              <div style="margin-top:10px;max-width:220px;">
+                <label for="quizQuestionCount">Number of questions</label>
+                <input id="quizQuestionCount" type="number" min="1" value="10" />
+              </div>
+            </div>
+
+            <div class="section">
+              <div class="status" id="setupStatus"></div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+                <button class="btn-primary" id="startQuizBtn" type="button">Start quiz</button>
+                <button class="btn-danger hidden" id="resetAllProgressBtn" type="button">Reset all progress</button>
+              </div>
+            </div>
+          </section>
+
+          <section id="questionView" class="view hidden">
+            <div class="question">
+              <h2 id="questionTitle"></h2>
+              <div class="progress" id="questionProgress"></div>
+            </div>
+            <input id="textAnswer" type="text" autocomplete="off" />
+            <div class="answer-actions">
+              <button class="btn-primary" id="submitAnswerBtn" type="button">Submit answer</button>
+              <button class="btn-primary hidden" id="nextQuestionBtn" type="button">Next question</button>
+            </div>
+            <div class="status" id="answerStatus"></div>
+          </section>
+
+          <section id="resultView" class="view hidden">
+            <h2 id="resultSummary" style="margin:0 0 8px;"></h2>
+            <button class="btn-primary" id="backToSetupBtn" type="button">Back to setup</button>
+          </section>
+        </div>
+
+        <div class="status" id="globalStatus"></div>
+      </article>
+    </section>
+  </main>
+
+  <script>
+    const modeLabels = {
+      random10: 'Random 10',
+      categories: 'Categories',
+      completionist: 'Completionist'
+    };
+
+    const state = {
+      user: null,
+      language: 'en',
+      mode: 'random10',
+      categories: [],
+      progressByCategory: [],
+      selectedCategories: new Set(),
+      questions: [],
+      answers: [],
+      index: 0,
+      almostRetryUsed: false,
+      isQuestionLocked: false
+    };
+
+    function setText(id, text, isError = false) {
+      const node = document.getElementById(id);
+      node.style.color = isError ? 'var(--danger)' : 'var(--muted)';
+      node.textContent = text;
+    }
+
+    async function getSession() {
+      const response = await fetch('/api/auth/session', { credentials: 'include' });
+      if (!response.ok) return null;
+      const data = await response.json();
+      return data.user || null;
+    }
+
+    function getCategoryProgress(categoryName) {
+      return state.progressByCategory.find((entry) => entry.category === categoryName) || { total: 0, correct: 0 };
+    }
+
+    function renderModes() {
+      const modeGrid = document.getElementById('modeGrid');
+      modeGrid.innerHTML = '';
+
+      for (const mode of ['random10', 'categories', 'completionist']) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = `mode-btn ${state.mode === mode ? 'active' : ''}`;
+        button.textContent = modeLabels[mode];
+        button.addEventListener('click', () => {
+          state.mode = mode;
+          state.selectedCategories = new Set();
+          renderModes();
+          renderCategoryGrid();
+          syncSetupState();
+        });
+        modeGrid.appendChild(button);
+      }
+    }
+
+    function renderCategoryGrid() {
+      const section = document.getElementById('categorySection');
+      const title = document.getElementById('categoryTitle');
+      const grid = document.getElementById('categoryGrid');
+      grid.innerHTML = '';
+
+      if (state.mode === 'random10') {
+        section.classList.add('hidden');
+        return;
+      }
+
+      const isCompletionist = state.mode === 'completionist';
+      title.textContent = isCompletionist ? 'Choose completionist categories' : 'Choose categories';
+      section.classList.remove('hidden');
+
+      for (const entry of state.categories) {
+        const progress = getCategoryProgress(entry.category);
+        const isCompleted = isCompletionist && Number(progress.total) > 0 && Number(progress.correct) >= Number(progress.total);
+
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className = `category-card${state.selectedCategories.has(entry.category) ? ' selected' : ''}${isCompleted ? ' disabled' : ''}`;
+        card.disabled = isCompleted;
+
+        const heading = document.createElement('strong');
+        heading.textContent = entry.category;
+        card.appendChild(heading);
+
+        const details = document.createElement('div');
+        details.style.marginTop = '6px';
+        details.style.color = 'var(--muted)';
+        details.style.fontSize = '.9rem';
+        details.textContent = isCompletionist
+          ? `${Math.max(0, Number(progress.total) - Number(progress.correct))} left of ${progress.total}`
+          : `${entry.total} questions`;
+        card.appendChild(details);
+
+        if (isCompletionist) {
+          const resetButton = document.createElement('button');
+          resetButton.type = 'button';
+          resetButton.className = 'category-reset';
+          resetButton.textContent = 'Reset';
+          resetButton.disabled = Number(progress.correct) === 0;
+          resetButton.addEventListener('click', async (event) => {
+            event.stopPropagation();
+            if (!resetButton.disabled) await resetCategory(entry.category);
+          });
+          card.appendChild(resetButton);
+        }
+
+        card.addEventListener('click', () => {
+          if (isCompleted) return;
+          if (state.selectedCategories.has(entry.category)) {
+            state.selectedCategories.delete(entry.category);
+          } else {
+            state.selectedCategories.add(entry.category);
+          }
+          renderCategoryGrid();
+        });
+
+        grid.appendChild(card);
+      }
+    }
+
+    function syncSetupState() {
+      const resetAllButton = document.getElementById('resetAllProgressBtn');
+      resetAllButton.classList.toggle('hidden', state.mode !== 'completionist');
+
+      if (state.mode === 'completionist') {
+        setText('setupStatus', 'Select categories and amount. Only unanswered/incorrect questions are used.');
+      } else if (state.mode === 'categories') {
+        setText('setupStatus', 'Select categories and amount for your quiz.');
+      } else {
+        setText('setupStatus', 'Random 10 is selected. Click Start quiz to continue.');
+      }
+    }
+
+    async function loadOverview() {
+      const response = await fetch('/api/quiz/overview', { credentials: 'include' });
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Could not load quiz overview.');
+      }
+
+      state.categories = Array.isArray(data.categories) ? data.categories : [];
+      state.progressByCategory = Array.isArray(data.progress) ? data.progress : [];
+    }
+
+    function showQuestion() {
+      const question = state.questions[state.index];
+      if (!question) {
+        showResults();
+        return;
+      }
+
+      document.getElementById('setupView').classList.add('hidden');
+      document.getElementById('resultView').classList.add('hidden');
+      document.getElementById('questionView').classList.remove('hidden');
+
+      state.almostRetryUsed = false;
+      state.isQuestionLocked = false;
+
+      const questionText = state.language === 'no' ? question.questionNo : question.questionEn;
+      document.getElementById('questionTitle').textContent = `${question.category}: ${questionText}`;
+      document.getElementById('questionProgress').textContent = `Question ${state.index + 1} of ${state.questions.length}`;
+      document.getElementById('answerStatus').textContent = '';
+
+      const answerInput = document.getElementById('textAnswer');
+      answerInput.value = '';
+      answerInput.placeholder = state.language === 'no' ? 'Skriv svaret ditt' : 'Type your answer';
+      answerInput.disabled = false;
+
+      const submitBtn = document.getElementById('submitAnswerBtn');
+      submitBtn.disabled = false;
+      submitBtn.textContent = state.language === 'no' ? 'Svar' : 'Submit answer';
+
+      const nextBtn = document.getElementById('nextQuestionBtn');
+      nextBtn.classList.add('hidden');
+      nextBtn.disabled = false;
+      nextBtn.textContent = state.language === 'no' ? 'Neste spørsmål' : 'Next question';
+
+      answerInput.focus();
+    }
+
+    function lockQuestionWithError(correctAnswer) {
+      state.isQuestionLocked = true;
+      document.getElementById('textAnswer').disabled = true;
+      document.getElementById('submitAnswerBtn').disabled = true;
+
+      const nextBtn = document.getElementById('nextQuestionBtn');
+      nextBtn.classList.remove('hidden');
+      nextBtn.focus();
+
+      setText('answerStatus', state.language === 'no'
+        ? `Feil ❌ (Riktig svar: ${correctAnswer})`
+        : `Incorrect ❌ (Correct answer: ${correctAnswer})`, true);
+    }
+
+    async function submitAnswer() {
+      if (state.isQuestionLocked) return;
+
+      const question = state.questions[state.index];
+      if (!question) return;
+
+      const answerInput = document.getElementById('textAnswer');
+      const selectedAnswer = answerInput.value;
+
+      const response = await fetch('/api/quiz/answer', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          questionId: question.id,
+          selectedAnswer,
+          language: state.language,
+          retryUsed: state.almostRetryUsed,
+          honeypot: ''
+        })
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setText('answerStatus', data.error || 'Could not submit answer.', true);
+        return;
+      }
+
+      if (data.status === 'almost') {
+        state.almostRetryUsed = true;
+        setText('answerStatus', state.language === 'no' ? 'Nesten! Prøv én gang til.' : 'Almost! Try one more time.');
+        return;
+      }
+
+      if (data.status === 'correct') {
+        state.answers.push(true);
+        setText('answerStatus', state.language === 'no' ? 'Riktig ✅' : 'Correct ✅');
+        document.getElementById('submitAnswerBtn').disabled = true;
+        document.getElementById('textAnswer').disabled = true;
+        setTimeout(() => {
+          state.index += 1;
+          showQuestion();
+        }, 320);
+        return;
+      }
+
+      state.answers.push(false);
+      lockQuestionWithError(data.correctAnswer || 'N/A');
+    }
+
+    function showResults() {
+      const correct = state.answers.filter(Boolean).length;
+      document.getElementById('questionView').classList.add('hidden');
+      document.getElementById('resultView').classList.remove('hidden');
+      document.getElementById('resultSummary').textContent = `Result: ${correct}/${state.answers.length} correct`;
+      loadOverview().then(() => {
+        renderCategoryGrid();
+        syncSetupState();
+      }).catch(() => {});
+    }
+
+    async function startQuiz() {
+      const mode = state.mode;
+      let count = 10;
+      let categories = [];
+
+      if (mode !== 'random10') {
+        categories = [...state.selectedCategories];
+        if (categories.length === 0) {
+          setText('setupStatus', 'Select at least one category.', true);
+          return;
+        }
+
+        const rawCount = Number(document.getElementById('quizQuestionCount').value);
+        if (!Number.isFinite(rawCount) || rawCount < 1) {
+          setText('setupStatus', 'Enter a valid question count.', true);
+          return;
+        }
+
+        count = rawCount;
+      }
+
+      const response = await fetch('/api/quiz/start', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode, count, categories, honeypot: '' })
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setText('setupStatus', data.error || 'Failed to start quiz.', true);
+        return;
+      }
+
+      if (!Array.isArray(data.questions) || data.questions.length === 0) {
+        setText('setupStatus', 'No questions available for this setup.', true);
+        return;
+      }
+
+      state.questions = data.questions;
+      state.answers = [];
+      state.index = 0;
+      showQuestion();
+    }
+
+    async function resetCategory(category) {
+      const response = await fetch('/api/quiz/reset-category', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ category, honeypot: '' })
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setText('setupStatus', data.error || 'Could not reset category progress.', true);
+        return;
+      }
+
+      await loadOverview();
+      renderCategoryGrid();
+      setText('setupStatus', `Progress reset for ${category}.`);
+    }
+
+    async function resetAll() {
+      const response = await fetch('/api/quiz/reset-all', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ honeypot: '' })
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setText('setupStatus', data.error || 'Could not reset all progress.', true);
+        return;
+      }
+
+      await loadOverview();
+      renderCategoryGrid();
+      setText('setupStatus', 'All progress was reset.');
+    }
+
+    async function init() {
+      state.user = await getSession();
+
+      if (!state.user) {
+        setText('accessStatus', 'Du må logge inn først (tilbake til forsiden).', true);
+        document.getElementById('startQuizBtn').disabled = true;
+        return;
+      }
+
+      if (state.user.role !== 'admin') {
+        setText('accessStatus', 'Kun admin har tilgang til denne siden.', true);
+        document.getElementById('startQuizBtn').disabled = true;
+        return;
+      }
+
+      setText('accessStatus', `Logged in as ${state.user.username}`);
+
+      try {
+        await loadOverview();
+      } catch (error) {
+        setText('setupStatus', error.message, true);
+      }
+
+      renderModes();
+      renderCategoryGrid();
+      syncSetupState();
+
+      document.getElementById('quizLanguage').addEventListener('change', (event) => {
+        state.language = event.target.value === 'no' ? 'no' : 'en';
+        if (!document.getElementById('questionView').classList.contains('hidden')) {
+          showQuestion();
+        }
+      });
+
+      document.getElementById('startQuizBtn').addEventListener('click', startQuiz);
+      document.getElementById('submitAnswerBtn').addEventListener('click', submitAnswer);
+      document.getElementById('nextQuestionBtn').addEventListener('click', () => {
+        state.index += 1;
+        showQuestion();
+      });
+      document.getElementById('backToSetupBtn').addEventListener('click', () => {
+        document.getElementById('resultView').classList.add('hidden');
+        document.getElementById('questionView').classList.add('hidden');
+        document.getElementById('setupView').classList.remove('hidden');
+      });
+
+      document.getElementById('resetAllProgressBtn').addEventListener('click', resetAll);
+
+      document.getElementById('textAnswer').addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          submitAnswer();
+        }
+      });
+    }
+
+    init();
+  </script>
+</body>
+</html>
