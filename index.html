@@ -5,126 +5,783 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>sarcasm.games</title>
   <style>
-    :root{--bg:#0b0c10;--card:#1e1f25;--txt:#eaeaea;--bd:#2f313a;--accent:#4ecca3}
-    
-    body.light-mode {--bg:#f7f7fb;--card:#ffffff;--txt:#111;--bd:#e7e7ef}
-    
-    @media (prefers-color-scheme: light){
-      body:not(.dark-mode) {:root{--bg:#f7f7fb;--card:#ffffff;--txt:#111;--bd:#e7e7ef}}
+    :root {
+      --bg: #0b0c10;
+      --card: #1e1f25;
+      --txt: #eaeaea;
+      --bd: #2f313a;
+      --accent: #4ecca3;
+      --danger: #ff6b6b;
+      --muted: #9aa0ad;
     }
 
-    body{margin:0;font:16px/1.4 system-ui,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--txt);display:flex;flex-direction:column;align-items:center;min-height:100dvh;transition: background 0.3s, color 0.3s;}
-    
-    .auth-bar {width: 100%; background: var(--card); border-bottom: 1px solid var(--bd); padding: 10px; display: flex; justify-content: center; align-items: center; gap: 12px; z-index: 100; min-height: 40px;}
-    .auth-bar input {background: var(--bg); border: 1px solid var(--bd); color: var(--txt); padding: 5px 10px; border-radius: 4px; font-size: 14px; outline: none;}
-    .auth-bar button {background: var(--accent); color: #000; border: none; padding: 5px 15px; border-radius: 4px; cursor: pointer; font-weight: bold;}
-    
-    .theme-toggle { cursor: pointer; font-size: 20px; user-select: none; padding: 0 10px; }
-    .logout-btn { background: #ff4d4d !important; color: white !important; display: none; }
+    body.light-mode {
+      --bg: #f7f7fb;
+      --card: #ffffff;
+      --txt: #111;
+      --bd: #e7e7ef;
+      --muted: #5d6470;
+    }
 
-    .wrap{max-width:860px;width:100%;padding:28px; text-align: center;}
-    h1{margin:0 0 8px;font-size:32px}
-    p{opacity:.8;margin:0 0 24px}
-    .grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
-    a{display:block;text-decoration:none;padding:18px 20px;border-radius:12px;background:var(--card);color:inherit;border:1px solid var(--bd);transition:.15s; position: relative;}
+    body {
+      margin: 0;
+      font: 16px/1.4 system-ui, Segoe UI, Roboto, Arial;
+      background: var(--bg);
+      color: var(--txt);
+      min-height: 100dvh;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .auth-shell {
+      min-height: 100dvh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+
+    .auth-card {
+      width: min(520px, 100%);
+      background: var(--card);
+      border: 1px solid var(--bd);
+      border-radius: 14px;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    .auth-title {
+      margin: 0 0 8px;
+      font-size: 1.6rem;
+    }
+
+    .auth-subtitle {
+      margin: 0 0 16px;
+      color: var(--muted);
+    }
+
+    .auth-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .tab-btn {
+      border: 1px solid var(--bd);
+      background: transparent;
+      color: var(--txt);
+      border-radius: 8px;
+      padding: 8px 12px;
+      cursor: pointer;
+    }
+
+    .tab-btn.active {
+      background: var(--accent);
+      color: #111;
+      border-color: var(--accent);
+      font-weight: 700;
+    }
+
+    .form-group {
+      margin-bottom: 10px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    input {
+      width: 100%;
+      box-sizing: border-box;
+      background: var(--bg);
+      border: 1px solid var(--bd);
+      color: var(--txt);
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 14px;
+      outline: none;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      border: 0;
+      border-radius: 8px;
+      padding: 10px 14px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .btn-primary { background: var(--accent); color: #111; }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-neutral { background: var(--bd); color: var(--txt); }
+
+    .status-box {
+      margin-top: 12px;
+      min-height: 20px;
+      color: var(--muted);
+      font-size: 0.92rem;
+      word-break: break-word;
+    }
+
+    .auth-note {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+
+    .app-shell {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100dvh;
+    }
+
+    .top-bar {
+      width: 100%;
+      background: var(--card);
+      border-bottom: 1px solid var(--bd);
+      padding: 10px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-sizing: border-box;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .top-bar .left,
+    .top-bar .right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .wrap {
+      max-width: 860px;
+      width: 100%;
+      padding: 28px;
+      text-align: center;
+      box-sizing: border-box;
+    }
+
+    h1 { margin: 0 0 8px; font-size: 32px; }
+    p { opacity: 0.85; margin: 0 0 24px; }
+    .grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+
+    a {
+      display: block;
+      text-decoration: none;
+      padding: 18px 20px;
+      border-radius: 12px;
+      background: var(--card);
+      color: inherit;
+      border: 1px solid var(--bd);
+      transition: 0.15s;
+      position: relative;
+    }
 
     .tooltip-text {
-      visibility: hidden; opacity: 0; transition: opacity 0.3s; position: absolute;
-      top: -35px; left: 50%; transform: translateX(-50%); background-color: var(--bd);
-      color: var(--txt); text-align: center; padding: 4px 8px; border-radius: 6px;
-      font-size: 12px; white-space: nowrap; pointer-events: none;
+      visibility: hidden;
+      opacity: 0;
+      transition: opacity 0.3s;
+      position: absolute;
+      top: -35px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: var(--bd);
+      color: var(--txt);
+      text-align: center;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 12px;
+      white-space: nowrap;
+      pointer-events: none;
     }
-    a:hover {transform: translateY(-1px); border-color: #767a88;}
-    a:hover .tooltip-text {visibility: visible; opacity: 1;}
 
-    #morsdagsContainer { display: none; max-width: 400px; width: 90%; margin: 60px auto; text-align: center; }
-    .morsdag-link { 
-      display: block; background: var(--card); border: 2px solid var(--accent); 
-      padding: 20px; margin: 10px 0; border-radius: 15px; text-decoration: none; 
-      color: var(--txt); font-size: 1.3rem; font-weight: bold; transition: 0.2s;
+    a:hover { transform: translateY(-1px); border-color: #767a88; }
+    a:hover .tooltip-text { visibility: visible; opacity: 1; }
+
+    .member-list {
+      margin-top: 24px;
+      background: var(--card);
+      border: 1px solid var(--bd);
+      border-radius: 12px;
+      padding: 14px;
+      text-align: left;
     }
-    .morsdag-link:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+
+    .member-list h3 {
+      margin-top: 0;
+    }
+
+    .member-list ul {
+      margin: 0;
+      padding-left: 20px;
+    }
   </style>
 </head>
 <body>
+  <div id="authShell" class="auth-shell">
+    <div class="auth-card">
+      <h1 class="auth-title">sarcasm.games login</h1>
+      <p class="auth-subtitle">Logg inn, opprett konto, reset passord eller slett bruker.</p>
 
-<div class="auth-bar" id="authBar">
-  <div class="theme-toggle" onclick="toggleTheme()" id="themeIcon">🌙</div>
-  <div id="loginFields">
-    <input type="text" id="user" placeholder="Brukernavn" autocomplete="off">
-    <input type="password" id="pass" placeholder="Passord">
-    <button onclick="checkLogin()">Logg inn</button>
+      <div class="auth-tabs">
+        <button class="tab-btn active" data-tab="login">Logg inn</button>
+        <button class="tab-btn" data-tab="register">Opprett bruker</button>
+        <button class="tab-btn" data-tab="reset">Reset passord</button>
+        <button class="tab-btn" data-tab="delete">Slett bruker</button>
+      </div>
+
+      <section id="loginTab" class="tab-content">
+        <div class="form-group">
+          <label for="loginUser">Bruker-ID</label>
+          <input id="loginUser" type="text" autocomplete="username" />
+        </div>
+        <div class="form-group">
+          <label for="loginPassword">Passord</label>
+          <input id="loginPassword" type="password" autocomplete="current-password" />
+        </div>
+        <div class="btn-row">
+          <button class="btn-primary" id="loginBtn">Logg inn</button>
+        </div>
+      </section>
+
+      <section id="registerTab" class="tab-content hidden">
+        <div class="form-group">
+          <label for="registerUser">Bruker-ID</label>
+          <input id="registerUser" type="text" autocomplete="username" />
+        </div>
+        <div class="form-group">
+          <label for="registerEmail">E-post</label>
+          <input id="registerEmail" type="email" autocomplete="email" />
+        </div>
+        <div class="form-group">
+          <label for="registerPassword">Passord</label>
+          <input id="registerPassword" type="password" autocomplete="new-password" />
+        </div>
+        <div class="btn-row">
+          <button class="btn-primary" id="registerBtn">Opprett bruker</button>
+        </div>
+      </section>
+
+      <section id="resetTab" class="tab-content hidden">
+        <div class="form-group">
+          <label for="resetIdentity">Bruker-ID eller e-post</label>
+          <input id="resetIdentity" type="text" />
+        </div>
+        <div class="btn-row">
+          <button class="btn-neutral" id="requestResetBtn">Send reset-link</button>
+        </div>
+        <hr style="border-color: var(--bd); border-width: 1px 0 0; margin: 14px 0;" />
+        <div class="form-group">
+          <label for="resetToken">Reset-token</label>
+          <input id="resetToken" type="text" />
+        </div>
+        <div class="form-group">
+          <label for="resetNewPassword">Nytt passord</label>
+          <input id="resetNewPassword" type="password" autocomplete="new-password" />
+        </div>
+        <div class="btn-row">
+          <button class="btn-primary" id="applyResetBtn">Sett nytt passord</button>
+        </div>
+      </section>
+
+      <section id="deleteTab" class="tab-content hidden">
+        <div class="form-group">
+          <label for="deleteUser">Bruker-ID</label>
+          <input id="deleteUser" type="text" />
+        </div>
+        <div class="form-group">
+          <label for="deletePassword">Passord</label>
+          <input id="deletePassword" type="password" autocomplete="current-password" />
+        </div>
+        <div class="btn-row">
+          <button class="btn-danger" id="deleteBtn">Slett min bruker</button>
+        </div>
+      </section>
+
+      <div id="statusBox" class="status-box"></div>
+      <p class="auth-note">
+        Lagring skjer lokalt i nettleseren med kryptering/hashing via Web Crypto API.
+      </p>
+    </div>
   </div>
-  <button id="logoutBtn" class="logout-btn" onclick="logout()">Logg ut</button>
-</div>
 
-<div class="wrap" id="mainContent">
-  <h1>sarcasm.games</h1>
-  <p>Where do you wanna go?</p>
-  <div class="grid">
-    <a href="/tiermaker/">Tier-maker <span class="tooltip-text">Make your own tier list.</span></a>
-    <a href="/monstercatch/">Monster catcher <span class="tooltip-text">A local game.</span></a>
-    <a href="/achievements/">Life Achievements <span class="tooltip-text">Track accomplishments</span></a>
-    <a href="/poketruefalse/">Pokemon True or False <span class="tooltip-text">Facts game!</span></a>
-    <a href="/lighthousekeeper/">Lighthouse Keeper <span class="tooltip-text">Keep the light on!</span></a>
-    <a href="/CosmicClick/">Cosmic clicker <span class="tooltip-text">Incremental clicker!</span></a>
-    <a href="/orb/">Orb Game <span class="tooltip-text">Race to the finish!</span></a>
-    <a href="/CrystalClick/">Crystal Mining <span class="tooltip-text">Second clicker!</span></a>
-    <a href="/GalacticClick/">Galactic Mining <span class="tooltip-text">Third clicker!</span></a>
-    <a href="/quizapp/">Quiz! <span class="tooltip-text">Generate a quiz</span></a>
-    <a href="/memory/">Guess the mon! <span class="tooltip-text">How fast are you?</span></a>
-    <a href="https://html.itch.zone/html/14908902/index.html">3D Platformer <span class="tooltip-text">Playable in browser</span></a>
+  <div id="appShell" class="app-shell hidden">
+    <div class="top-bar">
+      <div class="left">
+        <strong id="welcomeText">Innlogget</strong>
+      </div>
+      <div class="right">
+        <button class="btn-neutral" id="themeToggle">🌓 Tema</button>
+        <button class="btn-danger" id="logoutBtn">Logg ut</button>
+      </div>
+    </div>
+
+    <div class="wrap" id="mainContent">
+      <h1>sarcasm.games</h1>
+      <p>Where do you wanna go?</p>
+      <div class="grid">
+        <a href="/tiermaker/">Tier-maker <span class="tooltip-text">Make your own tier list.</span></a>
+        <a href="/monstercatch/">Monster catcher <span class="tooltip-text">A local game.</span></a>
+        <a href="/achievements/">Life Achievements <span class="tooltip-text">Track accomplishments</span></a>
+        <a href="/poketruefalse/">Pokemon True or False <span class="tooltip-text">Facts game!</span></a>
+        <a href="/lighthousekeeper/">Lighthouse Keeper <span class="tooltip-text">Keep the light on!</span></a>
+        <a href="/CosmicClick/">Cosmic clicker <span class="tooltip-text">Incremental clicker!</span></a>
+        <a href="/orb/">Orb Game <span class="tooltip-text">Race to the finish!</span></a>
+        <a href="/CrystalClick/">Crystal Mining <span class="tooltip-text">Second clicker!</span></a>
+        <a href="/GalacticClick/">Galactic Mining <span class="tooltip-text">Third clicker!</span></a>
+        <a href="/quizapp/">Quiz! <span class="tooltip-text">Generate a quiz</span></a>
+        <a href="/memory/">Guess the mon! <span class="tooltip-text">How fast are you?</span></a>
+        <a href="https://html.itch.zone/html/14908902/index.html">3D Platformer <span class="tooltip-text">Playable in browser</span></a>
+      </div>
+
+      <section id="memberListSection" class="member-list hidden">
+        <h3>Medlemsliste (kun admin)</h3>
+        <ul id="memberList"></ul>
+      </section>
+    </div>
   </div>
-</div>
 
-<div id="morsdagsContainer">
-  <h1 style="color: var(--accent); font-size: 40px;">🌸 Morsdag 2026</h1>
-  <p style="font-size: 18px;">Velkommen! Velg din quiz under:</p>
-  <a href="/Mamma/" class="morsdag-link">👸 Mamma</a>
-  <a href="/Isak/" class="morsdag-link">👦 Isak</a>
-  <a href="/Lilly/" class="morsdag-link">👧 Lilly</a>
-  <a href="/Pappa/" class="morsdag-link">🧔 Pappa</a>
-  <a href="/Karusell/" class="morsdag-link" style="border-color: #767a88; opacity: 0.9;">📸 Karusell</a>
-</div>
+  <script>
+    const APP_SECRET = 'sarcasm.games::v1::local-encryption-key';
+    const USER_STORAGE_KEY = 'sg_users_v1';
+    const SESSION_KEY = 'sg_session_v1';
 
-<script>
-  window.onload = function() {
-    if (localStorage.getItem('morsdag_innlogget') === 'true') {
-      visInnloggetState();
+    const ADMIN_SEED = {
+      username: 'admin',
+      email: 'andreasantbro@gmail.com',
+      password: 'O._Iw7365%kaue'
+    };
+
+    const state = {
+      users: [],
+      currentUser: null
+    };
+
+    const statusBox = document.getElementById('statusBox');
+    const authShell = document.getElementById('authShell');
+    const appShell = document.getElementById('appShell');
+    const welcomeText = document.getElementById('welcomeText');
+    const memberListSection = document.getElementById('memberListSection');
+    const memberList = document.getElementById('memberList');
+
+    async function sha256Hex(input) {
+      const data = new TextEncoder().encode(input);
+      const hash = await crypto.subtle.digest('SHA-256', data);
+      return [...new Uint8Array(hash)].map((v) => v.toString(16).padStart(2, '0')).join('');
     }
-    if (localStorage.getItem('theme') === 'light') {
-      document.body.classList.add('light-mode');
-      document.getElementById('themeIcon').innerText = '☀️';
+
+    function toBase64(bytes) {
+      return btoa(String.fromCharCode(...bytes));
     }
-  };
 
-  function toggleTheme() {
-    const isLight = document.body.classList.toggle('light-mode');
-    document.getElementById('themeIcon').innerText = isLight ? '☀️' : '🌙';
-    localStorage.setItem('theme', isLight ? 'light' : 'dark');
-  }
+    function fromBase64(base64) {
+      return Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+    }
 
-  function checkLogin() {
-    const u = document.getElementById('user').value.toLowerCase();
-    const p = document.getElementById('pass').value;
-    if(u === 'morsdag' && p === 'O._Iw7365%kaue') {
-      localStorage.setItem('morsdag_innlogget', 'true');
-      visInnloggetState();
-    } else { alert('Feil brukernavn eller passord'); }
-  }
+    async function deriveAesKey() {
+      const keyMaterial = await crypto.subtle.importKey(
+        'raw',
+        new TextEncoder().encode(APP_SECRET),
+        'PBKDF2',
+        false,
+        ['deriveKey']
+      );
+      return crypto.subtle.deriveKey(
+        {
+          name: 'PBKDF2',
+          salt: new TextEncoder().encode('sg-users-salt-v1'),
+          iterations: 120000,
+          hash: 'SHA-256'
+        },
+        keyMaterial,
+        { name: 'AES-GCM', length: 256 },
+        false,
+        ['encrypt', 'decrypt']
+      );
+    }
 
-  function logout() {
-    localStorage.removeItem('morsdag_innlogget');
-    location.reload();
-  }
+    async function encryptText(plainText) {
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const key = await deriveAesKey();
+      const ciphertext = await crypto.subtle.encrypt(
+        { name: 'AES-GCM', iv },
+        key,
+        new TextEncoder().encode(plainText)
+      );
+      return {
+        iv: toBase64(iv),
+        data: toBase64(new Uint8Array(ciphertext))
+      };
+    }
 
-  function visInnloggetState() {
-    document.getElementById('mainContent').style.display = 'none';
-    document.getElementById('loginFields').style.display = 'none';
-    document.getElementById('morsdagsContainer').style.display = 'block';
-    document.getElementById('logoutBtn').style.display = 'block';
-  }
-</script>
+    async function decryptText(payload) {
+      const key = await deriveAesKey();
+      const plaintext = await crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv: fromBase64(payload.iv) },
+        key,
+        fromBase64(payload.data)
+      );
+      return new TextDecoder().decode(plaintext);
+    }
 
+    async function hashPassword(password, saltHex) {
+      return sha256Hex(`${saltHex}::${password}::${APP_SECRET}`);
+    }
+
+    async function createPasswordRecord(password) {
+      const salt = crypto.getRandomValues(new Uint8Array(16));
+      const saltHex = [...salt].map((v) => v.toString(16).padStart(2, '0')).join('');
+      const hash = await hashPassword(password, saltHex);
+      return { salt: saltHex, hash };
+    }
+
+    async function verifyPassword(password, record) {
+      const check = await hashPassword(password, record.salt);
+      return check === record.hash;
+    }
+
+    async function saveUsers() {
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(state.users));
+    }
+
+    async function loadUsers() {
+      const raw = localStorage.getItem(USER_STORAGE_KEY);
+      state.users = raw ? JSON.parse(raw) : [];
+    }
+
+    async function ensureAdminSeed() {
+      if (state.users.find((u) => u.username === ADMIN_SEED.username)) return;
+
+      const emailEncrypted = await encryptText(ADMIN_SEED.email);
+      const password = await createPasswordRecord(ADMIN_SEED.password);
+      const now = Date.now();
+
+      state.users.push({
+        username: ADMIN_SEED.username,
+        emailEncrypted,
+        password,
+        role: 'admin',
+        createdAt: now,
+        resetToken: null,
+        resetExpiresAt: null
+      });
+
+      await saveUsers();
+    }
+
+    function setStatus(message, isError = false) {
+      statusBox.style.color = isError ? 'var(--danger)' : 'var(--muted)';
+      statusBox.textContent = message;
+    }
+
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-btn').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.tab === tabName);
+      });
+
+      document.querySelectorAll('.tab-content').forEach((section) => {
+        section.classList.add('hidden');
+      });
+
+      document.getElementById(`${tabName}Tab`).classList.remove('hidden');
+      setStatus('');
+    }
+
+    function setThemeFromStorage() {
+      if (localStorage.getItem('theme') === 'light') {
+        document.body.classList.add('light-mode');
+      }
+    }
+
+    function toggleTheme() {
+      const isLight = document.body.classList.toggle('light-mode');
+      localStorage.setItem('theme', isLight ? 'light' : 'dark');
+    }
+
+    async function setSession(username) {
+      localStorage.setItem(SESSION_KEY, username);
+      state.currentUser = username;
+      await showApp();
+    }
+
+    function clearSession() {
+      localStorage.removeItem(SESSION_KEY);
+      state.currentUser = null;
+      appShell.classList.add('hidden');
+      authShell.classList.remove('hidden');
+      setStatus('Logget ut.');
+    }
+
+    async function getUserByUsername(username) {
+      return state.users.find((u) => u.username === username.toLowerCase());
+    }
+
+    async function getUserByIdentity(identity) {
+      const candidate = identity.toLowerCase();
+      const byUser = state.users.find((u) => u.username === candidate);
+      if (byUser) return byUser;
+
+      for (const user of state.users) {
+        const decryptedEmail = (await decryptText(user.emailEncrypted)).toLowerCase();
+        if (decryptedEmail === candidate) return user;
+      }
+      return null;
+    }
+
+    async function renderMemberList() {
+      const user = await getUserByUsername(state.currentUser || '');
+      if (!user || user.role !== 'admin') {
+        memberListSection.classList.add('hidden');
+        memberList.innerHTML = '';
+        return;
+      }
+
+      memberListSection.classList.remove('hidden');
+      memberList.innerHTML = '';
+
+      for (const member of state.users) {
+        const email = await decryptText(member.emailEncrypted);
+        const li = document.createElement('li');
+        li.textContent = `${member.username} (${email}) - role: ${member.role}`;
+        memberList.appendChild(li);
+      }
+    }
+
+    async function showApp() {
+      const user = await getUserByUsername(state.currentUser || '');
+      if (!user) {
+        clearSession();
+        return;
+      }
+
+      welcomeText.textContent = `Innlogget som ${user.username}`;
+      authShell.classList.add('hidden');
+      appShell.classList.remove('hidden');
+      await renderMemberList();
+    }
+
+    async function login() {
+      const username = document.getElementById('loginUser').value.trim().toLowerCase();
+      const password = document.getElementById('loginPassword').value;
+
+      if (!username || !password) {
+        setStatus('Fyll inn både bruker-ID og passord.', true);
+        return;
+      }
+
+      const user = await getUserByUsername(username);
+      if (!user || !(await verifyPassword(password, user.password))) {
+        setStatus('Feil bruker-ID eller passord.', true);
+        return;
+      }
+
+      await setSession(username);
+      setStatus('Innlogging vellykket.');
+    }
+
+    async function registerUser() {
+      const username = document.getElementById('registerUser').value.trim().toLowerCase();
+      const email = document.getElementById('registerEmail').value.trim().toLowerCase();
+      const password = document.getElementById('registerPassword').value;
+
+      if (!username || !email || !password) {
+        setStatus('Alle felter må fylles ut.', true);
+        return;
+      }
+
+      if (username.length < 3) {
+        setStatus('Bruker-ID må være minst 3 tegn.', true);
+        return;
+      }
+
+      if (password.length < 8) {
+        setStatus('Passord må være minst 8 tegn.', true);
+        return;
+      }
+
+      if (await getUserByUsername(username)) {
+        setStatus('Bruker-ID finnes allerede.', true);
+        return;
+      }
+
+      if (await getUserByIdentity(email)) {
+        setStatus('E-post er allerede registrert.', true);
+        return;
+      }
+
+      const emailEncrypted = await encryptText(email);
+      const passwordRecord = await createPasswordRecord(password);
+
+      state.users.push({
+        username,
+        emailEncrypted,
+        password: passwordRecord,
+        role: 'member',
+        createdAt: Date.now(),
+        resetToken: null,
+        resetExpiresAt: null
+      });
+
+      await saveUsers();
+      setStatus('Bruker opprettet. Du kan nå logge inn.');
+      switchTab('login');
+      document.getElementById('loginUser').value = username;
+      document.getElementById('loginPassword').value = '';
+    }
+
+    async function requestReset() {
+      const identity = document.getElementById('resetIdentity').value.trim();
+      if (!identity) {
+        setStatus('Oppgi bruker-ID eller e-post for reset.', true);
+        return;
+      }
+
+      const user = await getUserByIdentity(identity);
+      if (!user) {
+        setStatus('Fant ingen bruker med den identiteten.', true);
+        return;
+      }
+
+      const token = crypto.randomUUID();
+      user.resetToken = token;
+      user.resetExpiresAt = Date.now() + 15 * 60 * 1000;
+      await saveUsers();
+
+      const email = await decryptText(user.emailEncrypted);
+      const resetLink = `${location.origin}${location.pathname}?resetToken=${encodeURIComponent(token)}`;
+
+      const subject = encodeURIComponent('Reset password for sarcasm.games');
+      const body = encodeURIComponent(
+        `Hei ${user.username},\n\nKlikk på denne lenken for å resette passordet ditt:\n${resetLink}\n\nToken: ${token}\nGyldig i 15 minutter.`
+      );
+
+      window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
+      setStatus(`Reset-token laget for ${user.username}. E-postutkast åpnet i din e-postklient.`);
+    }
+
+    async function applyReset() {
+      const token = document.getElementById('resetToken').value.trim();
+      const newPassword = document.getElementById('resetNewPassword').value;
+
+      if (!token || !newPassword) {
+        setStatus('Du må fylle inn token og nytt passord.', true);
+        return;
+      }
+
+      const user = state.users.find((u) => u.resetToken === token);
+      if (!user) {
+        setStatus('Ugyldig reset-token.', true);
+        return;
+      }
+
+      if (!user.resetExpiresAt || user.resetExpiresAt < Date.now()) {
+        setStatus('Reset-token er utløpt.', true);
+        return;
+      }
+
+      if (newPassword.length < 8) {
+        setStatus('Nytt passord må være minst 8 tegn.', true);
+        return;
+      }
+
+      user.password = await createPasswordRecord(newPassword);
+      user.resetToken = null;
+      user.resetExpiresAt = null;
+      await saveUsers();
+
+      setStatus('Passord er oppdatert. Du kan nå logge inn.');
+      switchTab('login');
+    }
+
+    async function deleteOwnUser() {
+      const username = document.getElementById('deleteUser').value.trim().toLowerCase();
+      const password = document.getElementById('deletePassword').value;
+
+      if (!username || !password) {
+        setStatus('Oppgi bruker-ID og passord for sletting.', true);
+        return;
+      }
+
+      const index = state.users.findIndex((u) => u.username === username);
+      if (index < 0) {
+        setStatus('Bruker finnes ikke.', true);
+        return;
+      }
+
+      const user = state.users[index];
+      if (user.role === 'admin') {
+        setStatus('Admin-brukeren kan ikke slettes.', true);
+        return;
+      }
+
+      if (!(await verifyPassword(password, user.password))) {
+        setStatus('Feil passord.', true);
+        return;
+      }
+
+      state.users.splice(index, 1);
+      await saveUsers();
+
+      if (state.currentUser === username) {
+        clearSession();
+      }
+
+      setStatus('Bruker er slettet.');
+      switchTab('login');
+    }
+
+    async function hydrateFromQuery() {
+      const params = new URLSearchParams(location.search);
+      const token = params.get('resetToken');
+      if (!token) return;
+
+      switchTab('reset');
+      document.getElementById('resetToken').value = token;
+      setStatus('Reset-token funnet i URL. Skriv inn nytt passord.');
+    }
+
+    async function init() {
+      setThemeFromStorage();
+      await loadUsers();
+      await ensureAdminSeed();
+      await hydrateFromQuery();
+
+      const sessionUser = localStorage.getItem(SESSION_KEY);
+      if (sessionUser) {
+        state.currentUser = sessionUser;
+        await showApp();
+      }
+
+      document.querySelectorAll('.tab-btn').forEach((btn) => {
+        btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+      });
+
+      document.getElementById('loginBtn').addEventListener('click', login);
+      document.getElementById('registerBtn').addEventListener('click', registerUser);
+      document.getElementById('requestResetBtn').addEventListener('click', requestReset);
+      document.getElementById('applyResetBtn').addEventListener('click', applyReset);
+      document.getElementById('deleteBtn').addEventListener('click', deleteOwnUser);
+      document.getElementById('logoutBtn').addEventListener('click', clearSession);
+      document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+    }
+
+    init();
+  </script>
 </body>
 </html>
