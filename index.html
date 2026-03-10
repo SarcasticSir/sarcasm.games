@@ -214,6 +214,37 @@
     a:hover { transform: translateY(-1px); border-color: #767a88; }
     a:hover .tooltip-text { visibility: visible; opacity: 1; }
 
+
+    .season-card {
+      margin-top: 24px;
+      background: var(--card);
+      border: 1px solid var(--bd);
+      border-radius: 12px;
+      padding: 14px;
+      text-align: left;
+    }
+
+    .season-card h3 {
+      margin: 0 0 10px;
+      text-align: left;
+    }
+
+    .season-grid {
+      display: grid;
+      gap: 10px;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    }
+
+    .module-group {
+      border: 1px dashed var(--bd);
+      border-radius: 10px;
+      padding: 10px;
+    }
+
+    .module-group h4 {
+      margin: 0 0 8px;
+    }
+
     .member-list {
       margin-top: 24px;
       background: var(--card);
@@ -350,6 +381,12 @@
         <a href="https://html.itch.zone/html/14908902/index.html">3D Platformer <span class="tooltip-text">Playable in browser</span></a>
       </div>
 
+
+      <section class="season-card hidden" id="featureModulesSection">
+        <h3 id="featureModulesTitle">Admin-moduler</h3>
+        <div class="season-grid" id="featureModulesGrid"></div>
+      </section>
+
       <section id="memberListSection" class="member-list hidden">
         <h3>Medlemsliste (kun admin)</h3>
         <ul id="memberList"></ul>
@@ -368,6 +405,28 @@
       password: 'O._Iw7365%kaue'
     };
 
+    const FEATURE_MODULES = [
+      {
+        id: 'morsdag-2026',
+        title: '🌸 Morsdag 2026',
+        adminOnly: true,
+        links: [
+          { label: '👸 Mamma', href: '/Mamma/' },
+          { label: '👦 Isak', href: '/Isak/' },
+          { label: '👧 Lilly', href: '/Lilly/' },
+          { label: '🧔 Pappa', href: '/Pappa/' },
+          { label: '📸 Karusell', href: '/Karusell/' }
+        ]
+      },
+      // Example for future modules:
+      // {
+      //   id: 'farsquiz-2027',
+      //   title: '🎉 Farsquiz 2027',
+      //   adminOnly: true,
+      //   links: [{ label: 'Start farsquiz', href: '/farsquiz/' }]
+      // }
+    ];
+
     const state = {
       users: [],
       currentUser: null
@@ -379,6 +438,9 @@
     const welcomeText = document.getElementById('welcomeText');
     const memberListSection = document.getElementById('memberListSection');
     const memberList = document.getElementById('memberList');
+    const featureModulesSection = document.getElementById('featureModulesSection');
+    const featureModulesTitle = document.getElementById('featureModulesTitle');
+    const featureModulesGrid = document.getElementById('featureModulesGrid');
 
     async function sha256Hex(input) {
       const data = new TextEncoder().encode(input);
@@ -544,6 +606,48 @@
       return null;
     }
 
+
+
+    function renderFeatureModules(user) {
+      const visibleModules = FEATURE_MODULES.filter((moduleConfig) => {
+        if (moduleConfig.adminOnly && user.role !== 'admin') {
+          return false;
+        }
+        return true;
+      });
+
+      if (visibleModules.length === 0) {
+        featureModulesSection.classList.add('hidden');
+        featureModulesGrid.innerHTML = '';
+        return;
+      }
+
+      const containsPublicModules = visibleModules.some((moduleConfig) => !moduleConfig.adminOnly);
+      featureModulesTitle.textContent = containsPublicModules ? 'Ekstra moduler' : 'Admin-moduler';
+
+      featureModulesGrid.innerHTML = '';
+
+      for (const moduleConfig of visibleModules) {
+        const moduleGroup = document.createElement('div');
+        moduleGroup.className = 'module-group';
+
+        const moduleHeading = document.createElement('h4');
+        moduleHeading.textContent = moduleConfig.title;
+        moduleGroup.appendChild(moduleHeading);
+
+        for (const link of moduleConfig.links) {
+          const anchor = document.createElement('a');
+          anchor.href = link.href;
+          anchor.textContent = link.label;
+          moduleGroup.appendChild(anchor);
+        }
+
+        featureModulesGrid.appendChild(moduleGroup);
+      }
+
+      featureModulesSection.classList.remove('hidden');
+    }
+
     async function renderMemberList() {
       const user = await getUserByUsername(state.currentUser || '');
       if (!user || user.role !== 'admin') {
@@ -573,6 +677,7 @@
       welcomeText.textContent = `Innlogget som ${user.username}`;
       authShell.classList.add('hidden');
       appShell.classList.remove('hidden');
+      renderFeatureModules(user);
       await renderMemberList();
     }
 
