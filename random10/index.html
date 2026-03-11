@@ -30,6 +30,7 @@
     <section id="introView">
       <h1>Random10 quiz</h1>
       <p>Welcome! On this page you will get 10 random questions from mixed categories.</p>
+      <p>New: you can reveal the answer only after a wrong guess, then move on manually.</p>
       <p>Answer checks follow forgiving rules: punctuation and tiny text differences are tolerated, close answers can become <strong>Almost</strong>, and for years we use tolerance windows. If you get <strong>Almost</strong>, you get one extra try.</p>
       <div class="btn-row">
         <button id="startBtn" class="btn-primary">Start Random10 quiz</button>
@@ -42,11 +43,14 @@
       <div class="progress" id="progressText"></div>
       <h2 id="questionTitle">Question</h2>
       <p id="questionCategory" class="muted"></p>
-      <input id="answerInput" type="text" placeholder="Write your answer here" autocomplete="off" />
-      <div class="btn-row">
-        <button id="submitBtn" class="btn-primary">Submit answer</button>
-        <button id="showAnswerBtn">Show answer</button>
-      </div>
+      <form id="answerForm">
+        <input id="answerInput" type="text" placeholder="Write your answer here" autocomplete="off" />
+        <div class="btn-row">
+          <button id="submitBtn" type="submit" class="btn-primary">Submit answer</button>
+          <button id="showAnswerBtn" type="button" class="hidden">Show answer</button>
+          <button id="nextQuestionBtn" type="button" class="hidden">Next question</button>
+        </div>
+      </form>
       <p id="statusText" class="status"></p>
       <p id="answerReveal" class="muted hidden"></p>
     </section>
@@ -67,33 +71,22 @@
   </main>
 
   <script>
-    const SAMPLE_QUESTIONS = [
-      { id: 1, category: 'Science', prompt: 'What planet is known as the Red Planet?', answers: ['Mars'] },
-      { id: 2, category: 'History', prompt: 'In which year did World War II end?', answers: ['1945'] },
-      { id: 3, category: 'Geography', prompt: 'What is the capital of Norway?', answers: ['Oslo'] },
-      { id: 4, category: 'Sports', prompt: 'How many players are on the field per team in football (soccer)?', answers: ['11'] },
-      { id: 5, category: 'Movies', prompt: 'Who directed Jurassic Park?', answers: ['Steven Spielberg', 'Spielberg'] },
-      { id: 6, category: 'Music', prompt: 'Which band made the song "Bohemian Rhapsody"?', answers: ['Queen'] },
-      { id: 7, category: 'Tech', prompt: 'What does HTML stand for?', answers: ['HyperText Markup Language', 'Hyper Text Markup Language'] },
-      { id: 8, category: 'Nature', prompt: 'What is the largest mammal in the world?', answers: ['Blue whale', 'The blue whale'] },
-      { id: 9, category: 'Food', prompt: 'Which country is sushi most associated with?', answers: ['Japan'] },
-      { id: 10, category: 'Literature', prompt: 'Who wrote "1984"?', answers: ['George Orwell', 'Orwell'] },
-      { id: 11, category: 'Science', prompt: 'What gas do plants absorb from the atmosphere?', answers: ['Carbon dioxide', 'CO2'] },
-      { id: 12, category: 'History', prompt: 'Who was the first man on the moon?', answers: ['Neil Armstrong', 'Armstrong'] }
-    ];
-
     const positiveMessages = ['Good!', 'Great job!', 'Nice one!', 'Excellent!', 'Well done!'];
 
     const introView = document.getElementById('introView');
     const questionView = document.getElementById('questionView');
     const resultView = document.getElementById('resultView');
     const introError = document.getElementById('introError');
+    const answerForm = document.getElementById('answerForm');
     const progressText = document.getElementById('progressText');
     const questionTitle = document.getElementById('questionTitle');
     const questionCategory = document.getElementById('questionCategory');
     const answerInput = document.getElementById('answerInput');
     const statusText = document.getElementById('statusText');
     const answerReveal = document.getElementById('answerReveal');
+    const showAnswerBtn = document.getElementById('showAnswerBtn');
+    const nextQuestionBtn = document.getElementById('nextQuestionBtn');
+    const submitBtn = document.getElementById('submitBtn');
 
     const state = {
       questions: [],
@@ -120,7 +113,7 @@
         : [raw.answer, raw.answer_en, raw.answer_no].filter(Boolean);
 
       return {
-        id: raw.id || `local-${idx}`,
+        id: raw.id || `api-${idx}`,
         category: raw.category || 'General',
         prompt: raw.prompt || raw.question || raw.question_en || raw.question_no || 'Missing question text',
         answers
@@ -129,6 +122,7 @@
 
     async function loadQuestions() {
       introError.textContent = '';
+
       try {
         const response = await fetch('/api/quiz/start', {
           method: 'POST',
@@ -145,11 +139,11 @@
         if (questions.length < 10) {
           throw new Error('Not enough API questions available yet.');
         }
+
         return questions.slice(0, 10);
       } catch (error) {
-        const copy = [...SAMPLE_QUESTIONS].sort(() => Math.random() - 0.5).slice(0, 10).map(normalizeQuestion);
-        introError.textContent = 'Using local fallback questions while API is being wired.';
-        return copy;
+        introError.textContent = 'Could not load questions from API. Please try again.';
+        return [];
       }
     }
 
@@ -165,6 +159,9 @@
       statusText.className = 'status';
       answerReveal.classList.add('hidden');
       answerReveal.textContent = `Answer: ${q.answers[0]}`;
+      showAnswerBtn.classList.add('hidden');
+      nextQuestionBtn.classList.add('hidden');
+      submitBtn.disabled = false;
     }
 
     function moveNextQuestion() {
@@ -177,50 +174,50 @@
         showView('result');
         return;
       }
+
       renderQuestion();
     }
 
     async function evaluateAnswer(question, userAnswer, retryAvailable) {
-      try {
-        const response = await fetch('/api/quiz/answer', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            questionId: question.id,
-            answer: userAnswer,
-            retryAvailable,
-            mode: 'random10',
-            lang: 'en'
-          })
-        });
+      const response = await fetch('/api/quiz/answer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          questionId: question.id,
+          answer: userAnswer,
+          retryAvailable,
+          mode: 'random10',
+          lang: 'en'
+        })
+      });
 
-        if (!response.ok) throw new Error('API not ready');
-        const payload = await response.json();
-        if (!payload || !payload.status) throw new Error('Invalid answer payload');
-        return payload;
-      } catch (error) {
-        const expected = question.answers[0] || '';
-        const normalizedGuess = userAnswer.trim().toLowerCase();
-        const normalizedExpected = expected.trim().toLowerCase();
-
-        if (normalizedGuess === normalizedExpected) {
-          return { status: 'correct' };
-        }
-
-        if (retryAvailable && normalizedExpected.includes(normalizedGuess) && normalizedGuess.length > 2) {
-          return { status: 'almost' };
-        }
-
-        return { status: 'wrong' };
+      if (!response.ok) {
+        throw new Error('Could not validate answer.');
       }
+
+      const payload = await response.json();
+      if (!payload || !payload.status) {
+        throw new Error('Invalid answer payload.');
+      }
+
+      return payload;
     }
 
     async function onSubmitAnswer() {
+      if (submitBtn.disabled) return;
+
       const userAnswer = answerInput.value.trim();
       if (!userAnswer) return;
       const question = state.questions[state.index];
 
-      const result = await evaluateAnswer(question, userAnswer, !state.awaitingRetry);
+      let result;
+      try {
+        result = await evaluateAnswer(question, userAnswer, !state.awaitingRetry);
+      } catch (error) {
+        statusText.className = 'status wrong';
+        statusText.textContent = 'Could not submit answer. Please try again.';
+        return;
+      }
 
       if (result.status === 'correct') {
         statusText.className = 'status ok';
@@ -245,12 +242,18 @@
       state.wrong += 1;
       state.awaitingRetry = false;
       statusText.className = 'status wrong';
-      statusText.textContent = 'Wrong answer. You can continue when ready.';
-      setTimeout(moveNextQuestion, 900);
+      statusText.textContent = 'Wrong answer. You can show answer, then continue.';
+      showAnswerBtn.classList.remove('hidden');
+      nextQuestionBtn.classList.remove('hidden');
+      submitBtn.disabled = true;
     }
 
     document.getElementById('startBtn').addEventListener('click', async () => {
       state.questions = await loadQuestions();
+      if (state.questions.length < 10) {
+        return;
+      }
+
       state.index = 0;
       state.correct = 0;
       state.almostResolved = 0;
@@ -260,16 +263,17 @@
       showView('question');
     });
 
-    document.getElementById('submitBtn').addEventListener('click', onSubmitAnswer);
-    answerInput.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter') {
-        event.preventDefault();
-        onSubmitAnswer();
-      }
+    answerForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      onSubmitAnswer();
     });
 
-    document.getElementById('showAnswerBtn').addEventListener('click', () => {
+    showAnswerBtn.addEventListener('click', () => {
       answerReveal.classList.toggle('hidden');
+    });
+
+    nextQuestionBtn.addEventListener('click', () => {
+      moveNextQuestion();
     });
 
     document.getElementById('playAgainBtn').addEventListener('click', () => {
