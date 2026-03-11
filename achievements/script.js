@@ -169,7 +169,6 @@ document.addEventListener('DOMContentLoaded', () => {
             { id: 'paid_off_a_loan', name: 'Paid Off a Student or Car Loan', points: 85 },
             { id: 'built_something_from_scratch', name: 'Built a Piece of Furniture from Scratch', points: 60 },
             { id: 'reduced_carbon_footprint', name: 'Reduced Your Carbon Footprint', points: 40 },
-            { id: 'created_a_vegetable_garden', name: 'Planted and Grew a Vegetable Garden', points: 35 },
             { id: 'started_a_retirement_fund', name: 'Started a Retirement Fund', points: 75 },
             { id: 'designed_a_room', name: 'Designed and Decorated a Room', points: 50 }
         ],
