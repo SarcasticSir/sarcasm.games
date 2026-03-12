@@ -28,8 +28,10 @@ function normalizeAnswerValues(value) {
     .filter(Boolean);
 }
 
-function extractAcceptedAnswers(row) {
-  const candidates = [row.answers_en, row.answers_no];
+function extractAcceptedAnswers(row, lang) {
+  const candidates = lang === 'no'
+    ? [row.answers_no, row.answers_en]
+    : [row.answers_en, row.answers_no];
   const seen = new Set();
 
   return candidates
@@ -64,8 +66,9 @@ module.exports = async function handler(req, res) {
 
   try {
     const body = parseBody(req.body);
-    const questionId = Number(body.questionId);
-    const answer = String(body.answer || '').trim();
+    const { questionId: rawQuestionId, answer: rawAnswer = '', lang = 'en' } = body;
+    const questionId = Number(rawQuestionId);
+    const answer = String(rawAnswer).trim();
 
     if (!Number.isInteger(questionId) || !answer) {
       res.status(400).json({ error: 'questionId and answer are required' });
@@ -86,7 +89,7 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const acceptedAnswers = extractAcceptedAnswers(question);
+    const acceptedAnswers = extractAcceptedAnswers(question, lang);
     const evaluation = evaluateAnswer({
       userAnswer: answer,
       acceptedAnswers,
