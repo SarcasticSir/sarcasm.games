@@ -5,519 +5,305 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Quiz categories</title>
   <style>
-    :root { --bg:#0b0c10; --card:#1e1f25; --txt:#eaeaea; --bd:#2f313a; --accent:#4ecca3; --muted:#9aa0ad; --ok:#80ed99; --warn:#ffd166; --bad:#ff6b6b; }
-    * { box-sizing: border-box; }
-    body { margin:0; font:16px/1.45 system-ui, Segoe UI, Roboto, Arial; background:var(--bg); color:var(--txt); min-height:100dvh; display:grid; place-items:center; padding:24px; }
-    .card { width:min(780px,100%); background:var(--card); border:1px solid var(--bd); border-radius:14px; padding:20px; }
-    h1,h2 { margin:0 0 12px; }
-    p { color:var(--muted); margin:0 0 12px; }
-    .hidden { display:none !important; }
-    .btn-row { display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; }
-    button, .link-btn { border:1px solid var(--bd); border-radius:8px; padding:10px 14px; font-weight:700; cursor:pointer; background:transparent; color:var(--txt); text-decoration:none; }
-    .btn-primary { background:var(--accent); color:#111; border-color:var(--accent); }
-    .muted { color:var(--muted); }
-    .status { min-height:24px; margin-top:12px; font-weight:700; }
-    .status.ok { color:var(--ok); }
-    .status.almost { color:var(--warn); }
-    .status.wrong { color:var(--bad); }
-    input[type="text"], input[type="number"] { width:100%; border:1px solid var(--bd); border-radius:8px; background:var(--bg); color:var(--txt); padding:12px; font-size:16px; }
-    .progress { color:var(--muted); margin-bottom:12px; }
-    .result-list { margin:10px 0 0; padding-left:18px; color:var(--muted); }
-    .category-grid { display:grid; gap:10px; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); margin:12px 0; }
-    .category-card { border:1px solid var(--bd); border-radius:10px; padding:12px; background:#17181e; display:flex; justify-content:space-between; gap:10px; align-items:flex-start; cursor:pointer; }
-    .category-card input { margin-top:3px; }
-    .category-meta { color:var(--muted); font-size:14px; }
-    .setup-row { margin-top:12px; }
-    .count-hint { margin-top:8px; }
+    :root {
+      --bg:#0b0c10;
+      --card:#1e1f25;
+      --txt:#eaeaea;
+      --bd:#2f313a;
+      --accent:#4ecca3;
+      --muted:#9aa0ad;
+      --danger:#ff8b8b;
+    }
+
+    body {
+      margin:0;
+      font:16px/1.4 system-ui, Segoe UI, Roboto, Arial;
+      background:var(--bg);
+      color:var(--txt);
+      min-height:100dvh;
+      display:grid;
+      place-items:center;
+      padding:20px;
+      box-sizing:border-box;
+    }
+
+    .card {
+      width:min(760px,100%);
+      background:var(--card);
+      border:1px solid var(--bd);
+      border-radius:14px;
+      padding:20px;
+    }
+
+    h1 { margin:0 0 10px; }
+
+    .muted {
+      margin:0 0 14px;
+      color:var(--muted);
+    }
+
+    .status {
+      min-height: 1.5rem;
+      margin: 0 0 12px;
+      color: var(--muted);
+    }
+
+    .status.error {
+      color: var(--danger);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 10px;
+      margin: 0 0 16px;
+    }
+
+    .cat {
+      border:1px solid var(--bd);
+      border-radius:10px;
+      padding:10px;
+      background:#181920;
+    }
+
+    .cat label {
+      display:flex;
+      gap:8px;
+      align-items:flex-start;
+      cursor:pointer;
+    }
+
+    .cat-name { font-weight:700; }
+    .cat-count { color:var(--muted); font-size: 14px; }
+
+    .controls {
+      display:flex;
+      flex-wrap:wrap;
+      gap:12px;
+      align-items:center;
+      margin:0 0 14px;
+    }
+
+    .controls label {
+      display:flex;
+      gap:8px;
+      align-items:center;
+    }
+
+    input[type="number"] {
+      width:80px;
+      padding:6px;
+      border-radius:8px;
+      border:1px solid var(--bd);
+      background:#101116;
+      color:var(--txt);
+    }
+
+    .actions {
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+
+    .btn {
+      display:inline-block;
+      text-decoration:none;
+      border-radius:8px;
+      padding:10px 14px;
+      font-weight:700;
+      border:0;
+      cursor:pointer;
+    }
+
+    .btn.primary {
+      background:var(--accent);
+      color:#111;
+    }
+
+    .btn.secondary {
+      background:#2b2e37;
+      color:#d4d8e4;
+    }
+
+    .btn:disabled {
+      opacity:0.5;
+      cursor:not-allowed;
+    }
   </style>
 </head>
 <body>
   <main class="card">
-    <section id="introView">
-      <h1>Quiz categories</h1>
-      <p id="introLead">Choose one or more categories and how many questions you want.</p>
-      <p id="introHint">Then start the quiz with the same flow as Random10.</p>
-      <div id="categoriesContainer" class="category-grid"></div>
-      <p id="categoryStatus" class="muted"></p>
-      <div class="setup-row">
-        <label for="questionCountInput" id="countLabel">Number of questions</label>
-        <input id="questionCountInput" type="number" min="1" step="1" value="1" />
-        <p id="countHint" class="count-hint muted"></p>
-      </div>
-      <div class="btn-row">
-        <button id="startBtn" class="btn-primary" disabled>Start category quiz</button>
-        <a class="link-btn" href="/">Back to sarcasm.games</a>
-      </div>
-      <p id="introError" class="status wrong"></p>
-    </section>
+    <h1>Quiz categories</h1>
+    <p class="muted">Choose one or more categories. Max question count updates based on your selection.</p>
 
-    <section id="questionView" class="hidden">
-      <div class="progress" id="progressText"></div>
-      <div class="btn-row" style="margin-top:0; margin-bottom:12px;">
-        <button id="abortQuizBtn" type="button">Abort quiz</button>
-      </div>
-      <div id="abortConfirmRow" class="btn-row hidden" style="margin-top:0; margin-bottom:12px;">
-        <span class="muted">Abort current quiz?</span>
-        <button id="confirmAbortBtn" type="button">Yes, abort</button>
-        <button id="cancelAbortBtn" type="button" class="btn-primary">Continue quiz</button>
-      </div>
-      <h2 id="questionTitle">Question</h2>
-      <p id="questionCategory" class="muted"></p>
-      <form id="answerForm">
-        <input id="answerInput" type="text" placeholder="Write your answer here" autocomplete="off" />
-        <div class="btn-row">
-          <button id="submitBtn" type="submit" class="btn-primary">Submit answer</button>
-          <button id="showAnswerBtn" type="button" class="hidden">Show answer</button>
-          <button id="nextQuestionBtn" type="button" class="hidden">Next question</button>
-        </div>
-      </form>
-      <p id="statusText" class="status"></p>
-      <p id="answerReveal" class="muted hidden"></p>
-    </section>
+    <p id="status" class="status" role="status" aria-live="polite">Loading categories…</p>
+    <section id="categoryGrid" class="grid" aria-label="Quiz categories"></section>
 
-    <section id="resultView" class="hidden">
-      <h2>Quiz complete 🎉</h2>
-      <p id="resultSummary"></p>
-      <ul class="result-list">
-        <li><span id="correctCount">0</span> correct</li>
-        <li><span id="wrongCount">0</span> wrong</li>
-      </ul>
-      <h3>Answered questions</h3>
-      <ul id="answeredQuestionsList" class="result-list"></ul>
-      <div class="btn-row">
-        <button id="playAgainBtn" class="btn-primary">Try again</button>
-        <a class="link-btn" href="/">Back to sarcasm.games</a>
-      </div>
-    </section>
+    <div class="controls">
+      <label>
+        Question count
+        <input id="questionCount" type="number" min="1" value="1" disabled />
+      </label>
+      <span id="countMeta" class="muted"></span>
+    </div>
+
+    <div class="actions">
+      <button id="startButton" class="btn primary" type="button" disabled>Start quiz</button>
+      <a href="/" class="btn secondary">Back to sarcasm.games</a>
+    </div>
   </main>
 
   <script type="module">
     import { getQuizLanguage as readQuizLanguage } from '/lib/client/quiz-language.js';
 
-    const fallbackLanguage = 'en';
-    const copy = {
-      en: {
-        title: 'Quiz categories', introLead: 'Choose one or more categories and how many questions you want.', introHint: 'Then start the quiz with the same flow as Random10.',
-        startQuiz: 'Start category quiz', loading: 'Loading…', backHome: 'Back to sarcasm.games', abortQuiz: 'Abort quiz', abortConfirm: 'Abort current quiz?', abortYes: 'Yes, abort', abortNo: 'Continue quiz',
-        questionTitle: 'Question', answerPlaceholder: 'Write your answer here', submitAnswer: 'Submit answer', showAnswer: 'Show answer', nextQuestion: 'Next question',
-        resultTitle: 'Quiz complete 🎉', resultSummary: 'You got {correct} / {total} correct.', correctCount: 'correct', wrongCount: 'wrong', answeredQuestionsHeading: 'Answered questions', playAgain: 'Try again',
-        progress: 'Question {current} of {total}', category: 'Category: {category}', answerPrefix: 'Answer: {answer}', countLabel: 'Number of questions',
-        availableCount: '{count} questions available in selected categories', noCategories: 'Select at least one category to start.', invalidCount: 'Choose a valid number between 1 and {max}.',
-        loadCategoriesError: 'Could not load categories right now.', loadingError: 'Could not start quiz now. Try again.', notEnoughQuestions: 'Not enough questions available.',
-        answerValidateError: 'Could not validate answer.', invalidPayloadError: 'Invalid server response.', answerSubmitError: 'Could not submit answer. Try again.', almostStatus: 'Almost! Try once more.', wrongStatus: 'Not quite. You can reveal the answer and move on.',
-        categoryCount: '{count} questions', positiveMessages: ['Great!', 'Nice!', 'Correct!', 'Awesome!', 'Well done!']
-      },
-      no: {
-        title: 'Quizkategorier', introLead: 'Velg én eller flere kategorier og hvor mange spørsmål du vil ha.', introHint: 'Deretter starter du quizen med samme flyt som Random10.',
-        startQuiz: 'Start kategori-quiz', loading: 'Laster…', backHome: 'Tilbake til sarcasm.games', abortQuiz: 'Avbryt quiz', abortConfirm: 'Avbryte nåværende quiz?', abortYes: 'Ja, avbryt', abortNo: 'Fortsett quiz',
-        questionTitle: 'Spørsmål', answerPlaceholder: 'Skriv svaret ditt her', submitAnswer: 'Send svar', showAnswer: 'Vis fasit', nextQuestion: 'Neste spørsmål',
-        resultTitle: 'Quiz fullført 🎉', resultSummary: 'Du fikk {correct} / {total} riktige.', correctCount: 'riktige', wrongCount: 'feil', answeredQuestionsHeading: 'Besvarte spørsmål', playAgain: 'Prøv igjen',
-        progress: 'Spørsmål {current} av {total}', category: 'Kategori: {category}', answerPrefix: 'Fasit: {answer}', countLabel: 'Antall spørsmål',
-        availableCount: '{count} spørsmål tilgjengelig i valgte kategorier', noCategories: 'Velg minst én kategori for å starte.', invalidCount: 'Velg et gyldig antall mellom 1 og {max}.',
-        loadCategoriesError: 'Kunne ikke laste kategorier akkurat nå.', loadingError: 'Klarte ikke starte quiz nå. Prøv igjen.', notEnoughQuestions: 'Ikke nok spørsmål tilgjengelig.',
-        answerValidateError: 'Kunne ikke validere svar.', invalidPayloadError: 'Ugyldig svar fra server.', answerSubmitError: 'Kunne ikke sende svar. Prøv igjen.', almostStatus: 'Nesten! Prøv én gang til.', wrongStatus: 'Ikke helt. Du kan vise fasit og gå videre.',
-        categoryCount: '{count} spørsmål', positiveMessages: ['Bra!', 'Godt jobba!', 'Nice!', 'Supert!', 'Flott!']
-      }
+    const activeLang = getQuizLanguage();
+    const categoryGrid = document.getElementById('categoryGrid');
+    const statusEl = document.getElementById('status');
+    const countInput = document.getElementById('questionCount');
+    const countMeta = document.getElementById('countMeta');
+    const startButton = document.getElementById('startButton');
+
+    const runtimeState = {
+      activeLang,
+      quizStarted: false,
+      categories: []
     };
 
-    const activeLang = readQuizLanguage();
-    const introView = document.getElementById('introView');
-    const questionView = document.getElementById('questionView');
-    const resultView = document.getElementById('resultView');
-    const categoriesContainer = document.getElementById('categoriesContainer');
-    const categoryStatus = document.getElementById('categoryStatus');
-    const questionCountInput = document.getElementById('questionCountInput');
-    const countLabel = document.getElementById('countLabel');
-    const countHint = document.getElementById('countHint');
-    const introError = document.getElementById('introError');
-    const answerForm = document.getElementById('answerForm');
-    const progressText = document.getElementById('progressText');
-    const questionTitle = document.getElementById('questionTitle');
-    const questionCategory = document.getElementById('questionCategory');
-    const answerInput = document.getElementById('answerInput');
-    const statusText = document.getElementById('statusText');
-    const answerReveal = document.getElementById('answerReveal');
-    const showAnswerBtn = document.getElementById('showAnswerBtn');
-    const nextQuestionBtn = document.getElementById('nextQuestionBtn');
-    const submitBtn = document.getElementById('submitBtn');
-    const startBtn = document.getElementById('startBtn');
-    const abortQuizBtn = document.getElementById('abortQuizBtn');
-    const abortConfirmRow = document.getElementById('abortConfirmRow');
-    const confirmAbortBtn = document.getElementById('confirmAbortBtn');
-    const cancelAbortBtn = document.getElementById('cancelAbortBtn');
-    const answeredQuestionsList = document.getElementById('answeredQuestionsList');
-    const backLinks = document.querySelectorAll('a.link-btn');
-    const introHeading = introView.querySelector('h1');
-    const introLead = document.getElementById('introLead');
-    const introHint = document.getElementById('introHint');
-    const abortConfirmText = abortConfirmRow.querySelector('.muted');
-    const questionSectionHeading = questionView.querySelector('h2');
-    const resultHeading = resultView.querySelector('h2');
-    const resultCounterItems = resultView.querySelectorAll('ul.result-list li');
-    const answeredQuestionsHeading = resultView.querySelector('h3');
-    const playAgainBtn = document.getElementById('playAgainBtn');
-
-    const state = {
-      language: fallbackLanguage,
-      categories: [],
-      selectedCategories: new Set(),
-      questions: [],
-      index: 0,
-      correct: 0,
-      wrong: 0,
-      answeredQuestions: [],
-      awaitingRetry: false,
-      isSubmitting: false,
-      isAdvancing: false,
-      quizStarted: false
-    };
-
-    function getStoredQuizLanguage() { return readQuizLanguage(); }
-    function syncLanguageFromStorage() { state.language = getStoredQuizLanguage(); }
-    function uiCopy() { return copy[state.language] || copy[fallbackLanguage]; }
-    function pickPositiveMessage() {
-      const messages = uiCopy().positiveMessages;
-      return messages[Math.floor(Math.random() * messages.length)];
-    }
-    function showView(view) {
-      introView.classList.toggle('hidden', view !== 'intro');
-      questionView.classList.toggle('hidden', view !== 'question');
-      resultView.classList.toggle('hidden', view !== 'result');
+    function getSelectedCategories() {
+      return runtimeState.categories.filter((category) => category.selected);
     }
 
-    function selectedQuestionTotal() {
-      return state.categories
-        .filter((category) => state.selectedCategories.has(category.name))
-        .reduce((sum, category) => sum + category.count, 0);
+    function getSelectedQuestionCapacity() {
+      return getSelectedCategories().reduce((sum, category) => sum + category.questionCount, 0);
     }
 
-    function updateCountBounds() {
-      const max = selectedQuestionTotal();
-      questionCountInput.min = '1';
-      questionCountInput.max = String(Math.max(max, 1));
+    function renderCountState() {
+      const selectedCount = getSelectedQuestionCapacity();
+      const hasSelection = selectedCount > 0;
 
-      const current = Number(questionCountInput.value) || 1;
-      if (max === 0) {
-        questionCountInput.value = '1';
-      } else if (current > max) {
-        questionCountInput.value = String(max);
-      } else if (current < 1) {
-        questionCountInput.value = '1';
-      }
-    }
+      countInput.disabled = !hasSelection;
+      startButton.disabled = !hasSelection;
 
-    function isCountValid() {
-      const max = selectedQuestionTotal();
-      const count = Number(questionCountInput.value);
-      return Number.isInteger(count) && count >= 1 && count <= max;
-    }
-
-    function renderSetupState() {
-      const c = uiCopy();
-      const available = selectedQuestionTotal();
-      countHint.textContent = c.availableCount.replace('{count}', String(available));
-
-      if (state.selectedCategories.size === 0) {
-        categoryStatus.textContent = c.noCategories;
-        startBtn.disabled = true;
+      if (!hasSelection) {
+        countInput.value = '1';
+        countInput.max = '1';
+        countMeta.textContent = 'Select at least one category to continue.';
         return;
       }
 
-      if (!isCountValid()) {
-        categoryStatus.textContent = c.invalidCount.replace('{max}', String(Math.max(available, 1)));
-        startBtn.disabled = true;
-        return;
-      }
-
-      categoryStatus.textContent = '';
-      startBtn.disabled = false;
+      countInput.max = String(selectedCount);
+      const requestedCount = Number(countInput.value) || 1;
+      countInput.value = String(Math.max(1, Math.min(requestedCount, selectedCount)));
+      countMeta.textContent = `Selected pool: ${selectedCount} questions (max count ${selectedCount}).`;
     }
 
     function renderCategories() {
-      const c = uiCopy();
-      categoriesContainer.innerHTML = '';
+      categoryGrid.innerHTML = '';
 
-      state.categories.forEach((category) => {
+      runtimeState.categories.forEach((category, index) => {
+        const wrapper = document.createElement('article');
+        wrapper.className = 'cat';
+
         const label = document.createElement('label');
-        label.className = 'category-card';
-
-        const textWrapper = document.createElement('div');
-        textWrapper.innerHTML = `<div>${category.name}</div><div class="category-meta">${c.categoryCount.replace('{count}', String(category.count))}</div>`;
-
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
-        checkbox.checked = state.selectedCategories.has(category.name);
+        checkbox.checked = category.selected;
+        checkbox.setAttribute('aria-label', `Select ${category.name}`);
+
         checkbox.addEventListener('change', () => {
-          if (checkbox.checked) {
-            state.selectedCategories.add(category.name);
-          } else {
-            state.selectedCategories.delete(category.name);
-          }
-          updateCountBounds();
-          renderSetupState();
+          runtimeState.categories[index].selected = checkbox.checked;
+          renderCountState();
         });
 
-        label.appendChild(textWrapper);
-        label.appendChild(checkbox);
-        categoriesContainer.appendChild(label);
+        const textWrapper = document.createElement('span');
+
+        const nameEl = document.createElement('span');
+        nameEl.className = 'cat-name';
+        nameEl.textContent = category.name;
+
+        const countEl = document.createElement('span');
+        countEl.className = 'cat-count';
+        countEl.textContent = `${category.questionCount} question${category.questionCount === 1 ? '' : 's'}`;
+
+        textWrapper.append(nameEl, document.createElement('br'), countEl);
+        label.append(checkbox, textWrapper);
+        wrapper.appendChild(label);
+        categoryGrid.appendChild(wrapper);
       });
 
-      updateCountBounds();
-      renderSetupState();
+      renderCountState();
     }
 
-    function setStartLoading(isLoading) {
-      startBtn.disabled = isLoading;
-      startBtn.textContent = isLoading ? uiCopy().loading : uiCopy().startQuiz;
-    }
-
-    async function loadCategories() {
-      introError.textContent = '';
+    async function loadOverview() {
       try {
-        const response = await fetch('/api/quiz/categories');
-        if (!response.ok) throw new Error('Failed to fetch categories');
+        const response = await fetch('/api/quiz/overview');
         const payload = await response.json();
-        state.categories = (payload.categories || []).filter((item) => item.name && item.count > 0);
-        state.selectedCategories = new Set(state.categories.map((category) => category.name));
-        renderCategories();
-      } catch (_error) {
-        introError.textContent = uiCopy().loadCategoriesError;
-      }
-    }
 
-    function renderAnsweredQuestions() {
-      answeredQuestionsList.innerHTML = '';
-      for (const entry of state.answeredQuestions) {
-        const item = document.createElement('li');
-        if (entry.status === 'correct') {
-          item.textContent = `✅ ${entry.prompt}`;
-        } else {
-          const answerPart = entry.acceptedAnswer ? ` (${uiCopy().answerPrefix.replace('{answer}', entry.acceptedAnswer)})` : '';
-          item.textContent = `❌ ${entry.prompt}${answerPart}`;
+        if (!response.ok) {
+          throw new Error(payload?.error || 'Failed to load categories');
         }
-        answeredQuestionsList.appendChild(item);
+
+        const categories = Array.isArray(payload?.categories) ? payload.categories : [];
+
+        if (!categories.length || !payload.totalQuestions) {
+          runtimeState.categories = [];
+          categoryGrid.innerHTML = '';
+          statusEl.classList.remove('error');
+          statusEl.textContent = 'No categories are available yet. Add quiz data to start playing.';
+          renderCountState();
+          return;
+        }
+
+        runtimeState.categories = categories.map((category) => ({
+          name: category.name,
+          questionCount: Number(category.questionCount) || 0,
+          selected: true
+        }));
+
+        statusEl.classList.remove('error');
+        statusEl.textContent = `Loaded ${runtimeState.categories.length} categories and ${payload.totalQuestions} total questions.`;
+        renderCategories();
+      } catch (error) {
+        runtimeState.categories = [];
+        categoryGrid.innerHTML = '';
+        statusEl.classList.add('error');
+        statusEl.textContent = `Could not load categories: ${error.message}`;
+        renderCountState();
       }
     }
 
-    function normalizeQuestion(raw, idx) {
-      const answers = Array.isArray(raw.answers) && raw.answers.length ? raw.answers : [raw.answer, raw.answer_en, raw.answer_no].filter(Boolean);
-      return { id: raw.id || `api-${idx}`, category: raw.category || 'General', prompt: raw.prompt || raw.question || 'Missing question text', answers };
-    }
+    countInput.addEventListener('change', renderCountState);
 
-    async function loadQuestions() {
-      introError.textContent = '';
-      try {
-        const requestedCount = Number(questionCountInput.value);
-        const response = await fetch('/api/quiz/start', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            mode: 'categories',
-            categories: Array.from(state.selectedCategories),
-            count: requestedCount,
-            lang: activeLang
-          })
-        });
+    startButton.addEventListener('click', () => {
+      const selectedCategories = getSelectedCategories().map((category) => category.name);
+      const count = Number(countInput.value) || 1;
 
-        if (!response.ok) throw new Error('Could not load questions');
-        const payload = await response.json();
-        const questions = (payload.questions || []).map(normalizeQuestion).filter((q) => q.answers.length);
-        if (questions.length < requestedCount) throw new Error(uiCopy().notEnoughQuestions);
-        return questions.slice(0, requestedCount);
-      } catch (_error) {
-        introError.textContent = uiCopy().loadingError;
-        return [];
-      }
-    }
+      window.quizCategoriesState = {
+        ...runtimeState,
+        quizStarted: true,
+        selectedCategories,
+        count
+      };
 
-    function renderQuestion() {
-      const q = state.questions[state.index];
-      progressText.textContent = uiCopy().progress.replace('{current}', String(state.index + 1)).replace('{total}', String(state.questions.length));
-      questionTitle.textContent = q.prompt;
-      questionCategory.textContent = uiCopy().category.replace('{category}', q.category);
-      answerInput.value = '';
-      answerInput.disabled = false;
-      answerInput.focus();
-      state.awaitingRetry = false;
-      state.isSubmitting = false;
-      state.isAdvancing = false;
-      statusText.textContent = '';
-      statusText.className = 'status';
-      answerReveal.classList.add('hidden');
-      answerReveal.textContent = uiCopy().answerPrefix.replace('{answer}', q.answers[0]);
-      showAnswerBtn.classList.add('hidden');
-      nextQuestionBtn.classList.add('hidden');
-      abortConfirmRow.classList.add('hidden');
-      submitBtn.disabled = false;
-    }
+      // Placeholder for next step API integration.
+      // fetch('/api/quiz/start', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({
+      //     mode: 'quiz-categories',
+      //     lang: runtimeState.activeLang,
+      //     categories: selectedCategories,
+      //     count
+      //   })
+      // })
 
-    function moveNextQuestion() {
-      state.index += 1;
-      if (state.index >= state.questions.length) {
-        document.getElementById('correctCount').textContent = String(state.correct);
-        document.getElementById('wrongCount').textContent = String(state.wrong);
-        renderAnsweredQuestions();
-        document.getElementById('resultSummary').textContent = uiCopy().resultSummary.replace('{correct}', String(state.correct)).replace('{total}', String(state.questions.length));
-        showView('result');
-        return;
-      }
-      renderQuestion();
-    }
-
-    function resetQuizState() {
-      state.questions = [];
-      state.index = 0;
-      state.correct = 0;
-      state.wrong = 0;
-      state.answeredQuestions = [];
-      state.awaitingRetry = false;
-      state.isSubmitting = false;
-      state.isAdvancing = false;
-      state.quizStarted = false;
-      introError.textContent = '';
-      statusText.textContent = '';
-      answerReveal.classList.add('hidden');
-      abortConfirmRow.classList.add('hidden');
-      setStartLoading(false);
-      renderSetupState();
-    }
-
-    async function evaluateAnswer(question, userAnswer, retryAvailable) {
-      const response = await fetch('/api/quiz/answer', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ questionId: question.id, answer: userAnswer, retryAvailable, mode: 'categories', lang: activeLang })
-      });
-      if (!response.ok) throw new Error(uiCopy().answerValidateError);
-      const payload = await response.json();
-      if (!payload || !payload.status) throw new Error(uiCopy().invalidPayloadError);
-      return payload;
-    }
-
-    async function onSubmitAnswer() {
-      if (submitBtn.disabled || state.isSubmitting || state.isAdvancing) return;
-      const userAnswer = answerInput.value.trim();
-      if (!userAnswer) return;
-
-      const question = state.questions[state.index];
-      const submittedIndex = state.index;
-      state.isSubmitting = true;
-
-      let result;
-      try {
-        result = await evaluateAnswer(question, userAnswer, !state.awaitingRetry);
-      } catch (_error) {
-        state.isSubmitting = false;
-        statusText.className = 'status wrong';
-        statusText.textContent = uiCopy().answerSubmitError;
-        return;
-      }
-
-      if (state.index !== submittedIndex) {
-        state.isSubmitting = false;
-        return;
-      }
-
-      if (result.status === 'correct') {
-        statusText.className = 'status ok';
-        statusText.textContent = pickPositiveMessage();
-        state.correct += 1;
-        state.answeredQuestions.push({ prompt: question.prompt, status: 'correct' });
-        state.isSubmitting = false;
-        state.isAdvancing = true;
-        submitBtn.disabled = true;
-        answerInput.disabled = true;
-        setTimeout(() => moveNextQuestion(), 700);
-        return;
-      }
-
-      if (result.status === 'almost' && !state.awaitingRetry) {
-        state.awaitingRetry = true;
-        state.isSubmitting = false;
-        statusText.className = 'status almost';
-        statusText.textContent = uiCopy().almostStatus;
-        answerInput.value = '';
-        answerInput.focus();
-        return;
-      }
-
-      state.wrong += 1;
-      state.answeredQuestions.push({ prompt: question.prompt, status: 'wrong', acceptedAnswer: result.acceptedAnswer || null });
-      state.awaitingRetry = false;
-      state.isSubmitting = false;
-      statusText.className = 'status wrong';
-      statusText.textContent = uiCopy().wrongStatus;
-      showAnswerBtn.classList.remove('hidden');
-      nextQuestionBtn.classList.remove('hidden');
-      submitBtn.disabled = true;
-    }
-
-    function applyCopy() {
-      const c = uiCopy();
-      document.title = c.title;
-      introHeading.textContent = c.title;
-      introLead.textContent = c.introLead;
-      introHint.textContent = c.introHint;
-      countLabel.textContent = c.countLabel;
-      startBtn.textContent = c.startQuiz;
-      for (const link of backLinks) link.textContent = c.backHome;
-      abortQuizBtn.textContent = c.abortQuiz;
-      abortConfirmText.textContent = c.abortConfirm;
-      confirmAbortBtn.textContent = c.abortYes;
-      cancelAbortBtn.textContent = c.abortNo;
-      questionSectionHeading.textContent = c.questionTitle;
-      answerInput.placeholder = c.answerPlaceholder;
-      submitBtn.textContent = c.submitAnswer;
-      showAnswerBtn.textContent = c.showAnswer;
-      nextQuestionBtn.textContent = c.nextQuestion;
-      resultHeading.textContent = c.resultTitle;
-      resultCounterItems[0].lastChild.textContent = ` ${c.correctCount}`;
-      resultCounterItems[1].lastChild.textContent = ` ${c.wrongCount}`;
-      answeredQuestionsHeading.textContent = c.answeredQuestionsHeading;
-      playAgainBtn.textContent = c.playAgain;
-      renderCategories();
-    }
-
-    startBtn.addEventListener('click', async () => {
-      if (startBtn.disabled) return;
-      syncLanguageFromStorage();
-      applyCopy();
-      setStartLoading(true);
-      state.questions = await loadQuestions();
-      if (state.questions.length < 1) {
-        setStartLoading(false);
-        renderSetupState();
-        return;
-      }
-      state.index = 0;
-      state.correct = 0;
-      state.wrong = 0;
-      state.answeredQuestions = [];
-      state.awaitingRetry = false;
-      state.isSubmitting = false;
-      state.isAdvancing = false;
-      state.quizStarted = true;
-      renderQuestion();
-      showView('question');
-      setStartLoading(false);
+      statusEl.classList.remove('error');
+      statusEl.textContent = `Ready: ${selectedCategories.length} categories selected, ${count} questions requested.`;
     });
 
-    questionCountInput.addEventListener('input', () => {
-      updateCountBounds();
-      renderSetupState();
-    });
-
-    abortQuizBtn.addEventListener('click', () => abortConfirmRow.classList.remove('hidden'));
-    confirmAbortBtn.addEventListener('click', () => { resetQuizState(); showView('intro'); });
-    cancelAbortBtn.addEventListener('click', () => { abortConfirmRow.classList.add('hidden'); answerInput.focus(); });
-    answerForm.addEventListener('submit', (event) => { event.preventDefault(); onSubmitAnswer(); });
-    showAnswerBtn.addEventListener('click', () => answerReveal.classList.toggle('hidden'));
-    nextQuestionBtn.addEventListener('click', () => moveNextQuestion());
-    playAgainBtn.addEventListener('click', () => { resetQuizState(); showView('intro'); });
-
-    syncLanguageFromStorage();
-    applyCopy();
-    loadCategories();
+    loadOverview();
+    window.quizCategoriesState = runtimeState;
   </script>
 </body>
 </html>
