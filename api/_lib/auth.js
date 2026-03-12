@@ -1,4 +1,5 @@
 const { SignJWT, jwtVerify } = require('jose');
+const { getUserById } = require('./db');
 
 const COOKIE_NAME = 'sg_session';
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
@@ -75,9 +76,33 @@ async function requireSession(req, res) {
       res.status(401).json({ error: 'Not authenticated' });
       return null;
     }
+
     const payload = await verifySessionToken(token);
-    return payload;
+    const userId = Number(payload.id || payload.sub);
+    if (!Number.isInteger(userId)) {
+      clearSessionCookie(res);
+      res.status(401).json({ error: 'Invalid session' });
+      return null;
+    }
+
+    const user = await getUserById(userId);
+    if (!user) {
+      clearSessionCookie(res);
+      res.status(401).json({ error: 'Invalid session' });
+      return null;
+    }
+
+    return {
+      ...payload,
+      id: user.id,
+      sub: String(user.id),
+      username: user.username,
+      email: user.email,
+      role: user.role,
+      country: user.country || 'unknown'
+    };
   } catch (error) {
+    clearSessionCookie(res);
     res.status(401).json({ error: 'Invalid session' });
     return null;
   }
