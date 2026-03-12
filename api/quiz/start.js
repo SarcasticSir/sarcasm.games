@@ -55,6 +55,21 @@ function mapQuestion(row, lang) {
   };
 }
 
+function parseCategoryList(value) {
+  if (!Array.isArray(value)) return [];
+
+  const seen = new Set();
+  return value
+    .map((entry) => String(entry || '').trim())
+    .filter(Boolean)
+    .filter((entry) => {
+      const key = entry.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+}
+
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' });
@@ -62,29 +77,84 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const { mode = 'random10', count = 10, lang = 'en' } = parseBody(req.body);
+    const {
+      mode = 'random10',
+      categories,
+      count = 10,
+      lang = 'en'
+    } = parseBody(req.body);
 
-    if (mode !== 'random10') {
-      res.status(400).json({ error: 'Only random10 mode is enabled right now.' });
+    if (mode === 'categories') {
+      if (!Array.isArray(categories) || !categories.length) {
+        res.status(400).json({ error: 'categories must be a non-empty array of strings.' });
+        return;
+      }
+
+      const selectedCategories = categories
+        .map((category) => (typeof category === 'string' ? category.trim() : ''))
+        .filter(Boolean);
+
+      if (!selectedCategories.length || selectedCategories.length !== categories.length) {
+        res.status(400).json({ error: 'categories must be a non-empty array of strings.' });
+        return;
+      }
+
+      const uniqueCategories = [...new Set(selectedCategories)];
+
+      const countResult = await runQuery(
+        `SELECT COUNT(*)::int AS total
+         FROM quiz_questions
+         WHERE category = ANY($1)`,
+        [uniqueCategories]
+      );
+
+      const totalAvailable = Number(countResult.rows[0]?.total || 0);
+
+      if (totalAvailable < 1) {
+        res.status(400).json({ error: 'No questions available for selected categories.' });
+        return;
+      }
+
+      const requestedCount = Number(count);
+      if (!Number.isInteger(requestedCount) || requestedCount < 1 || requestedCount > totalAvailable) {
+        res.status(400).json({ error: `count must be an integer between 1 and ${totalAvailable}.` });
+        return;
+      }
+
+      const query = await runQuery(
+        `SELECT id, category, question_en, question_no, answers_en, answers_no
+         FROM quiz_questions
+         WHERE category = ANY($1)
+         ORDER BY RANDOM()
+         LIMIT $2`,
+        [uniqueCategories, requestedCount]
+      );
+
+      const questions = query.rows
+        .map((row) => mapQuestion(row, lang))
+        .filter((row) => row.prompt && row.answers.length);
+
+      res.status(200).json({
+        mode: 'categories',
+        count: requestedCount,
+        totalAvailable,
+        selectedCategories: uniqueCategories,
+        questions
+      });
       return;
     }
 
-    const limit = Math.max(1, Math.min(Number(count) || 10, 50));
-
-    const query = await runQuery(
-      `SELECT id, category, question_en, question_no, answers_en, answers_no
-       FROM quiz_questions
-       ORDER BY RANDOM()
-       LIMIT $1`,
-      [limit]
-    );
+    if (mode !== 'random10') {
+      res.status(400).json({ error: 'Only random10 and categories modes are supported.' });
+      return;
+    }
 
     const questions = query.rows
       .map((row) => mapQuestion(row, lang))
       .filter((row) => row.prompt && row.answers.length);
 
     res.status(200).json({
-      mode: 'random10',
+      mode,
       count: questions.length,
       questions
     });
