@@ -5,35 +5,304 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Quiz categories</title>
   <style>
-    :root { --bg:#0b0c10; --card:#1e1f25; --txt:#eaeaea; --bd:#2f313a; --accent:#4ecca3; --muted:#9aa0ad; }
-    body { margin:0; font:16px/1.4 system-ui, Segoe UI, Roboto, Arial; background:var(--bg); color:var(--txt); min-height:100dvh; display:grid; place-items:center; padding:20px; box-sizing:border-box; }
-    .card { width:min(680px,100%); background:var(--card); border:1px solid var(--bd); border-radius:14px; padding:20px; }
+    :root {
+      --bg:#0b0c10;
+      --card:#1e1f25;
+      --txt:#eaeaea;
+      --bd:#2f313a;
+      --accent:#4ecca3;
+      --muted:#9aa0ad;
+      --danger:#ff8b8b;
+    }
+
+    body {
+      margin:0;
+      font:16px/1.4 system-ui, Segoe UI, Roboto, Arial;
+      background:var(--bg);
+      color:var(--txt);
+      min-height:100dvh;
+      display:grid;
+      place-items:center;
+      padding:20px;
+      box-sizing:border-box;
+    }
+
+    .card {
+      width:min(760px,100%);
+      background:var(--card);
+      border:1px solid var(--bd);
+      border-radius:14px;
+      padding:20px;
+    }
+
     h1 { margin:0 0 10px; }
-    p { margin:0 0 14px; color:var(--muted); }
-    a { display:inline-block; text-decoration:none; background:var(--accent); color:#111; border-radius:8px; padding:10px 14px; font-weight:700; }
+
+    .muted {
+      margin:0 0 14px;
+      color:var(--muted);
+    }
+
+    .status {
+      min-height: 1.5rem;
+      margin: 0 0 12px;
+      color: var(--muted);
+    }
+
+    .status.error {
+      color: var(--danger);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 10px;
+      margin: 0 0 16px;
+    }
+
+    .cat {
+      border:1px solid var(--bd);
+      border-radius:10px;
+      padding:10px;
+      background:#181920;
+    }
+
+    .cat label {
+      display:flex;
+      gap:8px;
+      align-items:flex-start;
+      cursor:pointer;
+    }
+
+    .cat-name { font-weight:700; }
+    .cat-count { color:var(--muted); font-size: 14px; }
+
+    .controls {
+      display:flex;
+      flex-wrap:wrap;
+      gap:12px;
+      align-items:center;
+      margin:0 0 14px;
+    }
+
+    .controls label {
+      display:flex;
+      gap:8px;
+      align-items:center;
+    }
+
+    input[type="number"] {
+      width:80px;
+      padding:6px;
+      border-radius:8px;
+      border:1px solid var(--bd);
+      background:#101116;
+      color:var(--txt);
+    }
+
+    .actions {
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+
+    .btn {
+      display:inline-block;
+      text-decoration:none;
+      border-radius:8px;
+      padding:10px 14px;
+      font-weight:700;
+      border:0;
+      cursor:pointer;
+    }
+
+    .btn.primary {
+      background:var(--accent);
+      color:#111;
+    }
+
+    .btn.secondary {
+      background:#2b2e37;
+      color:#d4d8e4;
+    }
+
+    .btn:disabled {
+      opacity:0.5;
+      cursor:not-allowed;
+    }
   </style>
 </head>
 <body>
   <main class="card">
     <h1>Quiz categories</h1>
-    <p>This is a placeholder page. We will build this quiz mode step by step.</p>
-    <a href="/">Back to sarcasm.games</a>
+    <p class="muted">Choose one or more categories. Max question count updates based on your selection.</p>
+
+    <p id="status" class="status" role="status" aria-live="polite">Loading categories…</p>
+    <section id="categoryGrid" class="grid" aria-label="Quiz categories"></section>
+
+    <div class="controls">
+      <label>
+        Question count
+        <input id="questionCount" type="number" min="1" value="1" disabled />
+      </label>
+      <span id="countMeta" class="muted"></span>
+    </div>
+
+    <div class="actions">
+      <button id="startButton" class="btn primary" type="button" disabled>Start quiz</button>
+      <a href="/" class="btn secondary">Back to sarcasm.games</a>
+    </div>
   </main>
 
   <script type="module">
     import { getQuizLanguage } from '/lib/client/quiz-language.js';
 
-    // Language is captured at page load and must stay fixed during one active round.
     const activeLang = getQuizLanguage();
+    const categoryGrid = document.getElementById('categoryGrid');
+    const statusEl = document.getElementById('status');
+    const countInput = document.getElementById('questionCount');
+    const countMeta = document.getElementById('countMeta');
+    const startButton = document.getElementById('startButton');
 
     const runtimeState = {
       activeLang,
-      quizStarted: false
+      quizStarted: false,
+      categories: []
     };
 
-    // Placeholder for upcoming API integration:
-    // fetch('/api/quiz/start', { method: 'POST', body: JSON.stringify({ mode: 'quiz-categories', lang: runtimeState.activeLang }) })
+    function getSelectedCategories() {
+      return runtimeState.categories.filter((category) => category.selected);
+    }
 
+    function getSelectedQuestionCapacity() {
+      return getSelectedCategories().reduce((sum, category) => sum + category.questionCount, 0);
+    }
+
+    function renderCountState() {
+      const selectedCount = getSelectedQuestionCapacity();
+      const hasSelection = selectedCount > 0;
+
+      countInput.disabled = !hasSelection;
+      startButton.disabled = !hasSelection;
+
+      if (!hasSelection) {
+        countInput.value = '1';
+        countInput.max = '1';
+        countMeta.textContent = 'Select at least one category to continue.';
+        return;
+      }
+
+      countInput.max = String(selectedCount);
+      const requestedCount = Number(countInput.value) || 1;
+      countInput.value = String(Math.max(1, Math.min(requestedCount, selectedCount)));
+      countMeta.textContent = `Selected pool: ${selectedCount} questions (max count ${selectedCount}).`;
+    }
+
+    function renderCategories() {
+      categoryGrid.innerHTML = '';
+
+      runtimeState.categories.forEach((category, index) => {
+        const wrapper = document.createElement('article');
+        wrapper.className = 'cat';
+
+        const label = document.createElement('label');
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = category.selected;
+        checkbox.setAttribute('aria-label', `Select ${category.name}`);
+
+        checkbox.addEventListener('change', () => {
+          runtimeState.categories[index].selected = checkbox.checked;
+          renderCountState();
+        });
+
+        const textWrapper = document.createElement('span');
+
+        const nameEl = document.createElement('span');
+        nameEl.className = 'cat-name';
+        nameEl.textContent = category.name;
+
+        const countEl = document.createElement('span');
+        countEl.className = 'cat-count';
+        countEl.textContent = `${category.questionCount} question${category.questionCount === 1 ? '' : 's'}`;
+
+        textWrapper.append(nameEl, document.createElement('br'), countEl);
+        label.append(checkbox, textWrapper);
+        wrapper.appendChild(label);
+        categoryGrid.appendChild(wrapper);
+      });
+
+      renderCountState();
+    }
+
+    async function loadOverview() {
+      try {
+        const response = await fetch('/api/quiz/overview');
+        const payload = await response.json();
+
+        if (!response.ok) {
+          throw new Error(payload?.error || 'Failed to load categories');
+        }
+
+        const categories = Array.isArray(payload?.categories) ? payload.categories : [];
+
+        if (!categories.length || !payload.totalQuestions) {
+          runtimeState.categories = [];
+          categoryGrid.innerHTML = '';
+          statusEl.classList.remove('error');
+          statusEl.textContent = 'No categories are available yet. Add quiz data to start playing.';
+          renderCountState();
+          return;
+        }
+
+        runtimeState.categories = categories.map((category) => ({
+          name: category.name,
+          questionCount: Number(category.questionCount) || 0,
+          selected: true
+        }));
+
+        statusEl.classList.remove('error');
+        statusEl.textContent = `Loaded ${runtimeState.categories.length} categories and ${payload.totalQuestions} total questions.`;
+        renderCategories();
+      } catch (error) {
+        runtimeState.categories = [];
+        categoryGrid.innerHTML = '';
+        statusEl.classList.add('error');
+        statusEl.textContent = `Could not load categories: ${error.message}`;
+        renderCountState();
+      }
+    }
+
+    countInput.addEventListener('change', renderCountState);
+
+    startButton.addEventListener('click', () => {
+      const selectedCategories = getSelectedCategories().map((category) => category.name);
+      const count = Number(countInput.value) || 1;
+
+      window.quizCategoriesState = {
+        ...runtimeState,
+        quizStarted: true,
+        selectedCategories,
+        count
+      };
+
+      // Placeholder for next step API integration.
+      // fetch('/api/quiz/start', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({
+      //     mode: 'quiz-categories',
+      //     lang: runtimeState.activeLang,
+      //     categories: selectedCategories,
+      //     count
+      //   })
+      // })
+
+      statusEl.classList.remove('error');
+      statusEl.textContent = `Ready: ${selectedCategories.length} categories selected, ${count} questions requested.`;
+    });
+
+    loadOverview();
     window.quizCategoriesState = runtimeState;
   </script>
 </body>
