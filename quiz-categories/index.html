@@ -52,6 +52,14 @@
       color: var(--danger);
     }
 
+    .status.ok {
+      color: #80ed99;
+    }
+
+    .status.almost {
+      color: #ffd166;
+    }
+
     .grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
@@ -162,28 +170,109 @@
       opacity:0.5;
       cursor:not-allowed;
     }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .result-list {
+      list-style:none;
+      margin:10px 0 0;
+      padding-left:0;
+      display:grid;
+      gap:10px;
+    }
+
+    .result-item {
+      border:1px solid var(--bd);
+      border-radius:10px;
+      padding:10px;
+      background:#181920;
+    }
+
+    .result-item-header {
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      align-items:center;
+      margin-bottom:8px;
+    }
+
+    .result-item-question {
+      margin:0;
+    }
+
+    .result-item-answer {
+      margin:0 0 8px;
+      color:var(--muted);
+    }
+
+    .result-item-status {
+      font-weight:700;
+    }
+
+    .result-item-status.correct {
+      color:#80ed99;
+    }
+
+    .result-item-status.wrong {
+      color:var(--danger);
+    }
   </style>
 </head>
 <body>
   <main class="card">
-    <h1>Quiz categories</h1>
-    <p class="muted">Choose one or more categories. Max question count updates based on your selection.</p>
+    <section id="setupView">
+      <h1>Quiz categories</h1>
+      <p class="muted">Choose one or more categories. Max question count updates based on your selection.</p>
 
-    <p id="status" class="status" role="status" aria-live="polite">Loading categories…</p>
-    <section id="categoryGrid" class="grid" aria-label="Quiz categories"></section>
+      <p id="status" class="status" role="status" aria-live="polite">Loading categories…</p>
+      <section id="categoryGrid" class="grid" aria-label="Quiz categories"></section>
 
-    <div class="controls">
-      <label>
-        Question count
-        <input id="questionCount" type="number" min="1" value="1" disabled />
-      </label>
-      <span id="countMeta" class="muted"></span>
-    </div>
+      <div class="controls">
+        <label>
+          Question count
+          <input id="questionCount" type="number" min="1" value="1" disabled />
+        </label>
+        <span id="countMeta" class="muted"></span>
+      </div>
 
-    <div class="actions">
-      <button id="startButton" class="btn primary" type="button" disabled>Start quiz</button>
-      <a href="/" class="btn secondary">Back to sarcasm.games</a>
-    </div>
+      <div class="actions">
+        <button id="startButton" class="btn primary" type="button" disabled>Start quiz</button>
+        <a href="/" class="btn secondary">Back to sarcasm.games</a>
+      </div>
+    </section>
+
+    <section id="questionView" class="hidden">
+      <p id="progressText" class="muted"></p>
+      <h2 id="questionTitle">Question</h2>
+      <p id="questionCategory" class="muted"></p>
+      <form id="answerForm">
+        <input id="answerInput" type="text" placeholder="Write your answer" autocomplete="off" />
+        <div class="actions">
+          <button id="submitBtn" class="btn primary" type="submit">Submit answer</button>
+          <button id="showAnswerBtn" class="btn secondary hidden" type="button">Show answer</button>
+          <button id="nextQuestionBtn" class="btn secondary hidden" type="button">Next question</button>
+        </div>
+      </form>
+      <p id="questionStatus" class="status"></p>
+      <p id="answerReveal" class="muted hidden"></p>
+    </section>
+
+    <section id="resultView" class="hidden">
+      <h2>Quiz complete 🎉</h2>
+      <p id="resultSummary" class="muted"></p>
+      <ul class="muted">
+        <li><span id="correctCount">0</span> correct</li>
+        <li><span id="wrongCount">0</span> wrong</li>
+      </ul>
+      <h3>Answered questions</h3>
+      <ul id="answeredQuestionsList" class="result-list"></ul>
+      <div class="actions">
+        <button id="playAgainBtn" class="btn primary" type="button">Play again</button>
+        <a href="/" class="btn secondary">Back to sarcasm.games</a>
+      </div>
+    </section>
   </main>
 
   <script type="module">
@@ -191,16 +280,48 @@
 
     const activeLang = readQuizLanguage();
     const categoryGrid = document.getElementById('categoryGrid');
+    const setupView = document.getElementById('setupView');
+    const questionView = document.getElementById('questionView');
+    const resultView = document.getElementById('resultView');
     const statusEl = document.getElementById('status');
     const countInput = document.getElementById('questionCount');
     const countMeta = document.getElementById('countMeta');
     const startButton = document.getElementById('startButton');
+    const progressText = document.getElementById('progressText');
+    const questionTitle = document.getElementById('questionTitle');
+    const questionCategory = document.getElementById('questionCategory');
+    const answerForm = document.getElementById('answerForm');
+    const answerInput = document.getElementById('answerInput');
+    const submitBtn = document.getElementById('submitBtn');
+    const showAnswerBtn = document.getElementById('showAnswerBtn');
+    const nextQuestionBtn = document.getElementById('nextQuestionBtn');
+    const questionStatus = document.getElementById('questionStatus');
+    const answerReveal = document.getElementById('answerReveal');
+    const resultSummary = document.getElementById('resultSummary');
+    const correctCount = document.getElementById('correctCount');
+    const wrongCount = document.getElementById('wrongCount');
+    const answeredQuestionsList = document.getElementById('answeredQuestionsList');
+    const playAgainBtn = document.getElementById('playAgainBtn');
 
     const runtimeState = {
       activeLang,
       quizStarted: false,
-      categories: []
+      categories: [],
+      questions: [],
+      index: 0,
+      correct: 0,
+      wrong: 0,
+      awaitingRetry: false,
+      selectedCategories: [],
+      count: 0,
+      answeredQuestions: []
     };
+
+    function showView(name) {
+      setupView.classList.toggle('hidden', name !== 'setup');
+      questionView.classList.toggle('hidden', name !== 'question');
+      resultView.classList.toggle('hidden', name !== 'result');
+    }
 
     function getSelectedCategories() {
       return runtimeState.categories.filter((category) => category.selected);
@@ -275,6 +396,105 @@
       renderCountState();
     }
 
+    function renderAnsweredQuestions() {
+      answeredQuestionsList.innerHTML = '';
+
+      for (const entry of runtimeState.answeredQuestions) {
+        const item = document.createElement('li');
+        item.className = 'result-item';
+
+        const header = document.createElement('div');
+        header.className = 'result-item-header';
+
+        const question = document.createElement('p');
+        question.className = 'result-item-question';
+        question.textContent = entry.prompt;
+
+        const status = document.createElement('span');
+        status.className = `result-item-status ${entry.status}`;
+        status.textContent = entry.status === 'correct' ? '✅ Correct' : '❌ Wrong';
+
+        const yourAnswer = document.createElement('p');
+        yourAnswer.className = 'result-item-answer';
+        yourAnswer.textContent = `Your answer: ${entry.userAnswer || 'No answer given'}`;
+
+        const revealButton = document.createElement('button');
+        revealButton.className = 'btn secondary';
+        revealButton.type = 'button';
+        revealButton.textContent = 'Show answer';
+
+        const answer = document.createElement('p');
+        answer.className = 'result-item-answer hidden';
+        answer.textContent = `Answer: ${entry.acceptedAnswer || '—'}`;
+
+        revealButton.addEventListener('click', () => {
+          const isHidden = answer.classList.toggle('hidden');
+          revealButton.textContent = isHidden ? 'Show answer' : 'Hide answer';
+        });
+
+        header.append(question, status);
+        item.append(header, yourAnswer, revealButton, answer);
+        answeredQuestionsList.appendChild(item);
+      }
+    }
+
+    function renderQuestion() {
+      const question = runtimeState.questions[runtimeState.index];
+      progressText.textContent = `Question ${runtimeState.index + 1} of ${runtimeState.questions.length}`;
+      questionTitle.textContent = question.prompt;
+      questionCategory.textContent = `Category: ${question.category || 'General'}`;
+      answerInput.value = '';
+      answerInput.disabled = false;
+      submitBtn.disabled = false;
+      questionStatus.textContent = '';
+      questionStatus.className = 'status';
+      showAnswerBtn.classList.add('hidden');
+      nextQuestionBtn.classList.add('hidden');
+      answerReveal.classList.add('hidden');
+      answerReveal.textContent = `Answer: ${question.answers[0] || '—'}`;
+      runtimeState.awaitingRetry = false;
+      answerInput.focus();
+    }
+
+    function moveNextQuestion() {
+      runtimeState.index += 1;
+      if (runtimeState.index >= runtimeState.questions.length) {
+        correctCount.textContent = String(runtimeState.correct);
+        wrongCount.textContent = String(runtimeState.wrong);
+        resultSummary.textContent = `You got ${runtimeState.correct} / ${runtimeState.questions.length} correct.`;
+        renderAnsweredQuestions();
+        showView('result');
+        return;
+      }
+
+      renderQuestion();
+    }
+
+    async function evaluateAnswer(questionId, answer, retryAvailable) {
+      const response = await fetch('/api/quiz/answer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          questionId,
+          answer,
+          retryAvailable,
+          mode: 'categories',
+          lang: runtimeState.activeLang
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Could not validate answer.');
+      }
+
+      const payload = await response.json();
+      if (!payload?.status) {
+        throw new Error('Invalid answer response.');
+      }
+
+      return payload;
+    }
+
     async function loadOverview() {
       try {
         const response = await fetch('/api/quiz/overview');
@@ -315,34 +535,150 @@
 
     countInput.addEventListener('change', renderCountState);
 
-    startButton.addEventListener('click', () => {
+    startButton.addEventListener('click', async () => {
       const selectedCategories = getSelectedCategories().map((category) => category.name);
       const count = Number(countInput.value) || 1;
 
-      window.quizCategoriesState = {
-        ...runtimeState,
-        quizStarted: true,
-        selectedCategories,
-        count
-      };
+      if (!selectedCategories.length) {
+        statusEl.classList.add('error');
+        statusEl.textContent = 'Select at least one category before starting.';
+        return;
+      }
 
-      // Placeholder for next step API integration.
-      // fetch('/api/quiz/start', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({
-      //     mode: 'quiz-categories',
-      //     lang: runtimeState.activeLang,
-      //     categories: selectedCategories,
-      //     count
-      //   })
-      // })
-
+      startButton.disabled = true;
       statusEl.classList.remove('error');
-      statusEl.textContent = `Ready: ${selectedCategories.length} categories selected, ${count} questions requested.`;
+      statusEl.textContent = 'Loading questions…';
+
+      try {
+        const response = await fetch('/api/quiz/start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            mode: 'categories',
+            lang: runtimeState.activeLang,
+            categories: selectedCategories,
+            count
+          })
+        });
+
+        const payload = await response.json();
+        if (!response.ok) {
+          throw new Error(payload?.error || 'Failed to start quiz');
+        }
+
+        const questions = Array.isArray(payload?.questions) ? payload.questions : [];
+        if (!questions.length) {
+          throw new Error('No questions were returned for your selection.');
+        }
+
+        runtimeState.quizStarted = true;
+        runtimeState.questions = questions;
+        runtimeState.index = 0;
+        runtimeState.correct = 0;
+        runtimeState.wrong = 0;
+        runtimeState.awaitingRetry = false;
+        runtimeState.selectedCategories = selectedCategories;
+        runtimeState.count = count;
+        runtimeState.answeredQuestions = [];
+
+        window.quizCategoriesState = {
+          ...runtimeState,
+          selectedCategories
+        };
+
+        statusEl.classList.remove('error');
+        statusEl.textContent = `Loaded ${questions.length} questions.`;
+        showView('question');
+        renderQuestion();
+      } catch (error) {
+        statusEl.classList.add('error');
+        statusEl.textContent = `Could not start quiz: ${error.message}`;
+      } finally {
+        renderCountState();
+      }
+    });
+
+    answerForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (submitBtn.disabled) return;
+
+      const userAnswer = answerInput.value.trim();
+      if (!userAnswer) return;
+
+      const current = runtimeState.questions[runtimeState.index];
+      let result;
+
+      try {
+        result = await evaluateAnswer(current.id, userAnswer, !runtimeState.awaitingRetry);
+      } catch (error) {
+        questionStatus.className = 'status error';
+        questionStatus.textContent = error.message;
+        return;
+      }
+
+      if (result.status === 'correct') {
+        runtimeState.correct += 1;
+        runtimeState.answeredQuestions.push({
+          prompt: current.prompt,
+          status: 'correct',
+          userAnswer,
+          acceptedAnswer: current.answers[0] || null
+        });
+        questionStatus.className = 'status ok';
+        questionStatus.textContent = 'Correct!';
+        submitBtn.disabled = true;
+        answerInput.disabled = true;
+        setTimeout(() => moveNextQuestion(), 600);
+        return;
+      }
+
+      if (result.status === 'almost' && !runtimeState.awaitingRetry) {
+        runtimeState.awaitingRetry = true;
+        questionStatus.className = 'status almost';
+        questionStatus.textContent = 'Almost! You get one more try.';
+        answerInput.value = '';
+        answerInput.focus();
+        return;
+      }
+
+      runtimeState.wrong += 1;
+      runtimeState.awaitingRetry = false;
+      runtimeState.answeredQuestions.push({
+        prompt: current.prompt,
+        status: 'wrong',
+        userAnswer,
+        acceptedAnswer: result.acceptedAnswer || current.answers[0] || null
+      });
+      questionStatus.className = 'status error';
+      questionStatus.textContent = 'Wrong answer. You can reveal the answer and continue.';
+      showAnswerBtn.classList.remove('hidden');
+      nextQuestionBtn.classList.remove('hidden');
+      submitBtn.disabled = true;
+      answerInput.disabled = true;
+    });
+
+    showAnswerBtn.addEventListener('click', () => {
+      answerReveal.classList.toggle('hidden');
+    });
+
+    nextQuestionBtn.addEventListener('click', () => {
+      moveNextQuestion();
+    });
+
+    playAgainBtn.addEventListener('click', () => {
+      runtimeState.quizStarted = false;
+      runtimeState.questions = [];
+      runtimeState.index = 0;
+      runtimeState.correct = 0;
+      runtimeState.wrong = 0;
+      runtimeState.awaitingRetry = false;
+      runtimeState.answeredQuestions = [];
+      showView('setup');
+      renderCountState();
     });
 
     loadOverview();
+    showView('setup');
     window.quizCategoriesState = runtimeState;
   </script>
 </body>

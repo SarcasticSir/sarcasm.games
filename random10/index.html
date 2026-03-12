@@ -23,6 +23,15 @@
     input[type="text"] { width:100%; border:1px solid var(--bd); border-radius:8px; background:var(--bg); color:var(--txt); padding:12px; font-size:16px; }
     .progress { color:var(--muted); margin-bottom:12px; }
     .result-list { margin:10px 0 0; padding-left:18px; color:var(--muted); }
+    .result-list.detailed { list-style:none; padding-left:0; display:grid; gap:10px; }
+    .result-item { border:1px solid var(--bd); border-radius:10px; padding:10px; background:#181920; }
+    .result-item-header { display:flex; justify-content:space-between; gap:10px; align-items:center; margin-bottom:8px; }
+    .result-item-question { margin:0; color:var(--txt); }
+    .result-item-status { font-weight:700; }
+    .result-item-status.correct { color:var(--ok); }
+    .result-item-status.wrong { color:var(--bad); }
+    .result-item-answer { margin:0 0 8px; color:var(--muted); }
+    .result-item-answer strong { color:var(--txt); }
   </style>
 </head>
 <body>
@@ -71,7 +80,7 @@
         <li><span id="wrongCount">0</span> wrong</li>
       </ul>
       <h3>Answered questions</h3>
-      <ul id="answeredQuestionsList" class="result-list"></ul>
+      <ul id="answeredQuestionsList" class="result-list detailed"></ul>
       <div class="btn-row">
         <button id="playAgainBtn" class="btn-primary">Try again</button>
         <a class="link-btn" href="/">Back to sarcasm.games</a>
@@ -106,6 +115,12 @@
         correctCount: 'correct',
         wrongCount: 'wrong',
         answeredQuestionsHeading: 'Answered questions',
+        resultStatusCorrect: 'Correct',
+        resultStatusWrong: 'Wrong',
+        yourAnswer: 'Your answer: {answer}',
+        noAnswer: 'No answer given',
+        revealCorrectAnswer: 'Show answer',
+        hideCorrectAnswer: 'Hide answer',
         playAgain: 'Try again',
         progress: 'Question {current} of {total}',
         category: 'Category: {category}',
@@ -142,6 +157,12 @@
         correctCount: 'riktige',
         wrongCount: 'feil',
         answeredQuestionsHeading: 'Besvarte spørsmål',
+        resultStatusCorrect: 'Riktig',
+        resultStatusWrong: 'Feil',
+        yourAnswer: 'Ditt svar: {answer}',
+        noAnswer: 'Ingen svar registrert',
+        revealCorrectAnswer: 'Vis fasit',
+        hideCorrectAnswer: 'Skjul fasit',
         playAgain: 'Prøv igjen',
         progress: 'Spørsmål {current} av {total}',
         category: 'Kategori: {category}',
@@ -240,12 +261,39 @@
 
       for (const entry of state.answeredQuestions) {
         const item = document.createElement('li');
-        if (entry.status === 'correct') {
-          item.textContent = `✅ ${entry.prompt}`;
-        } else {
-          const answerPart = entry.acceptedAnswer ? ` (${uiCopy().answerPrefix.replace('{answer}', entry.acceptedAnswer)})` : '';
-          item.textContent = `❌ ${entry.prompt}${answerPart}`;
-        }
+        item.className = 'result-item';
+
+        const header = document.createElement('div');
+        header.className = 'result-item-header';
+
+        const question = document.createElement('p');
+        question.className = 'result-item-question';
+        question.textContent = entry.prompt;
+
+        const status = document.createElement('span');
+        status.className = `result-item-status ${entry.status}`;
+        status.textContent = entry.status === 'correct' ? `✅ ${uiCopy().resultStatusCorrect}` : `❌ ${uiCopy().resultStatusWrong}`;
+
+        const yourAnswer = document.createElement('p');
+        yourAnswer.className = 'result-item-answer';
+        const printableAnswer = entry.userAnswer || uiCopy().noAnswer;
+        yourAnswer.textContent = uiCopy().yourAnswer.replace('{answer}', printableAnswer);
+
+        const revealButton = document.createElement('button');
+        revealButton.type = 'button';
+        revealButton.textContent = uiCopy().revealCorrectAnswer;
+
+        const answer = document.createElement('p');
+        answer.className = 'result-item-answer hidden';
+        answer.textContent = uiCopy().answerPrefix.replace('{answer}', entry.acceptedAnswer || '—');
+
+        revealButton.addEventListener('click', () => {
+          const isHidden = answer.classList.toggle('hidden');
+          revealButton.textContent = isHidden ? uiCopy().revealCorrectAnswer : uiCopy().hideCorrectAnswer;
+        });
+
+        header.append(question, status);
+        item.append(header, yourAnswer, revealButton, answer);
         answeredQuestionsList.appendChild(item);
       }
     }
@@ -401,7 +449,9 @@
         state.correct += 1;
         state.answeredQuestions.push({
           prompt: question.prompt,
-          status: 'correct'
+          status: 'correct',
+          userAnswer,
+          acceptedAnswer: question.answers[0] || null
         });
         state.isSubmitting = false;
         state.isAdvancing = true;
@@ -427,6 +477,7 @@
       state.answeredQuestions.push({
         prompt: question.prompt,
         status: 'wrong',
+        userAnswer,
         acceptedAnswer: result.acceptedAnswer || null
       });
       state.awaitingRetry = false;
