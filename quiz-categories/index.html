@@ -157,7 +157,7 @@
   <script type="module">
     import { getQuizLanguage as readQuizLanguage } from '/lib/client/quiz-language.js';
 
-    const activeLang = getQuizLanguage();
+    const activeLang = readQuizLanguage();
     const categoryGrid = document.getElementById('categoryGrid');
     const statusEl = document.getElementById('status');
     const countInput = document.getElementById('questionCount');
