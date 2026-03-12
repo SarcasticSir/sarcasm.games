@@ -15,6 +15,8 @@
       --danger:#ff8b8b;
     }
 
+    * { box-sizing: border-box; }
+
     body {
       margin:0;
       font:16px/1.4 system-ui, Segoe UI, Roboto, Arial;
@@ -139,72 +141,89 @@
       color:var(--txt);
     }
 
-    .actions {
+    .actions,
+    .btn-row {
       display:flex;
       gap:10px;
-      align-items:center;
       flex-wrap:wrap;
+      align-items:center;
+      margin-top:12px;
     }
 
-    .btn {
-      display:inline-block;
-      text-decoration:none;
+    button,
+    .link-btn {
+      border:1px solid var(--bd);
       border-radius:8px;
       padding:10px 14px;
       font-weight:700;
-      border:0;
       cursor:pointer;
+      background:transparent;
+      color:var(--txt);
+      text-decoration:none;
     }
 
-    .btn.primary {
+    .btn-primary {
       background:var(--accent);
       color:#111;
+      border-color:var(--accent);
     }
 
-    .btn.secondary {
-      background:#2b2e37;
-      color:#d4d8e4;
-    }
-
-    .btn:disabled {
+    button:disabled {
       opacity:0.5;
       cursor:not-allowed;
+    }
+
+    input[type="text"] {
+      width:100%;
+      border:1px solid var(--bd);
+      border-radius:8px;
+      background:var(--bg);
+      color:var(--txt);
+      padding:12px;
+      font-size:16px;
     }
 
     .hidden {
       display: none !important;
     }
 
+    .result-filter {
+      margin-top: 10px;
+    }
+
     .result-list {
       list-style:none;
-      margin:10px 0 0;
+      margin:8px 0 0;
       padding-left:0;
       display:grid;
-      gap:10px;
+      gap:8px;
     }
 
     .result-item {
       border:1px solid var(--bd);
-      border-radius:10px;
-      padding:10px;
+      border-radius:8px;
+      padding:8px;
       background:#181920;
     }
 
     .result-item-header {
       display:flex;
       justify-content:space-between;
-      gap:10px;
-      align-items:center;
-      margin-bottom:8px;
+      gap:8px;
+      align-items:flex-start;
+      margin-bottom:6px;
     }
 
     .result-item-question {
       margin:0;
+      font-size:15px;
+      line-height:1.3;
     }
 
     .result-item-answer {
-      margin:0 0 8px;
+      margin:0 0 6px;
       color:var(--muted);
+      font-size:14px;
     }
 
     .result-item-status {
@@ -238,21 +257,29 @@
       </div>
 
       <div class="actions">
-        <button id="startButton" class="btn primary" type="button" disabled>Start quiz</button>
-        <a href="/" class="btn secondary">Back to sarcasm.games</a>
+        <button id="startButton" class="btn-primary" type="button" disabled>Start quiz</button>
+        <a href="/" class="link-btn">Back to sarcasm.games</a>
       </div>
     </section>
 
     <section id="questionView" class="hidden">
       <p id="progressText" class="muted"></p>
+      <div class="btn-row" style="margin-top:0; margin-bottom:12px;">
+        <button id="abortQuizBtn" type="button">Abort quiz</button>
+      </div>
+      <div id="abortConfirmRow" class="btn-row hidden" style="margin-top:0; margin-bottom:12px;">
+        <span class="muted">Abort current quiz?</span>
+        <button id="confirmAbortBtn" type="button">Yes, abort</button>
+        <button id="cancelAbortBtn" type="button" class="btn-primary">Continue quiz</button>
+      </div>
       <h2 id="questionTitle">Question</h2>
       <p id="questionCategory" class="muted"></p>
       <form id="answerForm">
         <input id="answerInput" type="text" placeholder="Write your answer" autocomplete="off" />
-        <div class="actions">
-          <button id="submitBtn" class="btn primary" type="submit">Submit answer</button>
-          <button id="showAnswerBtn" class="btn secondary hidden" type="button">Show answer</button>
-          <button id="nextQuestionBtn" class="btn secondary hidden" type="button">Next question</button>
+        <div class="btn-row">
+          <button id="submitBtn" class="btn-primary" type="submit">Submit answer</button>
+          <button id="showAnswerBtn" class="hidden" type="button">Show answer</button>
+          <button id="nextQuestionBtn" class="hidden" type="button">Next question</button>
         </div>
       </form>
       <p id="questionStatus" class="status"></p>
@@ -267,16 +294,125 @@
         <li><span id="wrongCount">0</span> wrong</li>
       </ul>
       <h3>Answered questions</h3>
+      <div id="resultFilter" class="btn-row result-filter">
+        <button id="filterAllBtn" class="btn-primary" type="button">All</button>
+        <button id="filterWrongBtn" type="button">Wrong only</button>
+        <button id="filterCorrectBtn" type="button">Correct only</button>
+      </div>
       <ul id="answeredQuestionsList" class="result-list"></ul>
       <div class="actions">
-        <button id="playAgainBtn" class="btn primary" type="button">Play again</button>
-        <a href="/" class="btn secondary">Back to sarcasm.games</a>
+        <button id="playAgainBtn" class="btn-primary" type="button">Play again</button>
+        <a href="/" class="link-btn">Back to sarcasm.games</a>
       </div>
     </section>
   </main>
 
   <script type="module">
     import { getQuizLanguage as readQuizLanguage } from '/lib/client/quiz-language.js';
+
+    const fallbackLanguage = 'en';
+    const copy = {
+      en: {
+        title: 'Quiz categories',
+        setupLead: 'Choose one or more categories. Max question count updates based on your selection.',
+        loadingCategories: 'Loading categories…',
+        questionCount: 'Question count',
+        startQuiz: 'Start quiz',
+        backHome: 'Back to sarcasm.games',
+        abortQuiz: 'Abort quiz',
+        abortConfirm: 'Abort current quiz?',
+        abortYes: 'Yes, abort',
+        abortNo: 'Continue quiz',
+        questionTitle: 'Question',
+        answerPlaceholder: 'Write your answer here',
+        submitAnswer: 'Submit answer',
+        showAnswer: 'Show answer',
+        hideAnswer: 'Hide answer',
+        nextQuestion: 'Next question',
+        quizComplete: 'Quiz complete 🎉',
+        answeredQuestions: 'Answered questions',
+        filterAll: 'All',
+        filterWrongOnly: 'Wrong only',
+        filterCorrectOnly: 'Correct only',
+        noFilteredResults: 'No questions match this filter.',
+        playAgain: 'Play again',
+        noAnswer: 'No answer given',
+        yourAnswer: 'Your answer: {answer}',
+        answerPrefix: 'Answer: {answer}',
+        correctLabel: 'correct',
+        wrongLabel: 'wrong',
+        statusCorrect: '✅ Correct',
+        statusWrong: '❌ Wrong',
+        selectCategoryHint: 'Select at least one category to continue.',
+        selectedPool: 'Selected pool: {count} questions (max count {count}).',
+        progress: 'Question {current} of {total}',
+        category: 'Category: {category}',
+        summary: 'You got {correct} / {total} correct.',
+        loadedCategories: 'Loaded {categories} categories and {questions} total questions.',
+        noCategories: 'No categories are available yet. Add quiz data to start playing.',
+        startErrorHint: 'Select at least one category before starting.',
+        loadingQuestions: 'Loading questions…',
+        loadedQuestions: 'Loaded {count} questions.',
+        loadCategoriesError: 'Could not load categories: {message}',
+        startQuizError: 'Could not start quiz: {message}',
+        answerValidateError: 'Could not validate answer.',
+        invalidAnswerError: 'Invalid answer response.',
+        almostStatus: 'Almost! You get one more try.',
+        correctStatus: 'Correct!',
+        wrongStatus: 'Not quite. You can reveal the answer and continue.',
+        noQuestions: 'No questions were returned for your selection.'
+      },
+      no: {
+        title: 'Quizkategorier',
+        setupLead: 'Velg én eller flere kategorier. Maks antall spørsmål oppdateres basert på valget ditt.',
+        loadingCategories: 'Laster kategorier…',
+        questionCount: 'Antall spørsmål',
+        startQuiz: 'Start quiz',
+        backHome: 'Tilbake til sarcasm.games',
+        abortQuiz: 'Avbryt quiz',
+        abortConfirm: 'Avbryte nåværende quiz?',
+        abortYes: 'Ja, avbryt',
+        abortNo: 'Fortsett quiz',
+        questionTitle: 'Spørsmål',
+        answerPlaceholder: 'Skriv svaret ditt her',
+        submitAnswer: 'Send svar',
+        showAnswer: 'Vis fasit',
+        hideAnswer: 'Skjul fasit',
+        nextQuestion: 'Neste spørsmål',
+        quizComplete: 'Quiz fullført 🎉',
+        answeredQuestions: 'Besvarte spørsmål',
+        filterAll: 'Alle',
+        filterWrongOnly: 'Kun feil',
+        filterCorrectOnly: 'Kun riktige',
+        noFilteredResults: 'Ingen spørsmål matcher dette filteret.',
+        playAgain: 'Spill igjen',
+        noAnswer: 'Ingen svar registrert',
+        yourAnswer: 'Ditt svar: {answer}',
+        answerPrefix: 'Fasit: {answer}',
+        correctLabel: 'riktige',
+        wrongLabel: 'feil',
+        statusCorrect: '✅ Riktig',
+        statusWrong: '❌ Feil',
+        selectCategoryHint: 'Velg minst én kategori for å fortsette.',
+        selectedPool: 'Valgt pool: {count} spørsmål (maks antall {count}).',
+        progress: 'Spørsmål {current} av {total}',
+        category: 'Kategori: {category}',
+        summary: 'Du fikk {correct} / {total} riktige.',
+        loadedCategories: 'Lastet {categories} kategorier og {questions} spørsmål totalt.',
+        noCategories: 'Ingen kategorier er tilgjengelige ennå. Legg til quizdata for å starte.',
+        startErrorHint: 'Velg minst én kategori før du starter.',
+        loadingQuestions: 'Laster spørsmål…',
+        loadedQuestions: 'Lastet {count} spørsmål.',
+        loadCategoriesError: 'Kunne ikke laste kategorier: {message}',
+        startQuizError: 'Kunne ikke starte quiz: {message}',
+        answerValidateError: 'Kunne ikke validere svar.',
+        invalidAnswerError: 'Ugyldig svar fra server.',
+        almostStatus: 'Nesten! Du får ett forsøk til.',
+        correctStatus: 'Riktig!',
+        wrongStatus: 'Ikke helt. Du kan vise fasit og gå videre.',
+        noQuestions: 'Ingen spørsmål ble returnert for valget ditt.'
+      }
+    };
 
     const activeLang = readQuizLanguage();
     const categoryGrid = document.getElementById('categoryGrid');
@@ -297,11 +433,26 @@
     const nextQuestionBtn = document.getElementById('nextQuestionBtn');
     const questionStatus = document.getElementById('questionStatus');
     const answerReveal = document.getElementById('answerReveal');
+    const abortQuizBtn = document.getElementById('abortQuizBtn');
+    const abortConfirmRow = document.getElementById('abortConfirmRow');
+    const confirmAbortBtn = document.getElementById('confirmAbortBtn');
+    const cancelAbortBtn = document.getElementById('cancelAbortBtn');
     const resultSummary = document.getElementById('resultSummary');
     const correctCount = document.getElementById('correctCount');
     const wrongCount = document.getElementById('wrongCount');
     const answeredQuestionsList = document.getElementById('answeredQuestionsList');
     const playAgainBtn = document.getElementById('playAgainBtn');
+    const filterAllBtn = document.getElementById('filterAllBtn');
+    const filterWrongBtn = document.getElementById('filterWrongBtn');
+    const filterCorrectBtn = document.getElementById('filterCorrectBtn');
+    const setupHeading = setupView.querySelector('h1');
+    const setupLead = setupView.querySelector('p.muted');
+    const questionCountLabel = setupView.querySelector('.controls label');
+    const resultHeading = resultView.querySelector('h2');
+    const resultCounterItems = resultView.querySelectorAll('ul.muted li');
+    const answeredQuestionsHeading = resultView.querySelector('h3');
+    const backLinks = document.querySelectorAll('a.link-btn');
+    const abortConfirmText = abortConfirmRow.querySelector('.muted');
 
     const runtimeState = {
       activeLang,
@@ -314,8 +465,17 @@
       awaitingRetry: false,
       selectedCategories: [],
       count: 0,
-      answeredQuestions: []
+      answeredQuestions: [],
+      resultFilter: 'all'
     };
+
+    function uiCopy() {
+      return copy[runtimeState.activeLang] || copy[fallbackLanguage];
+    }
+
+    function syncLanguageFromStorage() {
+      runtimeState.activeLang = readQuizLanguage();
+    }
 
     function showView(name) {
       setupView.classList.toggle('hidden', name !== 'setup');
@@ -341,14 +501,14 @@
       if (!hasSelection) {
         countInput.value = '1';
         countInput.max = '1';
-        countMeta.textContent = 'Select at least one category to continue.';
+        countMeta.textContent = uiCopy().selectCategoryHint;
         return;
       }
 
       countInput.max = String(selectedCount);
       const requestedCount = Number(countInput.value) || 1;
       countInput.value = String(Math.max(1, Math.min(requestedCount, selectedCount)));
-      countMeta.textContent = `Selected pool: ${selectedCount} questions (max count ${selectedCount}).`;
+      countMeta.textContent = uiCopy().selectedPool.replaceAll('{count}', String(selectedCount));
     }
 
     function renderCategories() {
@@ -385,7 +545,7 @@
 
         const countEl = document.createElement('span');
         countEl.className = 'cat-count';
-        countEl.textContent = `${category.questionCount} question${category.questionCount === 1 ? '' : 's'}`;
+        countEl.textContent = `${category.questionCount} ${category.questionCount === 1 ? 'question' : 'questions'}`;
 
         textWrapper.append(nameEl, document.createElement('br'), countEl);
         label.append(checkbox, visualPill, textWrapper);
@@ -396,10 +556,38 @@
       renderCountState();
     }
 
+    function getFilteredAnsweredQuestions() {
+      if (runtimeState.resultFilter === 'wrong') {
+        return runtimeState.answeredQuestions.filter((entry) => entry.status === 'wrong');
+      }
+
+      if (runtimeState.resultFilter === 'correct') {
+        return runtimeState.answeredQuestions.filter((entry) => entry.status === 'correct');
+      }
+
+      return runtimeState.answeredQuestions;
+    }
+
+    function renderResultFilterState() {
+      filterAllBtn.classList.toggle('btn-primary', runtimeState.resultFilter === 'all');
+      filterWrongBtn.classList.toggle('btn-primary', runtimeState.resultFilter === 'wrong');
+      filterCorrectBtn.classList.toggle('btn-primary', runtimeState.resultFilter === 'correct');
+    }
+
     function renderAnsweredQuestions() {
       answeredQuestionsList.innerHTML = '';
+      renderResultFilterState();
 
-      for (const entry of runtimeState.answeredQuestions) {
+      const entries = getFilteredAnsweredQuestions();
+      if (!entries.length) {
+        const emptyItem = document.createElement('li');
+        emptyItem.className = 'result-item';
+        emptyItem.textContent = uiCopy().noFilteredResults;
+        answeredQuestionsList.appendChild(emptyItem);
+        return;
+      }
+
+      for (const entry of entries) {
         const item = document.createElement('li');
         item.className = 'result-item';
 
@@ -412,24 +600,23 @@
 
         const status = document.createElement('span');
         status.className = `result-item-status ${entry.status}`;
-        status.textContent = entry.status === 'correct' ? '✅ Correct' : '❌ Wrong';
+        status.textContent = entry.status === 'correct' ? uiCopy().statusCorrect : uiCopy().statusWrong;
 
         const yourAnswer = document.createElement('p');
         yourAnswer.className = 'result-item-answer';
-        yourAnswer.textContent = `Your answer: ${entry.userAnswer || 'No answer given'}`;
+        yourAnswer.textContent = uiCopy().yourAnswer.replace('{answer}', entry.userAnswer || uiCopy().noAnswer);
 
         const revealButton = document.createElement('button');
-        revealButton.className = 'btn secondary';
         revealButton.type = 'button';
-        revealButton.textContent = 'Show answer';
+        revealButton.textContent = uiCopy().showAnswer;
 
         const answer = document.createElement('p');
         answer.className = 'result-item-answer hidden';
-        answer.textContent = `Answer: ${entry.acceptedAnswer || '—'}`;
+        answer.textContent = uiCopy().answerPrefix.replace('{answer}', entry.acceptedAnswer || '—');
 
         revealButton.addEventListener('click', () => {
           const isHidden = answer.classList.toggle('hidden');
-          revealButton.textContent = isHidden ? 'Show answer' : 'Hide answer';
+          revealButton.textContent = isHidden ? uiCopy().showAnswer : uiCopy().hideAnswer;
         });
 
         header.append(question, status);
@@ -440,9 +627,11 @@
 
     function renderQuestion() {
       const question = runtimeState.questions[runtimeState.index];
-      progressText.textContent = `Question ${runtimeState.index + 1} of ${runtimeState.questions.length}`;
+      progressText.textContent = uiCopy().progress
+        .replace('{current}', String(runtimeState.index + 1))
+        .replace('{total}', String(runtimeState.questions.length));
       questionTitle.textContent = question.prompt;
-      questionCategory.textContent = `Category: ${question.category || 'General'}`;
+      questionCategory.textContent = uiCopy().category.replace('{category}', question.category || 'General');
       answerInput.value = '';
       answerInput.disabled = false;
       submitBtn.disabled = false;
@@ -451,7 +640,9 @@
       showAnswerBtn.classList.add('hidden');
       nextQuestionBtn.classList.add('hidden');
       answerReveal.classList.add('hidden');
-      answerReveal.textContent = `Answer: ${question.answers[0] || '—'}`;
+      answerReveal.textContent = uiCopy().answerPrefix.replace('{answer}', question.answers[0] || '—');
+      showAnswerBtn.textContent = uiCopy().showAnswer;
+      abortConfirmRow.classList.add('hidden');
       runtimeState.awaitingRetry = false;
       answerInput.focus();
     }
@@ -461,7 +652,9 @@
       if (runtimeState.index >= runtimeState.questions.length) {
         correctCount.textContent = String(runtimeState.correct);
         wrongCount.textContent = String(runtimeState.wrong);
-        resultSummary.textContent = `You got ${runtimeState.correct} / ${runtimeState.questions.length} correct.`;
+        resultSummary.textContent = uiCopy().summary
+          .replace('{correct}', String(runtimeState.correct))
+          .replace('{total}', String(runtimeState.questions.length));
         renderAnsweredQuestions();
         showView('result');
         return;
@@ -484,12 +677,12 @@
       });
 
       if (!response.ok) {
-        throw new Error('Could not validate answer.');
+        throw new Error(uiCopy().answerValidateError);
       }
 
       const payload = await response.json();
       if (!payload?.status) {
-        throw new Error('Invalid answer response.');
+        throw new Error(uiCopy().invalidAnswerError);
       }
 
       return payload;
@@ -510,7 +703,7 @@
           runtimeState.categories = [];
           categoryGrid.innerHTML = '';
           statusEl.classList.remove('error');
-          statusEl.textContent = 'No categories are available yet. Add quiz data to start playing.';
+          statusEl.textContent = uiCopy().noCategories;
           renderCountState();
           return;
         }
@@ -522,13 +715,15 @@
         }));
 
         statusEl.classList.remove('error');
-        statusEl.textContent = `Loaded ${runtimeState.categories.length} categories and ${payload.totalQuestions} total questions.`;
+        statusEl.textContent = uiCopy().loadedCategories
+          .replace('{categories}', String(runtimeState.categories.length))
+          .replace('{questions}', String(payload.totalQuestions));
         renderCategories();
       } catch (error) {
         runtimeState.categories = [];
         categoryGrid.innerHTML = '';
         statusEl.classList.add('error');
-        statusEl.textContent = `Could not load categories: ${error.message}`;
+        statusEl.textContent = uiCopy().loadCategoriesError.replace('{message}', error.message);
         renderCountState();
       }
     }
@@ -541,13 +736,13 @@
 
       if (!selectedCategories.length) {
         statusEl.classList.add('error');
-        statusEl.textContent = 'Select at least one category before starting.';
+        statusEl.textContent = uiCopy().startErrorHint;
         return;
       }
 
       startButton.disabled = true;
       statusEl.classList.remove('error');
-      statusEl.textContent = 'Loading questions…';
+      statusEl.textContent = uiCopy().loadingQuestions;
 
       try {
         const response = await fetch('/api/quiz/start', {
@@ -568,7 +763,7 @@
 
         const questions = Array.isArray(payload?.questions) ? payload.questions : [];
         if (!questions.length) {
-          throw new Error('No questions were returned for your selection.');
+          throw new Error(uiCopy().noQuestions);
         }
 
         runtimeState.quizStarted = true;
@@ -580,6 +775,7 @@
         runtimeState.selectedCategories = selectedCategories;
         runtimeState.count = count;
         runtimeState.answeredQuestions = [];
+        runtimeState.resultFilter = 'all';
 
         window.quizCategoriesState = {
           ...runtimeState,
@@ -587,12 +783,12 @@
         };
 
         statusEl.classList.remove('error');
-        statusEl.textContent = `Loaded ${questions.length} questions.`;
+        statusEl.textContent = uiCopy().loadedQuestions.replace('{count}', String(questions.length));
         showView('question');
         renderQuestion();
       } catch (error) {
         statusEl.classList.add('error');
-        statusEl.textContent = `Could not start quiz: ${error.message}`;
+        statusEl.textContent = uiCopy().startQuizError.replace('{message}', error.message);
       } finally {
         renderCountState();
       }
@@ -625,7 +821,7 @@
           acceptedAnswer: current.answers[0] || null
         });
         questionStatus.className = 'status ok';
-        questionStatus.textContent = 'Correct!';
+        questionStatus.textContent = uiCopy().correctStatus;
         submitBtn.disabled = true;
         answerInput.disabled = true;
         setTimeout(() => moveNextQuestion(), 600);
@@ -635,7 +831,7 @@
       if (result.status === 'almost' && !runtimeState.awaitingRetry) {
         runtimeState.awaitingRetry = true;
         questionStatus.className = 'status almost';
-        questionStatus.textContent = 'Almost! You get one more try.';
+        questionStatus.textContent = uiCopy().almostStatus;
         answerInput.value = '';
         answerInput.focus();
         return;
@@ -650,7 +846,7 @@
         acceptedAnswer: result.acceptedAnswer || current.answers[0] || null
       });
       questionStatus.className = 'status error';
-      questionStatus.textContent = 'Wrong answer. You can reveal the answer and continue.';
+      questionStatus.textContent = uiCopy().wrongStatus;
       showAnswerBtn.classList.remove('hidden');
       nextQuestionBtn.classList.remove('hidden');
       submitBtn.disabled = true;
@@ -658,11 +854,27 @@
     });
 
     showAnswerBtn.addEventListener('click', () => {
-      answerReveal.classList.toggle('hidden');
+      const isHidden = answerReveal.classList.toggle('hidden');
+      showAnswerBtn.textContent = isHidden ? uiCopy().showAnswer : uiCopy().hideAnswer;
     });
 
     nextQuestionBtn.addEventListener('click', () => {
       moveNextQuestion();
+    });
+
+    filterAllBtn.addEventListener('click', () => {
+      runtimeState.resultFilter = 'all';
+      renderAnsweredQuestions();
+    });
+
+    filterWrongBtn.addEventListener('click', () => {
+      runtimeState.resultFilter = 'wrong';
+      renderAnsweredQuestions();
+    });
+
+    filterCorrectBtn.addEventListener('click', () => {
+      runtimeState.resultFilter = 'correct';
+      renderAnsweredQuestions();
     });
 
     playAgainBtn.addEventListener('click', () => {
@@ -673,10 +885,65 @@
       runtimeState.wrong = 0;
       runtimeState.awaitingRetry = false;
       runtimeState.answeredQuestions = [];
+      runtimeState.resultFilter = 'all';
       showView('setup');
       renderCountState();
     });
 
+    abortQuizBtn.addEventListener('click', () => {
+      abortConfirmRow.classList.remove('hidden');
+    });
+
+    confirmAbortBtn.addEventListener('click', () => {
+      runtimeState.quizStarted = false;
+      runtimeState.questions = [];
+      runtimeState.index = 0;
+      runtimeState.correct = 0;
+      runtimeState.wrong = 0;
+      runtimeState.awaitingRetry = false;
+      runtimeState.answeredQuestions = [];
+      runtimeState.resultFilter = 'all';
+      showView('setup');
+      renderCountState();
+    });
+
+    cancelAbortBtn.addEventListener('click', () => {
+      abortConfirmRow.classList.add('hidden');
+      answerInput.focus();
+    });
+
+    function applyCopy() {
+      const c = uiCopy();
+      document.title = c.title;
+      setupHeading.textContent = c.title;
+      setupLead.textContent = c.setupLead;
+      statusEl.textContent = c.loadingCategories;
+      questionCountLabel.firstChild.textContent = `${c.questionCount} `;
+      startButton.textContent = c.startQuiz;
+      for (const backLink of backLinks) {
+        backLink.textContent = c.backHome;
+      }
+      abortQuizBtn.textContent = c.abortQuiz;
+      abortConfirmText.textContent = c.abortConfirm;
+      confirmAbortBtn.textContent = c.abortYes;
+      cancelAbortBtn.textContent = c.abortNo;
+      questionTitle.textContent = c.questionTitle;
+      answerInput.placeholder = c.answerPlaceholder;
+      submitBtn.textContent = c.submitAnswer;
+      showAnswerBtn.textContent = c.showAnswer;
+      nextQuestionBtn.textContent = c.nextQuestion;
+      resultHeading.textContent = c.quizComplete;
+      answeredQuestionsHeading.textContent = c.answeredQuestions;
+      filterAllBtn.textContent = c.filterAll;
+      filterWrongBtn.textContent = c.filterWrongOnly;
+      filterCorrectBtn.textContent = c.filterCorrectOnly;
+      resultCounterItems[0].lastChild.textContent = ` ${c.correctLabel}`;
+      resultCounterItems[1].lastChild.textContent = ` ${c.wrongLabel}`;
+      playAgainBtn.textContent = c.playAgain;
+    }
+
+    syncLanguageFromStorage();
+    applyCopy();
     loadOverview();
     showView('setup');
     window.quizCategoriesState = runtimeState;
