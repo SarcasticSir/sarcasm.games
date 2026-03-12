@@ -149,6 +149,13 @@ module.exports = async function handler(req, res) {
       return;
     }
 
+    const query = await runQuery(
+      `SELECT id, category, question_en, question_no, answers_en, answers_no
+       FROM quiz_questions
+       ORDER BY RANDOM()
+       LIMIT 10`
+    );
+
     const questions = query.rows
       .map((row) => mapQuestion(row, lang))
       .filter((row) => row.prompt && row.answers.length);
