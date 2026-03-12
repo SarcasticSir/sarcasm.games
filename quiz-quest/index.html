@@ -184,31 +184,33 @@
 <body>
   <main class="card">
     <h1>Quiz quest</h1>
-    <p id="introText" class="muted">Choose one or more categories and answer until the pool is complete.</p>
+    <section id="setupView">
+      <p id="introText" class="muted">Choose one or more categories and answer until the pool is complete.</p>
 
-    <p id="modeText" class="muted"></p>
-    <p id="poolStatus" class="status"></p>
-    <p id="setupStatus" class="status" role="status" aria-live="polite"></p>
+      <p id="modeText" class="muted"></p>
+      <p id="poolStatus" class="status"></p>
+      <p id="setupStatus" class="status" role="status" aria-live="polite"></p>
 
-    <section id="categoryGrid" class="grid" aria-label="Quiz quest categories"></section>
+      <section id="categoryGrid" class="grid" aria-label="Quiz quest categories"></section>
 
-    <div class="controls">
-      <label for="questionCount" id="questionCountLabel">Question count
-        <input id="questionCount" type="number" min="1" value="1" disabled />
-      </label>
-      <span id="countMeta" class="muted"></span>
-    </div>
+      <div class="controls">
+        <label for="questionCount" id="questionCountLabel">Question count
+          <input id="questionCount" type="number" min="1" value="1" disabled />
+        </label>
+        <span id="countMeta" class="muted"></span>
+      </div>
 
-    <div class="actions">
-      <button id="startQuestBtn" class="btn-primary" type="button">Start quest</button>
-      <a href="/" class="link-btn" id="backLink">Back to sarcasm.games</a>
-    </div>
+      <div class="actions">
+        <button id="startQuestBtn" class="btn-primary" type="button">Start quest</button>
+        <a href="/" class="link-btn" id="backLink">Back to sarcasm.games</a>
+      </div>
 
-    <div class="controls">
-      <label for="resetCategorySelect" class="muted" id="resetLabel">Reset category</label>
-      <select id="resetCategorySelect"></select>
-      <button id="resetCategoryBtn" type="button">Reset category</button>
-    </div>
+      <div class="controls">
+        <label for="resetCategorySelect" class="muted" id="resetLabel">Reset category</label>
+        <select id="resetCategorySelect"></select>
+        <button id="resetCategoryBtn" type="button">Reset category</button>
+      </div>
+    </section>
 
     <section id="questionSection" class="question-card hidden">
       <p id="progressText" class="muted"></p>
@@ -309,9 +311,11 @@
       isSubmitting: false,
       guestProgress: readGuestProgress(),
       roundTarget: 0,
-      roundAnswered: 0
+      roundAnswered: 0,
+      isQuestActive: false
     };
 
+    const setupView = document.getElementById('setupView');
     const introText = document.getElementById('introText');
     const modeText = document.getElementById('modeText');
     const poolStatus = document.getElementById('poolStatus');
@@ -456,6 +460,11 @@
       answerReveal.textContent = '';
       nextBtn.classList.add('hidden');
       submitBtn.disabled = false;
+    }
+
+    function setQuestActive(active) {
+      state.isQuestActive = active;
+      setupView.classList.toggle('hidden', active);
     }
 
     function renderResetCategories() {
@@ -646,13 +655,18 @@
       state.roundTarget = Math.max(1, Math.min(Number.isInteger(requested) ? requested : 1, available));
       state.roundAnswered = 0;
       questionCountInput.value = String(state.roundTarget);
+      setQuestActive(true);
 
-      await loadNextQuestion();
+      const hasQuestion = await loadNextQuestion();
+      if (!hasQuestion) {
+        setQuestActive(false);
+      }
     }
 
     async function proceedAfterAnswer() {
       if (state.roundAnswered >= state.roundTarget) {
         clearQuestionState();
+        setQuestActive(false);
         setupStatus.className = 'status ok';
         setupStatus.textContent = ui().roundDone;
         await refreshOverview();
