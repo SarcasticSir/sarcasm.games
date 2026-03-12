@@ -12,6 +12,25 @@ function parseBody(body) {
   return typeof body === 'object' ? body : {};
 }
 
+function extractAnswers(row, lang) {
+  const preferred = lang === 'no'
+    ? [row.answer_no, row.answer_en, row.answer]
+    : [row.answer_en, row.answer_no, row.answer];
+
+  const allCandidates = [...preferred, row.correct_answer, row.correct_answer_en, row.correct_answer_no];
+
+  const seen = new Set();
+  return allCandidates
+    .filter(Boolean)
+    .flatMap((value) => String(value).split('|').map((part) => part.trim()).filter(Boolean))
+    .filter((value) => {
+      const key = value.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+}
+
 function mapQuestion(row, lang) {
   const prompt = lang === 'no'
     ? row.question_no || row.question_en || row.question || ''
@@ -20,7 +39,8 @@ function mapQuestion(row, lang) {
   return {
     id: row.id,
     category: row.category || 'General',
-    prompt
+    prompt,
+    answers: extractAnswers(row, lang)
   };
 }
 
@@ -41,7 +61,9 @@ module.exports = async function handler(req, res) {
     const limit = Math.max(1, Math.min(Number(count) || 10, 50));
 
     const query = await runQuery(
-      `SELECT id, category, question_en, question_no, question
+      `SELECT id, category, question_en, question_no, question,
+              answer_en, answer_no, answer,
+              correct_answer, correct_answer_en, correct_answer_no
        FROM quiz_questions
        ORDER BY RANDOM()
        LIMIT $1`,
