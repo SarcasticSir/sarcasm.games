@@ -187,36 +187,43 @@
       display: none !important;
     }
 
+    .result-filter {
+      margin-top: 10px;
+    }
+
     .result-list {
       list-style:none;
-      margin:10px 0 0;
+      margin:8px 0 0;
       padding-left:0;
       display:grid;
-      gap:10px;
+      gap:8px;
     }
 
     .result-item {
       border:1px solid var(--bd);
-      border-radius:10px;
-      padding:10px;
+      border-radius:8px;
+      padding:8px;
       background:#181920;
     }
 
     .result-item-header {
       display:flex;
       justify-content:space-between;
-      gap:10px;
-      align-items:center;
-      margin-bottom:8px;
+      gap:8px;
+      align-items:flex-start;
+      margin-bottom:6px;
     }
 
     .result-item-question {
       margin:0;
+      font-size:15px;
+      line-height:1.3;
     }
 
     .result-item-answer {
-      margin:0 0 8px;
+      margin:0 0 6px;
       color:var(--muted);
+      font-size:14px;
     }
 
     .result-item-status {
@@ -287,6 +294,11 @@
         <li><span id="wrongCount">0</span> wrong</li>
       </ul>
       <h3>Answered questions</h3>
+      <div id="resultFilter" class="btn-row result-filter">
+        <button id="filterAllBtn" class="btn-primary" type="button">All</button>
+        <button id="filterWrongBtn" type="button">Wrong only</button>
+        <button id="filterCorrectBtn" type="button">Correct only</button>
+      </div>
       <ul id="answeredQuestionsList" class="result-list"></ul>
       <div class="actions">
         <button id="playAgainBtn" class="btn-primary" type="button">Play again</button>
@@ -319,6 +331,10 @@
         nextQuestion: 'Next question',
         quizComplete: 'Quiz complete 🎉',
         answeredQuestions: 'Answered questions',
+        filterAll: 'All',
+        filterWrongOnly: 'Wrong only',
+        filterCorrectOnly: 'Correct only',
+        noFilteredResults: 'No questions match this filter.',
         playAgain: 'Play again',
         noAnswer: 'No answer given',
         yourAnswer: 'Your answer: {answer}',
@@ -365,6 +381,10 @@
         nextQuestion: 'Neste spørsmål',
         quizComplete: 'Quiz fullført 🎉',
         answeredQuestions: 'Besvarte spørsmål',
+        filterAll: 'Alle',
+        filterWrongOnly: 'Kun feil',
+        filterCorrectOnly: 'Kun riktige',
+        noFilteredResults: 'Ingen spørsmål matcher dette filteret.',
         playAgain: 'Spill igjen',
         noAnswer: 'Ingen svar registrert',
         yourAnswer: 'Ditt svar: {answer}',
@@ -422,6 +442,9 @@
     const wrongCount = document.getElementById('wrongCount');
     const answeredQuestionsList = document.getElementById('answeredQuestionsList');
     const playAgainBtn = document.getElementById('playAgainBtn');
+    const filterAllBtn = document.getElementById('filterAllBtn');
+    const filterWrongBtn = document.getElementById('filterWrongBtn');
+    const filterCorrectBtn = document.getElementById('filterCorrectBtn');
     const setupHeading = setupView.querySelector('h1');
     const setupLead = setupView.querySelector('p.muted');
     const questionCountLabel = setupView.querySelector('.controls label');
@@ -442,7 +465,8 @@
       awaitingRetry: false,
       selectedCategories: [],
       count: 0,
-      answeredQuestions: []
+      answeredQuestions: [],
+      resultFilter: 'all'
     };
 
     function uiCopy() {
@@ -532,10 +556,38 @@
       renderCountState();
     }
 
+    function getFilteredAnsweredQuestions() {
+      if (runtimeState.resultFilter === 'wrong') {
+        return runtimeState.answeredQuestions.filter((entry) => entry.status === 'wrong');
+      }
+
+      if (runtimeState.resultFilter === 'correct') {
+        return runtimeState.answeredQuestions.filter((entry) => entry.status === 'correct');
+      }
+
+      return runtimeState.answeredQuestions;
+    }
+
+    function renderResultFilterState() {
+      filterAllBtn.classList.toggle('btn-primary', runtimeState.resultFilter === 'all');
+      filterWrongBtn.classList.toggle('btn-primary', runtimeState.resultFilter === 'wrong');
+      filterCorrectBtn.classList.toggle('btn-primary', runtimeState.resultFilter === 'correct');
+    }
+
     function renderAnsweredQuestions() {
       answeredQuestionsList.innerHTML = '';
+      renderResultFilterState();
 
-      for (const entry of runtimeState.answeredQuestions) {
+      const entries = getFilteredAnsweredQuestions();
+      if (!entries.length) {
+        const emptyItem = document.createElement('li');
+        emptyItem.className = 'result-item';
+        emptyItem.textContent = uiCopy().noFilteredResults;
+        answeredQuestionsList.appendChild(emptyItem);
+        return;
+      }
+
+      for (const entry of entries) {
         const item = document.createElement('li');
         item.className = 'result-item';
 
@@ -723,6 +775,7 @@
         runtimeState.selectedCategories = selectedCategories;
         runtimeState.count = count;
         runtimeState.answeredQuestions = [];
+        runtimeState.resultFilter = 'all';
 
         window.quizCategoriesState = {
           ...runtimeState,
@@ -809,6 +862,21 @@
       moveNextQuestion();
     });
 
+    filterAllBtn.addEventListener('click', () => {
+      runtimeState.resultFilter = 'all';
+      renderAnsweredQuestions();
+    });
+
+    filterWrongBtn.addEventListener('click', () => {
+      runtimeState.resultFilter = 'wrong';
+      renderAnsweredQuestions();
+    });
+
+    filterCorrectBtn.addEventListener('click', () => {
+      runtimeState.resultFilter = 'correct';
+      renderAnsweredQuestions();
+    });
+
     playAgainBtn.addEventListener('click', () => {
       runtimeState.quizStarted = false;
       runtimeState.questions = [];
@@ -817,6 +885,7 @@
       runtimeState.wrong = 0;
       runtimeState.awaitingRetry = false;
       runtimeState.answeredQuestions = [];
+      runtimeState.resultFilter = 'all';
       showView('setup');
       renderCountState();
     });
@@ -833,6 +902,7 @@
       runtimeState.wrong = 0;
       runtimeState.awaitingRetry = false;
       runtimeState.answeredQuestions = [];
+      runtimeState.resultFilter = 'all';
       showView('setup');
       renderCountState();
     });
@@ -864,6 +934,9 @@
       nextQuestionBtn.textContent = c.nextQuestion;
       resultHeading.textContent = c.quizComplete;
       answeredQuestionsHeading.textContent = c.answeredQuestions;
+      filterAllBtn.textContent = c.filterAll;
+      filterWrongBtn.textContent = c.filterWrongOnly;
+      filterCorrectBtn.textContent = c.filterCorrectOnly;
       resultCounterItems[0].lastChild.textContent = ` ${c.correctLabel}`;
       resultCounterItems[1].lastChild.textContent = ` ${c.wrongLabel}`;
       playAgainBtn.textContent = c.playAgain;
