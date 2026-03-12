@@ -80,12 +80,86 @@
   </main>
 
   <script type="module">
-    import { getQuizLanguage } from '/lib/client/quiz-language.js';
+    import { getQuizLanguage as readQuizLanguage } from '/lib/client/quiz-language.js';
 
-    const positiveMessages = ['Good!', 'Great job!', 'Nice one!', 'Excellent!', 'Well done!'];
+    const fallbackLanguage = 'en';
+    const copy = {
+      en: {
+        title: 'Random10 quiz',
+        introLead: 'Welcome! On this page you will get 10 random questions from mixed categories.',
+        introFeature: 'New: you can reveal the answer only after a wrong guess, then move on manually.',
+        introRules: 'Answer checks follow forgiving rules for text answers: punctuation and tiny text differences are tolerated, close answers can become Almost. Numeric answers require exact numbers, but values within 10% are marked as Almost. If you get Almost, you get one extra try.',
+        startQuiz: 'Start Random10 quiz',
+        loading: 'Loading…',
+        backHome: 'Back to sarcasm.games',
+        abortQuiz: 'Abort quiz',
+        abortConfirm: 'Abort current quiz?',
+        abortYes: 'Yes, abort',
+        abortNo: 'Continue quiz',
+        questionTitle: 'Question',
+        answerPlaceholder: 'Write your answer here',
+        submitAnswer: 'Submit answer',
+        showAnswer: 'Show answer',
+        nextQuestion: 'Next question',
+        resultTitle: 'Quiz complete 🎉',
+        resultSummary: 'You got {correct} / {total} correct.',
+        correctCount: 'correct',
+        wrongCount: 'wrong',
+        answeredQuestionsHeading: 'Answered questions',
+        playAgain: 'Try again',
+        progress: 'Question {current} of {total}',
+        category: 'Category: {category}',
+        answerPrefix: 'Answer: {answer}',
+        fetchError: 'Could not load questions right now.',
+        notEnoughQuestions: 'Not enough questions available.',
+        loadingError: 'Unable to start quiz right now. Please try again.',
+        answerValidateError: 'Could not validate answer.',
+        invalidPayloadError: 'Invalid response from server.',
+        answerSubmitError: 'Could not submit answer. Try again.',
+        almostStatus: 'Almost! Try one more time.',
+        wrongStatus: 'Not quite. You can reveal the answer and continue.',
+        positiveMessages: ['Good!', 'Great job!', 'Nice one!', 'Excellent!', 'Well done!']
+      },
+      no: {
+        title: 'Random10 quiz',
+        introLead: 'Velkommen! Her får du 10 tilfeldige spørsmål fra blandede kategorier.',
+        introFeature: 'Nytt: du kan vise fasit etter feil svar og gå videre manuelt.',
+        introRules: 'Svarvurdering er romslig for tekstsvar: tegnsetting og små tekstforskjeller tolereres, og nære svar kan bli Almost. Tall-svar krever eksakte tall, men verdier innenfor 10% blir merket som Almost. Hvis du får Almost, får du ett ekstra forsøk.',
+        startQuiz: 'Start Random10 quiz',
+        loading: 'Laster…',
+        backHome: 'Tilbake til sarcasm.games',
+        abortQuiz: 'Avbryt quiz',
+        abortConfirm: 'Avbryte nåværende quiz?',
+        abortYes: 'Ja, avbryt',
+        abortNo: 'Fortsett quiz',
+        questionTitle: 'Spørsmål',
+        answerPlaceholder: 'Skriv svaret ditt her',
+        submitAnswer: 'Send svar',
+        showAnswer: 'Vis fasit',
+        nextQuestion: 'Neste spørsmål',
+        resultTitle: 'Quiz fullført 🎉',
+        resultSummary: 'Du fikk {correct} / {total} riktige.',
+        correctCount: 'riktige',
+        wrongCount: 'feil',
+        answeredQuestionsHeading: 'Besvarte spørsmål',
+        playAgain: 'Prøv igjen',
+        progress: 'Spørsmål {current} av {total}',
+        category: 'Kategori: {category}',
+        answerPrefix: 'Fasit: {answer}',
+        fetchError: 'Kunne ikke laste spørsmål nå.',
+        notEnoughQuestions: 'Ikke nok spørsmål tilgjengelig.',
+        loadingError: 'Klarte ikke starte quiz nå. Prøv igjen.',
+        answerValidateError: 'Kunne ikke validere svar.',
+        invalidPayloadError: 'Ugyldig svar fra server.',
+        answerSubmitError: 'Kunne ikke sende svar. Prøv igjen.',
+        almostStatus: 'Nesten! Prøv én gang til.',
+        wrongStatus: 'Ikke helt. Du kan vise fasit og gå videre.',
+        positiveMessages: ['Bra!', 'Godt jobba!', 'Nice!', 'Supert!', 'Flott!']
+      }
+    };
 
     // Language is locked for this runtime session once loaded.
-    const activeLang = getQuizLanguage();
+    const activeLang = readQuizLanguage();
 
     const introView = document.getElementById('introView');
     const questionView = document.getElementById('questionView');
@@ -117,12 +191,8 @@
     const answeredQuestionsHeading = resultView.querySelector('h3');
     const playAgainBtn = document.getElementById('playAgainBtn');
 
-    function getQuizLanguage() {
-      const storedLanguage = localStorage.getItem('quizLanguage');
-      if (allowedLanguages.has(storedLanguage)) {
-        return storedLanguage;
-      }
-      return fallbackLanguage;
+    function getStoredQuizLanguage() {
+      return readQuizLanguage();
     }
 
     const state = {
@@ -140,7 +210,7 @@
 
 
     function syncLanguageFromStorage() {
-      state.language = getQuizLanguage();
+      state.language = getStoredQuizLanguage();
     }
 
     function uiCopy() {
