@@ -98,7 +98,9 @@ module.exports = async function handler(req, res) {
       questionId,
       status: evaluation.status,
       retryAvailable: evaluation.retryAvailable,
-      acceptedAnswer: evaluation.matchedAnswer || acceptedAnswers[0] || null
+      acceptedAnswer: evaluation.status === 'wrong'
+        ? (evaluation.matchedAnswer || acceptedAnswers[0] || null)
+        : null
     });
   } catch (error) {
     console.error('[quiz/answer] failed:', error?.message);
