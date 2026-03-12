@@ -171,21 +171,21 @@
   <script>
     const QUIZ_LANGUAGE_KEY = 'quizLanguage';
     const GAMES = [
-      { href: '/tiermaker/', title: { en: 'Tier-maker', no: 'Tier-lager' }, tooltip: { en: 'Make your own tier list.', no: 'Lag din egen tier-liste.' } },
-      { href: '/monstercatch/', title: { en: 'Monster catcher', no: 'Monsterfanger' }, tooltip: { en: 'A local game.', no: 'Et lokalt spill.' } },
-      { href: '/achievements/', title: { en: 'Life Achievements', no: 'Livsmål' }, tooltip: { en: 'Track accomplishments', no: 'Følg fremgang og prestasjoner' } },
-      { href: '/poketruefalse/', title: { en: 'Pokemon True or False', no: 'Pokemon sant eller usant' }, tooltip: { en: 'Facts game!', no: 'Fakta-spill!' } },
-      { href: '/lighthousekeeper/', title: { en: 'Lighthouse Keeper', no: 'Fyrvokter' }, tooltip: { en: 'Keep the light on!', no: 'Hold lyset på!' } },
-      { href: '/CosmicClick/', title: { en: 'Cosmic clicker', no: 'Kosmisk klikker' }, tooltip: { en: 'Incremental clicker!', no: 'Incremental clicker!' } },
-      { href: '/orb/', title: { en: 'Orb Game', no: 'Orb-spill' }, tooltip: { en: 'Race to the finish!', no: 'Kappløp til mål!' } },
-      { href: '/CrystalClick/', title: { en: 'Crystal Mining', no: 'Krystallgraving' }, tooltip: { en: 'Second clicker!', no: 'Andre clicker!' } },
-      { href: '/GalacticClick/', title: { en: 'Galactic Mining', no: 'Galaktisk gruvedrift' }, tooltip: { en: 'Third clicker!', no: 'Tredje clicker!' } },
-      { href: '/memory/', title: { en: 'Guess the mon!', no: 'Gjett monsteret!' }, tooltip: { en: 'How fast are you?', no: 'Hvor rask er du?' } },
-      { href: '/random10/', title: { en: 'Random 10 quiz', no: 'Tilfeldig 10-quiz' }, tooltip: { en: 'Quick 10-question mode', no: 'Rask modus med 10 spørsmål' } },
-      { href: '/quiz-categories/', title: { en: 'Quiz categories', no: 'Quizkategorier' }, tooltip: { en: 'Choose categories and play', no: 'Velg kategorier og spill' } },
-      { href: '/quiz-quest/', title: { en: 'Quiz quest', no: 'Quiz-oppdrag' }, tooltip: { en: 'Quest mode (placeholder)', no: 'Oppdragsmodus (placeholder)' } },
-      { href: '/pokemon-quiz/', title: { en: 'Pokémon quiz', no: 'Pokémon-quiz' }, tooltip: { en: 'Pokémon mode (placeholder)', no: 'Pokémon-modus (placeholder)' } },
-      { href: 'https://html.itch.zone/html/14908902/index.html', title: { en: '3D Platformer', no: '3D-plattformspill' }, tooltip: { en: 'Playable in browser', no: 'Spillbart i nettleser' } }
+      { href: '/tiermaker/', title: 'Tier-maker', tooltip: { en: 'Make your own tier list.', no: 'Lag din egen tier-liste.' } },
+      { href: '/monstercatch/', title: 'Monster catcher', tooltip: { en: 'A local game.', no: 'Et lokalt spill.' } },
+      { href: '/achievements/', title: 'Life Achievements', tooltip: { en: 'Track accomplishments', no: 'Følg fremgang og prestasjoner' } },
+      { href: '/poketruefalse/', title: 'Pokemon True or False', tooltip: { en: 'Facts game!', no: 'Fakta-spill!' } },
+      { href: '/lighthousekeeper/', title: 'Lighthouse Keeper', tooltip: { en: 'Keep the light on!', no: 'Hold lyset på!' } },
+      { href: '/CosmicClick/', title: 'Cosmic clicker', tooltip: { en: 'Incremental clicker!', no: 'Incremental clicker!' } },
+      { href: '/orb/', title: 'Orb Game', tooltip: { en: 'Race to the finish!', no: 'Kappløp til mål!' } },
+      { href: '/CrystalClick/', title: 'Crystal Mining', tooltip: { en: 'Second clicker!', no: 'Andre clicker!' } },
+      { href: '/GalacticClick/', title: 'Galactic Mining', tooltip: { en: 'Third clicker!', no: 'Tredje clicker!' } },
+      { href: '/memory/', title: 'Guess the mon!', tooltip: { en: 'How fast are you?', no: 'Hvor rask er du?' } },
+      { href: '/random10/', title: 'Random 10 quiz', tooltip: { en: 'Quick 10-question mode', no: 'Rask modus med 10 spørsmål' } },
+      { href: '/quiz-categories/', title: 'Quiz categories', tooltip: { en: 'Choose categories and play', no: 'Velg kategorier og spill' } },
+      { href: '/quiz-quest/', title: 'Quiz quest', tooltip: { en: 'Quest mode (placeholder)', no: 'Oppdragsmodus (placeholder)' } },
+      { href: '/pokemon-quiz/', title: 'Pokémon quiz', tooltip: { en: 'Pokémon mode (placeholder)', no: 'Pokémon-modus (placeholder)' } },
+      { href: 'https://html.itch.zone/html/14908902/index.html', title: '3D Platformer', tooltip: { en: 'Playable in browser', no: 'Spillbart i nettleser' } }
     ];
 
     const I18N = {
@@ -331,7 +331,7 @@
       for (const game of GAMES) {
         const anchor = document.createElement('a');
         anchor.href = game.href;
-        anchor.textContent = game.title[currentLanguage] || game.title.en;
+        anchor.textContent = game.title;
 
         const tooltip = document.createElement('span');
         tooltip.className = 'tooltip-text';
