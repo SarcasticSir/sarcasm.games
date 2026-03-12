@@ -11,7 +11,8 @@ This module is meant to be reused across all quiz modes (`random10`, `categories
 - Normalizes free text (case-insensitive, strips apostrophes/punctuation, ignores extra spaces).
 - Removes common helper words (English + Norwegian stop words).
 - Uses Levenshtein-based fuzzy similarity for text answers.
-- Supports numeric year tolerance (default `10%` difference accepted as correct).
+- Supports strict numeric matching for numeric answers.
+- Supports **almost** status for numeric answers when input is exact numeric format and within `10%`.
 - Supports **almost** status when close, and allows one retry.
 
 ## Suggested API usage
