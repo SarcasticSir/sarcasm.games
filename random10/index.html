@@ -346,6 +346,11 @@
       showView('intro');
     });
 
+    abortQuizBtn.addEventListener('click', () => {
+      resetQuizState();
+      showView('intro');
+    });
+
     answerForm.addEventListener('submit', (event) => {
       event.preventDefault();
       onSubmitAnswer();
