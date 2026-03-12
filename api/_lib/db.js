@@ -1,12 +1,81 @@
-const { createClient } = require('@vercel/postgres');
+const { createPool } = require('@vercel/postgres');
+
+const DB_POOL_KEY = Symbol.for('sarcasm.games.db.pool');
+const DB_POOL_LOGGER_KEY = Symbol.for('sarcasm.games.db.poolLoggerAttached');
+
+const DEFAULT_POOL_MAX = 10;
+const DEFAULT_IDLE_TIMEOUT_MS = 30_000;
+const DEFAULT_CONNECTION_TIMEOUT_MS = 5_000;
+
+function parsePositiveIntEnv(name, fallback, { min = 1, max = Number.MAX_SAFE_INTEGER } = {}) {
+  const rawValue = process.env[name];
+  if (rawValue == null || rawValue === '') return fallback;
+
+  const parsed = Number.parseInt(rawValue, 10);
+  if (!Number.isFinite(parsed) || parsed < min) return fallback;
+  return Math.min(parsed, max);
+}
+
+function serializeDbError(error) {
+  return {
+    message: error?.message || 'Unknown database error',
+    code: error?.code || 'UNKNOWN'
+  };
+}
+
+function getPoolConfig() {
+  return {
+    max: parsePositiveIntEnv('DB_POOL_MAX', DEFAULT_POOL_MAX, { min: 1, max: 50 }),
+    idleTimeoutMillis: parsePositiveIntEnv('DB_POOL_IDLE_TIMEOUT_MS', DEFAULT_IDLE_TIMEOUT_MS, { min: 1_000, max: 300_000 }),
+    connectionTimeoutMillis: parsePositiveIntEnv('DB_POOL_CONNECTION_TIMEOUT_MS', DEFAULT_CONNECTION_TIMEOUT_MS, { min: 100, max: 60_000 })
+  };
+}
+
+function createSharedPool() {
+  const poolConfig = getPoolConfig();
+  const pool = createPool(poolConfig);
+
+  pool.on('error', (error) => {
+    console.error('[db] Unexpected pool error', serializeDbError(error));
+  });
+
+  pool[DB_POOL_LOGGER_KEY] = true;
+
+  console.info('[db] Pool initialized', {
+    max: poolConfig.max,
+    idleTimeoutMillis: poolConfig.idleTimeoutMillis,
+    connectionTimeoutMillis: poolConfig.connectionTimeoutMillis
+  });
+
+  return pool;
+}
+
+function getPool() {
+  if (!globalThis[DB_POOL_KEY]) {
+    globalThis[DB_POOL_KEY] = createSharedPool();
+    return globalThis[DB_POOL_KEY];
+  }
+
+  const pool = globalThis[DB_POOL_KEY];
+
+  if (!pool[DB_POOL_LOGGER_KEY] && typeof pool.on === 'function') {
+    pool.on('error', (error) => {
+      console.error('[db] Unexpected pool error', serializeDbError(error));
+    });
+    pool[DB_POOL_LOGGER_KEY] = true;
+  }
+
+  return pool;
+}
 
 async function runQuery(text, params = []) {
-  const client = createClient();
-  await client.connect();
+  const pool = getPool();
+
   try {
-    return await client.query(text, params);
-  } finally {
-    await client.end();
+    return await pool.query(text, params);
+  } catch (error) {
+    console.error('[db] Query failed', serializeDbError(error));
+    throw error;
   }
 }
 
