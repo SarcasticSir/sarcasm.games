@@ -41,6 +41,9 @@
 
     <section id="questionView" class="hidden">
       <div class="progress" id="progressText"></div>
+      <div class="btn-row" style="margin-top:0; margin-bottom:12px;">
+        <button id="abortQuizBtn" type="button">Abort quiz</button>
+      </div>
       <h2 id="questionTitle">Question</h2>
       <p id="questionCategory" class="muted"></p>
       <form id="answerForm">
@@ -87,6 +90,7 @@
     const showAnswerBtn = document.getElementById('showAnswerBtn');
     const nextQuestionBtn = document.getElementById('nextQuestionBtn');
     const submitBtn = document.getElementById('submitBtn');
+    const abortQuizBtn = document.getElementById('abortQuizBtn');
 
     const state = {
       questions: [],
@@ -181,6 +185,18 @@
       }
 
       renderQuestion();
+    }
+
+    function resetQuizState() {
+      state.questions = [];
+      state.index = 0;
+      state.correct = 0;
+      state.almostResolved = 0;
+      state.wrong = 0;
+      state.awaitingRetry = false;
+      state.isSubmitting = false;
+      state.isAdvancing = false;
+      introError.textContent = '';
     }
 
     async function evaluateAnswer(question, userAnswer, retryAvailable) {
@@ -286,6 +302,11 @@
       showView('question');
     });
 
+    abortQuizBtn.addEventListener('click', () => {
+      resetQuizState();
+      showView('intro');
+    });
+
     answerForm.addEventListener('submit', (event) => {
       event.preventDefault();
       onSubmitAnswer();
@@ -300,6 +321,7 @@
     });
 
     document.getElementById('playAgainBtn').addEventListener('click', () => {
+      resetQuizState();
       showView('intro');
     });
   </script>
