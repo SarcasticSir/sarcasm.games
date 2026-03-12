@@ -41,6 +41,9 @@
 
     <section id="questionView" class="hidden">
       <div class="progress" id="progressText"></div>
+      <div class="btn-row" style="margin-top:0; margin-bottom:12px;">
+        <button id="abortQuizBtn" type="button">Abort quiz</button>
+      </div>
       <h2 id="questionTitle">Question</h2>
       <p id="questionCategory" class="muted"></p>
       <form id="answerForm">
@@ -60,9 +63,10 @@
       <p id="resultSummary"></p>
       <ul class="result-list">
         <li><span id="correctCount">0</span> correct</li>
-        <li><span id="almostCount">0</span> almost (resolved on retry)</li>
         <li><span id="wrongCount">0</span> wrong</li>
       </ul>
+      <h3>Answered questions</h3>
+      <ul id="answeredQuestionsList" class="result-list"></ul>
       <div class="btn-row">
         <button id="playAgainBtn" class="btn-primary">Try again</button>
         <a class="link-btn" href="/">Back to sarcasm.games</a>
@@ -87,13 +91,16 @@
     const showAnswerBtn = document.getElementById('showAnswerBtn');
     const nextQuestionBtn = document.getElementById('nextQuestionBtn');
     const submitBtn = document.getElementById('submitBtn');
+    const startBtn = document.getElementById('startBtn');
+    const abortQuizBtn = document.getElementById('abortQuizBtn');
+    const answeredQuestionsList = document.getElementById('answeredQuestionsList');
 
     const state = {
       questions: [],
       index: 0,
       correct: 0,
-      almostResolved: 0,
       wrong: 0,
+      answeredQuestions: [],
       awaitingRetry: false,
       isSubmitting: false,
       isAdvancing: false
@@ -107,6 +114,27 @@
       introView.classList.toggle('hidden', view !== 'intro');
       questionView.classList.toggle('hidden', view !== 'question');
       resultView.classList.toggle('hidden', view !== 'result');
+    }
+
+
+    function setStartLoading(isLoading) {
+      startBtn.disabled = isLoading;
+      startBtn.textContent = isLoading ? 'Loading…' : 'Start Random10 quiz';
+    }
+
+    function renderAnsweredQuestions() {
+      answeredQuestionsList.innerHTML = '';
+
+      for (const entry of state.answeredQuestions) {
+        const item = document.createElement('li');
+        if (entry.status === 'correct') {
+          item.textContent = `✅ ${entry.prompt}`;
+        } else {
+          const answerPart = entry.acceptedAnswer ? ` (Answer: ${entry.acceptedAnswer})` : '';
+          item.textContent = `❌ ${entry.prompt}${answerPart}`;
+        }
+        answeredQuestionsList.appendChild(item);
+      }
     }
 
     function normalizeQuestion(raw, idx) {
@@ -173,14 +201,29 @@
       state.index += 1;
       if (state.index >= state.questions.length) {
         document.getElementById('correctCount').textContent = String(state.correct);
-        document.getElementById('almostCount').textContent = String(state.almostResolved);
         document.getElementById('wrongCount').textContent = String(state.wrong);
+        renderAnsweredQuestions();
         document.getElementById('resultSummary').textContent = `You finished Random10 with ${state.correct} / ${state.questions.length} correct answers.`;
         showView('result');
         return;
       }
 
       renderQuestion();
+    }
+
+    function resetQuizState() {
+      state.questions = [];
+      state.index = 0;
+      state.correct = 0;
+      state.wrong = 0;
+      state.answeredQuestions = [];
+      state.awaitingRetry = false;
+      state.isSubmitting = false;
+      state.isAdvancing = false;
+      introError.textContent = '';
+      statusText.textContent = '';
+      answerReveal.classList.add('hidden');
+      setStartLoading(false);
     }
 
     async function evaluateAnswer(question, userAnswer, retryAvailable) {
@@ -236,6 +279,10 @@
         statusText.className = 'status ok';
         statusText.textContent = pickPositiveMessage();
         state.correct += 1;
+        state.answeredQuestions.push({
+          prompt: question.prompt,
+          status: 'correct'
+        });
         state.isSubmitting = false;
         state.isAdvancing = true;
         submitBtn.disabled = true;
@@ -256,10 +303,12 @@
         return;
       }
 
-      if (state.awaitingRetry) {
-        state.almostResolved += 1;
-      }
       state.wrong += 1;
+      state.answeredQuestions.push({
+        prompt: question.prompt,
+        status: 'wrong',
+        acceptedAnswer: result.acceptedAnswer || null
+      });
       state.awaitingRetry = false;
       state.isSubmitting = false;
       statusText.className = 'status wrong';
@@ -269,21 +318,32 @@
       submitBtn.disabled = true;
     }
 
-    document.getElementById('startBtn').addEventListener('click', async () => {
+    startBtn.addEventListener('click', async () => {
+      if (startBtn.disabled) return;
+      setStartLoading(true);
       state.questions = await loadQuestions();
       if (state.questions.length < 10) {
+        setStartLoading(false);
         return;
       }
 
       state.index = 0;
       state.correct = 0;
-      state.almostResolved = 0;
       state.wrong = 0;
+      state.answeredQuestions = [];
       state.awaitingRetry = false;
       state.isSubmitting = false;
       state.isAdvancing = false;
       renderQuestion();
       showView('question');
+      setStartLoading(false);
+    });
+
+    abortQuizBtn.addEventListener('click', () => {
+      const shouldAbort = window.confirm('Abort current quiz and return to start?');
+      if (!shouldAbort) return;
+      resetQuizState();
+      showView('intro');
     });
 
     answerForm.addEventListener('submit', (event) => {
@@ -300,6 +360,7 @@
     });
 
     document.getElementById('playAgainBtn').addEventListener('click', () => {
+      resetQuizState();
       showView('intro');
     });
   </script>
