@@ -12,15 +12,46 @@ function parseBody(body) {
   return typeof body === 'object' ? body : {};
 }
 
+function normalizeAnswerValues(value) {
+  if (!value) return [];
+
+  if (Array.isArray(value)) {
+    return value
+      .flatMap((part) => normalizeAnswerValues(part));
+  }
+
+  return String(value)
+    .split('|')
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
+function extractAnswers(row, lang) {
+  const preferred = lang === 'no'
+    ? [row.answers_no, row.answers_en]
+    : [row.answers_en, row.answers_no];
+
+  const seen = new Set();
+  return preferred
+    .flatMap((value) => normalizeAnswerValues(value))
+    .filter((value) => {
+      const key = value.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+}
+
 function mapQuestion(row, lang) {
   const prompt = lang === 'no'
-    ? row.question_no || row.question_en || row.question || ''
-    : row.question_en || row.question_no || row.question || '';
+    ? row.question_no || row.question_en || ''
+    : row.question_en || row.question_no || '';
 
   return {
     id: row.id,
     category: row.category || 'General',
-    prompt
+    prompt,
+    answers: extractAnswers(row, lang)
   };
 }
 
@@ -41,14 +72,16 @@ module.exports = async function handler(req, res) {
     const limit = Math.max(1, Math.min(Number(count) || 10, 50));
 
     const query = await runQuery(
-      `SELECT id, category, question_en, question_no, question
+      `SELECT id, category, question_en, question_no, answers_en, answers_no
        FROM quiz_questions
        ORDER BY RANDOM()
        LIMIT $1`,
       [limit]
     );
 
-    const questions = query.rows.map((row) => mapQuestion(row, lang));
+    const questions = query.rows
+      .map((row) => mapQuestion(row, lang))
+      .filter((row) => row.prompt && row.answers.length);
 
     res.status(200).json({
       mode: 'random10',

@@ -14,19 +14,32 @@ function parseBody(body) {
   return typeof body === 'object' ? body : {};
 }
 
+function normalizeAnswerValues(value) {
+  if (!value) return [];
+
+  if (Array.isArray(value)) {
+    return value
+      .flatMap((part) => normalizeAnswerValues(part));
+  }
+
+  return String(value)
+    .split('|')
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
 function extractAcceptedAnswers(row) {
-  const candidates = [
-    row.answer_en,
-    row.answer_no,
-    row.answer,
-    row.correct_answer,
-    row.correct_answer_en,
-    row.correct_answer_no
-  ];
+  const candidates = [row.answers_en, row.answers_no];
+  const seen = new Set();
 
   return candidates
-    .filter(Boolean)
-    .flatMap((value) => String(value).split('|').map((part) => part.trim()).filter(Boolean));
+    .flatMap((value) => normalizeAnswerValues(value))
+    .filter((value) => {
+      const key = value.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
 }
 
 async function persistProgress(userId, questionId, isCorrect) {
@@ -60,7 +73,7 @@ module.exports = async function handler(req, res) {
     }
 
     const questionResult = await runQuery(
-      `SELECT id, answer_en, answer_no, answer, correct_answer, correct_answer_en, correct_answer_no
+      `SELECT id, answers_en, answers_no
        FROM quiz_questions
        WHERE id = $1
        LIMIT 1`,
@@ -98,7 +111,9 @@ module.exports = async function handler(req, res) {
       questionId,
       status: evaluation.status,
       retryAvailable: evaluation.retryAvailable,
-      acceptedAnswer: evaluation.matchedAnswer || acceptedAnswers[0] || null
+      acceptedAnswer: evaluation.status === 'wrong'
+        ? (evaluation.matchedAnswer || acceptedAnswers[0] || null)
+        : null
     });
   } catch (error) {
     console.error('[quiz/answer] failed:', error?.message);
