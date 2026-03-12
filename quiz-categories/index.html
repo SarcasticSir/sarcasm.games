@@ -64,13 +64,45 @@
       border-radius:10px;
       padding:10px;
       background:#181920;
+      transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .cat.is-selected {
+      border-color: #3ebd95;
+      background: linear-gradient(180deg, #172922 0%, #141f1b 100%);
+      box-shadow: inset 0 0 0 1px rgba(78, 204, 163, 0.35);
     }
 
     .cat label {
       display:flex;
       gap:8px;
-      align-items:flex-start;
+      align-items:center;
       cursor:pointer;
+      position: relative;
+      min-height: 24px;
+    }
+
+    .cat input[type="checkbox"] {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .cat-pill {
+      width: 14px;
+      height: 14px;
+      border-radius: 999px;
+      border: 1px solid #6f7788;
+      background: #2f3340;
+      box-sizing: border-box;
+      flex-shrink: 0;
+      transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .cat.is-selected .cat-pill {
+      border-color: #56d5ad;
+      background: #43c89f;
+      box-shadow: 0 0 0 3px rgba(67, 200, 159, 0.2);
     }
 
     .cat-name { font-weight:700; }
@@ -204,6 +236,9 @@
       runtimeState.categories.forEach((category, index) => {
         const wrapper = document.createElement('article');
         wrapper.className = 'cat';
+        if (category.selected) {
+          wrapper.classList.add('is-selected');
+        }
 
         const label = document.createElement('label');
         const checkbox = document.createElement('input');
@@ -211,8 +246,13 @@
         checkbox.checked = category.selected;
         checkbox.setAttribute('aria-label', `Select ${category.name}`);
 
+        const visualPill = document.createElement('span');
+        visualPill.className = 'cat-pill';
+        visualPill.setAttribute('aria-hidden', 'true');
+
         checkbox.addEventListener('change', () => {
           runtimeState.categories[index].selected = checkbox.checked;
+          wrapper.classList.toggle('is-selected', checkbox.checked);
           renderCountState();
         });
 
@@ -227,7 +267,7 @@
         countEl.textContent = `${category.questionCount} question${category.questionCount === 1 ? '' : 's'}`;
 
         textWrapper.append(nameEl, document.createElement('br'), countEl);
-        label.append(checkbox, textWrapper);
+        label.append(checkbox, visualPill, textWrapper);
         wrapper.appendChild(label);
         categoryGrid.appendChild(wrapper);
       });
