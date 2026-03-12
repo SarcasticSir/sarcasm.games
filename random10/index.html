@@ -79,83 +79,13 @@
     </section>
   </main>
 
-  <script>
-    const allowedLanguages = new Set(['en', 'no']);
-    const fallbackLanguage = 'en';
-    const copy = {
-      en: {
-        title: 'Random10 quiz',
-        introLead: 'Welcome! On this page you will get 10 random questions from mixed categories.',
-        introFeature: 'New: you can reveal the answer only after a wrong guess, then move on manually.',
-        introRules: 'Answer checks follow forgiving rules for text answers: punctuation and tiny text differences are tolerated, close answers can become Almost. Numeric answers require exact numbers, but values within 10% are marked as Almost. If you get Almost, you get one extra try.',
-        startQuiz: 'Start Random10 quiz',
-        backHome: 'Back to sarcasm.games',
-        loading: 'Loading…',
-        loadingError: 'Could not load questions from API. Please try again.',
-        fetchError: 'Could not fetch quiz questions from API.',
-        notEnoughQuestions: 'Not enough API questions available yet.',
-        progress: 'Question {current} / {total}',
-        category: 'Category: {category}',
-        abortQuiz: 'Abort quiz',
-        abortConfirm: 'Abort current quiz?',
-        abortYes: 'Yes, abort',
-        abortNo: 'Continue quiz',
-        questionTitle: 'Question',
-        answerPlaceholder: 'Write your answer here',
-        submitAnswer: 'Submit answer',
-        showAnswer: 'Show answer',
-        nextQuestion: 'Next question',
-        answerPrefix: 'Answer: {answer}',
-        resultTitle: 'Quiz complete 🎉',
-        resultSummary: 'You finished Random10 with {correct} / {total} correct answers.',
-        correctCount: 'correct',
-        wrongCount: 'wrong',
-        answeredQuestionsHeading: 'Answered questions',
-        playAgain: 'Try again',
-        answerSubmitError: 'Could not submit answer. Please try again.',
-        answerValidateError: 'Could not validate answer.',
-        invalidPayloadError: 'Invalid answer payload.',
-        almostStatus: 'Almost — try again.',
-        wrongStatus: 'Wrong answer. You can show answer, then continue.',
-        positiveMessages: ['Good!', 'Great job!', 'Nice one!', 'Excellent!', 'Well done!']
-      },
-      no: {
-        title: 'Random10-quiz',
-        introLead: 'Velkommen! På denne siden får du 10 tilfeldige spørsmål fra blandede kategorier.',
-        introFeature: 'Nytt: du kan vise svaret først etter et feilforsøk, og deretter gå videre manuelt.',
-        introRules: 'Svarevaluering bruker tilgivende regler for tekstsvar: tegnsetting og små tekstforskjeller tolereres, og nære svar kan bli Almost. Numeriske svar krever eksakte tall, men verdier innenfor 10 % markeres som Almost. Får du Almost, får du ett ekstra forsøk.',
-        startQuiz: 'Start Random10-quiz',
-        backHome: 'Tilbake til sarcasm.games',
-        loading: 'Laster…',
-        loadingError: 'Kunne ikke laste spørsmål fra API. Prøv igjen.',
-        fetchError: 'Kunne ikke hente quizspørsmål fra API.',
-        notEnoughQuestions: 'Ikke nok API-spørsmål tilgjengelig ennå.',
-        progress: 'Spørsmål {current} / {total}',
-        category: 'Kategori: {category}',
-        abortQuiz: 'Avbryt quiz',
-        abortConfirm: 'Avbryte nåværende quiz?',
-        abortYes: 'Ja, avbryt',
-        abortNo: 'Fortsett quiz',
-        questionTitle: 'Spørsmål',
-        answerPlaceholder: 'Skriv svaret ditt her',
-        submitAnswer: 'Send svar',
-        showAnswer: 'Vis svar',
-        nextQuestion: 'Neste spørsmål',
-        answerPrefix: 'Svar: {answer}',
-        resultTitle: 'Quiz fullført 🎉',
-        resultSummary: 'Du fullførte Random10 med {correct} / {total} riktige svar.',
-        correctCount: 'riktige',
-        wrongCount: 'feil',
-        answeredQuestionsHeading: 'Besvarte spørsmål',
-        playAgain: 'Prøv igjen',
-        answerSubmitError: 'Kunne ikke sende svar. Prøv igjen.',
-        answerValidateError: 'Kunne ikke validere svar.',
-        invalidPayloadError: 'Ugyldig svarpayload.',
-        almostStatus: 'Nesten — prøv igjen.',
-        wrongStatus: 'Feil svar. Du kan vise svaret, og deretter fortsette.',
-        positiveMessages: ['Bra!', 'Godt jobba!', 'Nydelig!', 'Utmerket!', 'Flott!']
-      }
-    };
+  <script type="module">
+    import { getQuizLanguage } from '/lib/client/quiz-language.js';
+
+    const positiveMessages = ['Good!', 'Great job!', 'Nice one!', 'Excellent!', 'Well done!'];
+
+    // Language is locked for this runtime session once loaded.
+    const activeLang = getQuizLanguage();
 
     const introView = document.getElementById('introView');
     const questionView = document.getElementById('questionView');
@@ -204,7 +134,8 @@
       answeredQuestions: [],
       awaitingRetry: false,
       isSubmitting: false,
-      isAdvancing: false
+      isAdvancing: false,
+      quizStarted: false
     };
 
 
@@ -269,7 +200,7 @@
         const response = await fetch('/api/quiz/start', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ mode: 'random10', count: 10, lang: state.language })
+          body: JSON.stringify({ mode: 'random10', count: 10, lang: activeLang })
         });
 
         if (!response.ok) {
@@ -337,6 +268,7 @@
       state.awaitingRetry = false;
       state.isSubmitting = false;
       state.isAdvancing = false;
+      state.quizStarted = false;
       introError.textContent = '';
       statusText.textContent = '';
       answerReveal.classList.add('hidden');
@@ -353,7 +285,7 @@
           answer: userAnswer,
           retryAvailable,
           mode: 'random10',
-          lang: state.language
+          lang: activeLang
         })
       });
 
@@ -481,6 +413,7 @@
       state.awaitingRetry = false;
       state.isSubmitting = false;
       state.isAdvancing = false;
+      state.quizStarted = true;
       renderQuestion();
       showView('question');
       setStartLoading(false);
