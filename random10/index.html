@@ -31,7 +31,7 @@
       <h1>Random10 quiz</h1>
       <p>Welcome! On this page you will get 10 random questions from mixed categories.</p>
       <p>New: you can reveal the answer only after a wrong guess, then move on manually.</p>
-      <p>Answer checks follow forgiving rules: punctuation and tiny text differences are tolerated, close answers can become <strong>Almost</strong>, and for years we use tolerance windows. If you get <strong>Almost</strong>, you get one extra try.</p>
+      <p>Answer checks follow forgiving rules for text answers: punctuation and tiny text differences are tolerated, close answers can become <strong>Almost</strong>. Numeric answers require exact numbers, but values within 10% are marked as <strong>Almost</strong>. If you get <strong>Almost</strong>, you get one extra try.</p>
       <div class="btn-row">
         <button id="startBtn" class="btn-primary">Start Random10 quiz</button>
         <a class="link-btn" href="/">Back to sarcasm.games</a>
@@ -94,7 +94,9 @@
       correct: 0,
       almostResolved: 0,
       wrong: 0,
-      awaitingRetry: false
+      awaitingRetry: false,
+      isSubmitting: false,
+      isAdvancing: false
     };
 
     function pickPositiveMessage() {
@@ -153,8 +155,11 @@
       questionTitle.textContent = q.prompt;
       questionCategory.textContent = `Category: ${q.category}`;
       answerInput.value = '';
+      answerInput.disabled = false;
       answerInput.focus();
       state.awaitingRetry = false;
+      state.isSubmitting = false;
+      state.isAdvancing = false;
       statusText.textContent = '';
       statusText.className = 'status';
       answerReveal.classList.add('hidden');
@@ -204,18 +209,26 @@
     }
 
     async function onSubmitAnswer() {
-      if (submitBtn.disabled) return;
+      if (submitBtn.disabled || state.isSubmitting || state.isAdvancing) return;
 
       const userAnswer = answerInput.value.trim();
       if (!userAnswer) return;
       const question = state.questions[state.index];
+      const submittedIndex = state.index;
+      state.isSubmitting = true;
 
       let result;
       try {
         result = await evaluateAnswer(question, userAnswer, !state.awaitingRetry);
       } catch (error) {
+        state.isSubmitting = false;
         statusText.className = 'status wrong';
         statusText.textContent = 'Could not submit answer. Please try again.';
+        return;
+      }
+
+      if (state.index !== submittedIndex) {
+        state.isSubmitting = false;
         return;
       }
 
@@ -223,12 +236,19 @@
         statusText.className = 'status ok';
         statusText.textContent = pickPositiveMessage();
         state.correct += 1;
-        setTimeout(moveNextQuestion, 700);
+        state.isSubmitting = false;
+        state.isAdvancing = true;
+        submitBtn.disabled = true;
+        answerInput.disabled = true;
+        setTimeout(() => {
+          moveNextQuestion();
+        }, 700);
         return;
       }
 
       if (result.status === 'almost' && !state.awaitingRetry) {
         state.awaitingRetry = true;
+        state.isSubmitting = false;
         statusText.className = 'status almost';
         statusText.textContent = 'Almost — try again.';
         answerInput.value = '';
@@ -241,6 +261,7 @@
       }
       state.wrong += 1;
       state.awaitingRetry = false;
+      state.isSubmitting = false;
       statusText.className = 'status wrong';
       statusText.textContent = 'Wrong answer. You can show answer, then continue.';
       showAnswerBtn.classList.remove('hidden');
@@ -259,6 +280,8 @@
       state.almostResolved = 0;
       state.wrong = 0;
       state.awaitingRetry = false;
+      state.isSubmitting = false;
+      state.isAdvancing = false;
       renderQuestion();
       showView('question');
     });
