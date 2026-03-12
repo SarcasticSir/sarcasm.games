@@ -5,53 +5,198 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Quiz quest</title>
   <style>
-    :root { --bg:#0b0c10; --card:#1e1f25; --txt:#eaeaea; --bd:#2f313a; --accent:#4ecca3; --muted:#9aa0ad; --ok:#80ed99; --bad:#ff8b8b; }
+    :root {
+      --bg:#0b0c10;
+      --card:#1e1f25;
+      --txt:#eaeaea;
+      --bd:#2f313a;
+      --accent:#4ecca3;
+      --muted:#9aa0ad;
+      --danger:#ff8b8b;
+      --ok:#80ed99;
+    }
+
     * { box-sizing: border-box; }
-    body { margin:0; font:16px/1.45 system-ui, Segoe UI, Roboto, Arial; background:var(--bg); color:var(--txt); min-height:100dvh; display:grid; place-items:center; padding:24px; }
-    .card { width:min(780px,100%); background:var(--card); border:1px solid var(--bd); border-radius:14px; padding:20px; }
-    h1,h2 { margin:0 0 10px; }
-    p { margin:0 0 12px; color:var(--muted); }
-    .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
-    select,input[type="text"],button,.link-btn { border:1px solid var(--bd); border-radius:8px; padding:10px 12px; background:transparent; color:var(--txt); font:inherit; }
-    select { min-width:240px; }
-    input[type="text"] { width:100%; }
-    button,.link-btn { font-weight:700; cursor:pointer; text-decoration:none; }
-    .btn-primary { background:var(--accent); border-color:var(--accent); color:#111; }
-    button:disabled { opacity:.6; cursor:not-allowed; }
-    .muted { color:var(--muted); }
-    .status { min-height:24px; font-weight:700; }
-    .status.ok { color:var(--ok); }
-    .status.bad { color:var(--bad); }
-    .hidden { display:none !important; }
-    .badge { border:1px solid var(--bd); border-radius:999px; padding:4px 10px; font-size:13px; color:var(--muted); }
-    .question-card { border:1px solid var(--bd); border-radius:10px; padding:14px; background:#181920; margin-top:14px; }
+
+    body {
+      margin:0;
+      font:16px/1.4 system-ui, Segoe UI, Roboto, Arial;
+      background:var(--bg);
+      color:var(--txt);
+      min-height:100dvh;
+      display:grid;
+      place-items:center;
+      padding:20px;
+      box-sizing:border-box;
+    }
+
+    .card {
+      width:min(760px,100%);
+      background:var(--card);
+      border:1px solid var(--bd);
+      border-radius:14px;
+      padding:20px;
+    }
+
+    h1, h2 { margin:0 0 10px; }
+
+    .muted {
+      margin:0 0 14px;
+      color:var(--muted);
+    }
+
+    .status {
+      min-height: 1.5rem;
+      margin: 0 0 12px;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .status.error { color: var(--danger); }
+    .status.ok { color: var(--ok); }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 10px;
+      margin: 0 0 16px;
+    }
+
+    .cat {
+      border:1px solid var(--bd);
+      border-radius:10px;
+      padding:10px;
+      background:#181920;
+      transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .cat.is-selected {
+      border-color: #3ebd95;
+      background: linear-gradient(180deg, #172922 0%, #141f1b 100%);
+      box-shadow: inset 0 0 0 1px rgba(78, 204, 163, 0.35);
+    }
+
+    .cat label {
+      display:flex;
+      gap:8px;
+      align-items:center;
+      cursor:pointer;
+      position: relative;
+      min-height: 24px;
+    }
+
+    .cat input[type="checkbox"] {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .cat-pill {
+      width: 14px;
+      height: 14px;
+      border-radius: 999px;
+      border: 1px solid #6f7788;
+      background: #2f3340;
+      box-sizing: border-box;
+      flex-shrink: 0;
+      transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .cat.is-selected .cat-pill {
+      border-color: #56d5ad;
+      background: #43c89f;
+      box-shadow: 0 0 0 3px rgba(67, 200, 159, 0.2);
+    }
+
+    .cat-name { font-weight:700; }
+    .cat-count { color:var(--muted); font-size: 14px; }
+
+    .controls,
+    .actions,
+    .btn-row {
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      align-items:center;
+      margin-top:12px;
+    }
+
+    select,
+    input[type="text"],
+    button,
+    .link-btn {
+      border:1px solid var(--bd);
+      border-radius:8px;
+      padding:10px 14px;
+      font:inherit;
+      background:transparent;
+      color:var(--txt);
+    }
+
+    input[type="text"] {
+      width:100%;
+      background:var(--bg);
+      font-size:16px;
+      padding:12px;
+    }
+
+    button,
+    .link-btn {
+      font-weight:700;
+      cursor:pointer;
+      text-decoration:none;
+    }
+
+    .btn-primary {
+      background:var(--accent);
+      color:#111;
+      border-color:var(--accent);
+    }
+
+    button:disabled {
+      opacity:0.5;
+      cursor:not-allowed;
+    }
+
+    .hidden { display: none !important; }
+
+    .question-card {
+      border:1px solid var(--bd);
+      border-radius:8px;
+      padding:12px;
+      background:#181920;
+      margin-top: 14px;
+    }
   </style>
 </head>
 <body>
   <main class="card">
     <h1>Quiz quest</h1>
-    <p id="introText">Answer questions per category. Correct answers are removed from your pool.</p>
+    <p id="introText" class="muted">Choose one or more categories and answer until the pool is complete.</p>
 
-    <div class="row" style="margin-bottom:10px;">
-      <span id="modeBadge" class="badge">Guest mode</span>
-      <span id="categoryProgress" class="badge">Remaining: -</span>
-    </div>
+    <p id="modeText" class="muted"></p>
+    <p id="poolStatus" class="status"></p>
+    <p id="setupStatus" class="status" role="status" aria-live="polite"></p>
 
-    <div class="row">
-      <select id="categorySelect" aria-label="Category"></select>
+    <section id="categoryGrid" class="grid" aria-label="Quiz quest categories"></section>
+
+    <div class="actions">
       <button id="loadQuestionBtn" class="btn-primary" type="button">Get question</button>
-      <button id="resetCategoryBtn" type="button">Reset category</button>
-      <a class="link-btn" href="/">Back to sarcasm.games</a>
+      <a href="/" class="link-btn" id="backLink">Back to sarcasm.games</a>
     </div>
 
-    <p id="setupStatus" class="status"></p>
+    <div class="controls">
+      <label for="resetCategorySelect" class="muted" id="resetLabel">Reset category</label>
+      <select id="resetCategorySelect"></select>
+      <button id="resetCategoryBtn" type="button">Reset category</button>
+    </div>
 
     <section id="questionSection" class="question-card hidden">
       <p id="questionCategory" class="muted"></p>
-      <h2 id="questionPrompt"></h2>
+      <h2 id="questionPrompt">Question</h2>
       <form id="answerForm">
         <input id="answerInput" type="text" placeholder="Write your answer" autocomplete="off" />
-        <div class="row" style="margin-top:10px;">
+        <div class="btn-row">
           <button id="submitBtn" type="submit" class="btn-primary">Submit</button>
           <button id="nextBtn" type="button" class="hidden">Next question</button>
         </div>
@@ -69,58 +214,62 @@
 
     const copy = {
       en: {
-        intro: 'Answer questions per category. Correct answers are removed from your pool.',
-        guestMode: 'Guest mode',
-        userMode: 'Logged in mode',
+        intro: 'Choose one or more categories and answer until the pool is complete.',
+        modeGuest: 'Mode: Guest (progress is saved in this browser)',
+        modeUser: 'Mode: Logged in (progress is saved on your account)',
+        selectedPool: 'Selected pool: {remaining} remaining of {total} total.',
+        selectHint: 'Select at least one category to continue.',
         getQuestion: 'Get question',
-        resetCategory: 'Reset category',
+        next: 'Next question',
+        submit: 'Submit',
         back: 'Back to sarcasm.games',
-        remaining: 'Remaining: {remaining} / {total}',
-        solved: 'Solved: {solved}',
-        emptyCategory: 'Category complete! Reset category to play it again.',
-        noCategories: 'No categories available.',
-        failedOverview: 'Could not load categories right now.',
+        resetCategory: 'Reset category',
+        resetCategoryLabel: 'Reset category',
+        resetUserDone: 'Category progress reset.',
+        resetGuestDone: 'Guest progress reset for this category.',
+        resetNeedsCategory: 'Choose a category to reset.',
+        failedOverview: 'Could not load category overview.',
         failedQuestion: 'Could not load a question.',
         failedAnswer: 'Could not validate answer.',
         failedReset: 'Could not reset category.',
-        resetNeedsLogin: 'Log in to reset server progress. In guest mode, reset uses local storage only.',
+        emptySelection: 'Choose at least one category first.',
+        emptyPool: 'No unsolved valid questions left in selected categories.',
         questionIn: 'Category: {category}',
-        correct: '✅ Correct! Removed from your quest pool.',
-        wrong: '❌ Wrong. You can continue with another question.',
+        correct: '✅ Correct! Removed from your pool.',
+        wrong: '❌ Wrong. Move to another random question.',
         answerPrefix: 'Accepted answer: {answer}',
-        submit: 'Submit',
-        next: 'Next question',
         yourAnswerMissing: 'Write an answer first.',
-        resetGuestDone: 'Guest progress for this category reset.',
-        resetUserDone: 'Category progress reset.',
-        placeholder: 'Write your answer'
+        placeholder: 'Write your answer',
+        noCategories: 'No categories available.'
       },
       no: {
-        intro: 'Svar på spørsmål per kategori. Riktige svar fjernes fra din pool.',
-        guestMode: 'Gjestemodus',
-        userMode: 'Innlogget modus',
+        intro: 'Velg én eller flere kategorier og svar til poolen er fullført.',
+        modeGuest: 'Modus: Gjest (fremgang lagres i denne nettleseren)',
+        modeUser: 'Modus: Innlogget (fremgang lagres på kontoen din)',
+        selectedPool: 'Valgt pool: {remaining} gjenstår av {total} totalt.',
+        selectHint: 'Velg minst én kategori for å fortsette.',
         getQuestion: 'Hent spørsmål',
-        resetCategory: 'Reset kategori',
-        back: 'Tilbake til sarcasm.games',
-        remaining: 'Gjenstår: {remaining} / {total}',
-        solved: 'Løst: {solved}',
-        emptyCategory: 'Kategorien er fullført! Reset kategori for å spille igjen.',
-        noCategories: 'Ingen kategorier tilgjengelig.',
-        failedOverview: 'Kunne ikke laste kategorier nå.',
-        failedQuestion: 'Kunne ikke hente spørsmål.',
-        failedAnswer: 'Kunne ikke sjekke svaret.',
-        failedReset: 'Kunne ikke resette kategori.',
-        resetNeedsLogin: 'Logg inn for å resette server-progresjon. I gjestemodus brukes localStorage.',
-        questionIn: 'Kategori: {category}',
-        correct: '✅ Riktig! Spørsmålet er fjernet fra quest-poolen din.',
-        wrong: '❌ Feil. Du kan gå videre til et nytt spørsmål.',
-        answerPrefix: 'Godkjent svar: {answer}',
-        submit: 'Svar',
         next: 'Neste spørsmål',
-        yourAnswerMissing: 'Skriv et svar først.',
-        resetGuestDone: 'Gjestefremgang for kategorien er resatt.',
+        submit: 'Svar',
+        back: 'Tilbake til sarcasm.games',
+        resetCategory: 'Reset kategori',
+        resetCategoryLabel: 'Reset kategori',
         resetUserDone: 'Kategorifremgang er resatt.',
-        placeholder: 'Skriv svaret ditt'
+        resetGuestDone: 'Gjestefremgang for kategorien er resatt.',
+        resetNeedsCategory: 'Velg en kategori å resette.',
+        failedOverview: 'Kunne ikke laste kategorioversikt.',
+        failedQuestion: 'Kunne ikke hente spørsmål.',
+        failedAnswer: 'Kunne ikke sjekke svar.',
+        failedReset: 'Kunne ikke resette kategori.',
+        emptySelection: 'Velg minst én kategori først.',
+        emptyPool: 'Ingen uløste gyldige spørsmål igjen i valgte kategorier.',
+        questionIn: 'Kategori: {category}',
+        correct: '✅ Riktig! Fjernet fra poolen din.',
+        wrong: '❌ Feil. Gå videre til et nytt tilfeldig spørsmål.',
+        answerPrefix: 'Godkjent svar: {answer}',
+        yourAnswerMissing: 'Skriv et svar først.',
+        placeholder: 'Skriv svaret ditt',
+        noCategories: 'Ingen kategorier tilgjengelig.'
       }
     };
 
@@ -134,12 +283,15 @@
     };
 
     const introText = document.getElementById('introText');
-    const modeBadge = document.getElementById('modeBadge');
-    const categoryProgress = document.getElementById('categoryProgress');
-    const categorySelect = document.getElementById('categorySelect');
-    const loadQuestionBtn = document.getElementById('loadQuestionBtn');
-    const resetCategoryBtn = document.getElementById('resetCategoryBtn');
+    const modeText = document.getElementById('modeText');
+    const poolStatus = document.getElementById('poolStatus');
     const setupStatus = document.getElementById('setupStatus');
+    const categoryGrid = document.getElementById('categoryGrid');
+    const loadQuestionBtn = document.getElementById('loadQuestionBtn');
+    const resetLabel = document.getElementById('resetLabel');
+    const resetCategorySelect = document.getElementById('resetCategorySelect');
+    const resetCategoryBtn = document.getElementById('resetCategoryBtn');
+    const backLink = document.getElementById('backLink');
     const questionSection = document.getElementById('questionSection');
     const questionCategory = document.getElementById('questionCategory');
     const questionPrompt = document.getElementById('questionPrompt');
@@ -167,8 +319,11 @@
           const uniqueIds = [...new Set(ids
             .map((id) => Number(id))
             .filter((id) => Number.isInteger(id) && id > 0))];
-          if (uniqueIds.length) normalized[category] = uniqueIds;
+          if (uniqueIds.length) {
+            normalized[category] = uniqueIds;
+          }
         }
+
         return normalized;
       } catch (error) {
         return {};
@@ -213,74 +368,22 @@
       return response.json();
     }
 
-    function renderStaticText() {
-      introText.textContent = ui().intro;
-      loadQuestionBtn.textContent = ui().getQuestion;
-      resetCategoryBtn.textContent = ui().resetCategory;
-      document.querySelector('.link-btn').textContent = ui().back;
-      submitBtn.textContent = ui().submit;
-      nextBtn.textContent = ui().next;
-      answerInput.placeholder = ui().placeholder;
-      modeBadge.textContent = state.session ? ui().userMode : ui().guestMode;
-      resetCategoryBtn.title = state.session ? '' : ui().resetNeedsLogin;
+    function selectedCategories() {
+      return state.categories.filter((category) => category.selected).map((category) => category.name);
     }
 
-    function renderCategories() {
-      categorySelect.innerHTML = '';
-
-      if (!state.categories.length) {
-        const option = document.createElement('option');
-        option.value = '';
-        option.textContent = ui().noCategories;
-        categorySelect.appendChild(option);
-        categorySelect.disabled = true;
-        loadQuestionBtn.disabled = true;
-        resetCategoryBtn.disabled = true;
-        categoryProgress.textContent = ui().remaining.replace('{remaining}', '-').replace('{total}', '-');
+    function renderPoolStatus() {
+      const selected = state.categories.filter((category) => category.selected);
+      if (!selected.length) {
+        poolStatus.textContent = ui().selectHint;
         return;
       }
 
-      const selectedValue = categorySelect.value;
-
-      for (const category of state.categories) {
-        const option = document.createElement('option');
-        option.value = category.name;
-        option.textContent = `${category.name} (${category.remaining}/${category.total})`;
-        categorySelect.appendChild(option);
-      }
-
-      const match = state.categories.find((entry) => entry.name === selectedValue);
-      categorySelect.value = match ? selectedValue : state.categories[0].name;
-      categorySelect.disabled = false;
-      loadQuestionBtn.disabled = false;
-      resetCategoryBtn.disabled = false;
-      renderCategoryStats();
-    }
-
-    function renderCategoryStats() {
-      const current = state.categories.find((entry) => entry.name === categorySelect.value);
-      if (!current) {
-        categoryProgress.textContent = ui().remaining.replace('{remaining}', '-').replace('{total}', '-');
-        return;
-      }
-
-      const remainingLabel = ui().remaining
-        .replace('{remaining}', String(current.remaining))
-        .replace('{total}', String(current.total));
-      const solvedLabel = ui().solved.replace('{solved}', String(current.solved));
-      categoryProgress.textContent = `${remainingLabel} · ${solvedLabel}`;
-    }
-
-    async function refreshOverview() {
-      try {
-        const payload = await questApi('overview');
-        state.categories = Array.isArray(payload.categories) ? payload.categories : [];
-        renderCategories();
-        setupStatus.textContent = '';
-      } catch (error) {
-        setupStatus.className = 'status bad';
-        setupStatus.textContent = ui().failedOverview;
-      }
+      const total = selected.reduce((sum, category) => sum + category.total, 0);
+      const remaining = selected.reduce((sum, category) => sum + category.remaining, 0);
+      poolStatus.textContent = ui().selectedPool
+        .replace('{remaining}', String(remaining))
+        .replace('{total}', String(total));
     }
 
     function clearQuestionState() {
@@ -294,32 +397,154 @@
       submitBtn.disabled = false;
     }
 
-    async function loadQuestion() {
-      const category = categorySelect.value;
-      if (!category) return;
-      if (state.isLoadingQuestion) return;
+    function renderResetCategories() {
+      const previous = resetCategorySelect.value;
+      resetCategorySelect.innerHTML = '';
 
+      for (const category of state.categories) {
+        const option = document.createElement('option');
+        option.value = category.name;
+        option.textContent = category.name;
+        resetCategorySelect.appendChild(option);
+      }
+
+      if (!state.categories.length) {
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = ui().noCategories;
+        resetCategorySelect.appendChild(option);
+      }
+
+      const exists = state.categories.some((category) => category.name === previous);
+      resetCategorySelect.value = exists ? previous : (state.categories[0]?.name || '');
+      resetCategorySelect.disabled = !state.categories.length;
+      resetCategoryBtn.disabled = !state.categories.length;
+    }
+
+    function renderCategories() {
+      categoryGrid.innerHTML = '';
+
+      if (!state.categories.length) {
+        const empty = document.createElement('p');
+        empty.className = 'muted';
+        empty.textContent = ui().noCategories;
+        categoryGrid.appendChild(empty);
+        loadQuestionBtn.disabled = true;
+        renderPoolStatus();
+        renderResetCategories();
+        return;
+      }
+
+      loadQuestionBtn.disabled = false;
+
+      state.categories.forEach((category, index) => {
+        const wrapper = document.createElement('article');
+        wrapper.className = 'cat';
+        wrapper.classList.toggle('is-selected', category.selected);
+
+        const label = document.createElement('label');
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = category.selected;
+
+        const visualPill = document.createElement('span');
+        visualPill.className = 'cat-pill';
+        visualPill.setAttribute('aria-hidden', 'true');
+
+        const textWrapper = document.createElement('span');
+
+        const nameEl = document.createElement('span');
+        nameEl.className = 'cat-name';
+        nameEl.textContent = category.name;
+
+        const countEl = document.createElement('span');
+        countEl.className = 'cat-count';
+        countEl.textContent = `${category.remaining}/${category.total}`;
+
+        checkbox.addEventListener('change', () => {
+          state.categories[index].selected = checkbox.checked;
+          wrapper.classList.toggle('is-selected', checkbox.checked);
+          clearQuestionState();
+          renderPoolStatus();
+        });
+
+        textWrapper.append(nameEl, document.createElement('br'), countEl);
+        label.append(checkbox, visualPill, textWrapper);
+        wrapper.appendChild(label);
+        categoryGrid.appendChild(wrapper);
+      });
+
+      renderPoolStatus();
+      renderResetCategories();
+    }
+
+    function markGuestSolved(question) {
+      if (!state.guestProgress[question.category]) {
+        state.guestProgress[question.category] = [];
+      }
+
+      if (!state.guestProgress[question.category].includes(question.id)) {
+        state.guestProgress[question.category].push(question.id);
+        writeGuestProgress();
+      }
+    }
+
+    async function refreshOverview() {
+      try {
+        const selectedBefore = new Set(selectedCategories());
+        const payload = await questApi('overview');
+        const categories = Array.isArray(payload.categories) ? payload.categories : [];
+
+        state.categories = categories.map((entry) => ({
+          ...entry,
+          selected: selectedBefore.size ? selectedBefore.has(entry.name) : false
+        }));
+
+        if (!state.categories.some((category) => category.selected) && state.categories.length) {
+          state.categories[0].selected = true;
+        }
+
+        renderCategories();
+        setupStatus.className = 'status';
+        setupStatus.textContent = '';
+      } catch (error) {
+        setupStatus.className = 'status error';
+        setupStatus.textContent = ui().failedOverview;
+      }
+    }
+
+    async function loadQuestion() {
+      const categories = selectedCategories();
+      if (!categories.length) {
+        setupStatus.className = 'status error';
+        setupStatus.textContent = ui().emptySelection;
+        return;
+      }
+
+      if (state.isLoadingQuestion) return;
       state.isLoadingQuestion = true;
       loadQuestionBtn.disabled = true;
-      setupStatus.textContent = '';
 
       try {
-        const payload = await questApi('next', { category });
+        const payload = await questApi('next', { categories });
         const question = payload.question || null;
 
         if (!question) {
           clearQuestionState();
           setupStatus.className = 'status';
-          setupStatus.textContent = ui().emptyCategory;
+          setupStatus.textContent = ui().emptyPool;
           await refreshOverview();
           return;
         }
 
         state.currentQuestion = question;
+        setupStatus.className = 'status';
+        setupStatus.textContent = '';
         questionSection.classList.remove('hidden');
         questionCategory.textContent = ui().questionIn.replace('{category}', question.category);
         questionPrompt.textContent = question.prompt;
         answerInput.value = '';
+        answerInput.placeholder = ui().placeholder;
         answerInput.focus();
         questionStatus.textContent = '';
         questionStatus.className = 'status';
@@ -328,23 +553,11 @@
         submitBtn.disabled = false;
         nextBtn.classList.add('hidden');
       } catch (error) {
-        setupStatus.className = 'status bad';
+        setupStatus.className = 'status error';
         setupStatus.textContent = ui().failedQuestion;
       } finally {
         state.isLoadingQuestion = false;
         loadQuestionBtn.disabled = false;
-      }
-    }
-
-    function markGuestSolved(question) {
-      const category = question.category;
-      if (!state.guestProgress[category]) {
-        state.guestProgress[category] = [];
-      }
-
-      if (!state.guestProgress[category].includes(question.id)) {
-        state.guestProgress[category].push(question.id);
-        writeGuestProgress();
       }
     }
 
@@ -354,7 +567,7 @@
 
       const answer = answerInput.value.trim();
       if (!answer) {
-        questionStatus.className = 'status bad';
+        questionStatus.className = 'status error';
         questionStatus.textContent = ui().yourAnswerMissing;
         return;
       }
@@ -393,14 +606,14 @@
           nextBtn.classList.remove('hidden');
           await refreshOverview();
         } else {
-          questionStatus.className = 'status bad';
+          questionStatus.className = 'status error';
           questionStatus.textContent = ui().wrong;
           answerReveal.classList.remove('hidden');
           answerReveal.textContent = ui().answerPrefix.replace('{answer}', payload.acceptedAnswer || '—');
           nextBtn.classList.remove('hidden');
         }
       } catch (error) {
-        questionStatus.className = 'status bad';
+        questionStatus.className = 'status error';
         questionStatus.textContent = ui().failedAnswer;
       } finally {
         state.isSubmitting = false;
@@ -409,8 +622,12 @@
     }
 
     async function resetCategoryProgress() {
-      const category = categorySelect.value;
-      if (!category) return;
+      const category = resetCategorySelect.value;
+      if (!category) {
+        setupStatus.className = 'status error';
+        setupStatus.textContent = ui().resetNeedsCategory;
+        return;
+      }
 
       try {
         if (state.session) {
@@ -427,21 +644,27 @@
         clearQuestionState();
         await refreshOverview();
       } catch (error) {
-        setupStatus.className = 'status bad';
+        setupStatus.className = 'status error';
         setupStatus.textContent = ui().failedReset;
       }
     }
 
-    categorySelect.addEventListener('change', () => {
-      renderCategoryStats();
-      clearQuestionState();
-      setupStatus.textContent = '';
-    });
+    function renderStaticText() {
+      introText.textContent = ui().intro;
+      modeText.textContent = state.session ? ui().modeUser : ui().modeGuest;
+      loadQuestionBtn.textContent = ui().getQuestion;
+      nextBtn.textContent = ui().next;
+      submitBtn.textContent = ui().submit;
+      backLink.textContent = ui().back;
+      resetLabel.textContent = ui().resetCategoryLabel;
+      resetCategoryBtn.textContent = ui().resetCategory;
+      answerInput.placeholder = ui().placeholder;
+    }
 
-    loadQuestionBtn.addEventListener('click', loadQuestion);
     nextBtn.addEventListener('click', loadQuestion);
-    resetCategoryBtn.addEventListener('click', resetCategoryProgress);
+    loadQuestionBtn.addEventListener('click', loadQuestion);
     answerForm.addEventListener('submit', submitAnswer);
+    resetCategoryBtn.addEventListener('click', resetCategoryProgress);
 
     async function init() {
       state.session = await fetchSession();

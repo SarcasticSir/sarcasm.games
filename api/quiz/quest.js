@@ -27,6 +27,21 @@ function parseSolvedQuestionIds(value) {
     });
 }
 
+function parseCategoryList(value) {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set();
+
+  return value
+    .map((entry) => String(entry || '').trim())
+    .filter(Boolean)
+    .filter((entry) => {
+      const key = entry.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+}
+
 async function tryGetSession(req) {
   try {
     const cookies = parseCookies(req);
@@ -78,6 +93,10 @@ function mapQuestion(row, lang) {
     prompt,
     answers: extractAnswers(row, lang)
   };
+}
+
+function isQuestionValid(question) {
+  return Boolean(question && question.prompt && Array.isArray(question.answers) && question.answers.length);
 }
 
 async function getOverview({ userId, solvedQuestionIds }) {
@@ -160,9 +179,9 @@ module.exports = async function handler(req, res) {
     }
 
     if (action === 'next') {
-      const category = String(body.category || '').trim();
-      if (!category) {
-        res.status(400).json({ error: 'category is required' });
+      const categories = parseCategoryList(body.categories);
+      if (!categories.length) {
+        res.status(400).json({ error: 'categories must be a non-empty array' });
         return;
       }
 
@@ -173,30 +192,27 @@ module.exports = async function handler(req, res) {
            LEFT JOIN user_answers ua
              ON ua.question_id = q.id
             AND ua.user_id = $2
-           WHERE q.category = $1
+           WHERE q.category = ANY($1)
              AND COALESCE(ua.is_correct, FALSE) = FALSE
            ORDER BY RANDOM()
-           LIMIT 1`,
-          [category, userId]
+           LIMIT 50`,
+          [categories, userId]
         )
         : await runQuery(
           `SELECT q.id, q.category, q.question_en, q.question_no, q.answers_en, q.answers_no
            FROM quiz_questions q
-           WHERE q.category = $1
+           WHERE q.category = ANY($1)
              AND NOT (q.id = ANY($2::int[]))
            ORDER BY RANDOM()
-           LIMIT 1`,
-          [category, solvedQuestionIds.length ? solvedQuestionIds : [0]]
+           LIMIT 50`,
+          [categories, solvedQuestionIds.length ? solvedQuestionIds : [0]]
         );
 
-      const row = query.rows[0];
-      if (!row) {
-        res.status(200).json({ question: null });
-        return;
-      }
+      const question = query.rows
+        .map((row) => mapQuestion(row, lang))
+        .find((entry) => isQuestionValid(entry));
 
-      const question = mapQuestion(row, lang);
-      if (!question.prompt || !question.answers.length) {
+      if (!question) {
         res.status(200).json({ question: null });
         return;
       }
