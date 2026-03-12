@@ -30,7 +30,11 @@
 
     .app-shell{display:flex;flex-direction:column;align-items:center;min-height:100dvh}
     .top-bar{width:100%;background:var(--card);border-bottom:1px solid var(--bd);padding:10px 14px;display:flex;justify-content:space-between;align-items:center;box-sizing:border-box;gap:10px;flex-wrap:wrap}
-    .top-bar .right{display:flex;gap:8px;flex-wrap:wrap}
+    .top-bar .right{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .language-picker{display:flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:6px 10px}
+    .language-picker label{font-size:.85rem;color:var(--muted)}
+    .language-picker select{background:transparent;color:var(--txt);border:0;outline:none;font-size:.9rem}
+    .language-badge{font-size:.85rem;color:var(--accent);font-weight:700}
     .wrap{max-width:860px;width:100%;padding:28px;text-align:center;box-sizing:border-box}
     h1{margin:0 0 8px;font-size:32px}
     p{opacity:.85;margin:0 0 24px}
@@ -52,6 +56,14 @@
     <div class="top-bar">
       <strong id="welcomeText">Logged in as: Guest</strong>
       <div class="right">
+        <div class="language-picker" aria-label="Language picker">
+          <label for="languageSelect">Language</label>
+          <select id="languageSelect">
+            <option value="en">English</option>
+            <option value="no">Norsk</option>
+          </select>
+          <span class="language-badge" id="activeLanguageLabel">English</span>
+        </div>
         <button class="btn-neutral" id="themeToggle">🌓 Theme</button>
         <button class="btn-neutral" id="toggleLoginBtn">Login</button>
         <button class="btn-danger hidden" id="logoutBtn">Logout</button>
@@ -198,6 +210,7 @@
     let currentCaptcha = null;
     let failedResetAttempts = 0;
     let currentUser = null;
+    const QUIZ_LANGUAGE_KEY = 'quizLanguage';
 
     const statusBox = document.getElementById('statusBox');
     const authShell = document.getElementById('authShell');
@@ -211,6 +224,8 @@
     const resetInfoBtn = document.getElementById('resetInfoBtn');
     const logoutBtn = document.getElementById('logoutBtn');
     const toggleLoginBtn = document.getElementById('toggleLoginBtn');
+    const languageSelect = document.getElementById('languageSelect');
+    const activeLanguageLabel = document.getElementById('activeLanguageLabel');
 
 
 
@@ -259,6 +274,41 @@
     function toggleTheme() {
       const isLight = document.body.classList.toggle('light-mode');
       localStorage.setItem('theme', isLight ? 'light' : 'dark');
+    }
+
+    function inferDefaultLanguage() {
+      const browserLanguage = (navigator.language || '').toLowerCase();
+      if (browserLanguage.startsWith('no') || browserLanguage.startsWith('nb') || browserLanguage.startsWith('nn')) {
+        return 'no';
+      }
+      return 'en';
+    }
+
+    function getStoredQuizLanguage() {
+      const stored = localStorage.getItem(QUIZ_LANGUAGE_KEY);
+      return stored === 'en' || stored === 'no' ? stored : null;
+    }
+
+    function updateActiveLanguageUi(language) {
+      const languageName = language === 'no' ? 'Norsk' : 'English';
+      activeLanguageLabel.textContent = languageName;
+      languageSelect.value = language;
+    }
+
+    function saveQuizLanguage(language) {
+      localStorage.setItem(QUIZ_LANGUAGE_KEY, language);
+      updateActiveLanguageUi(language);
+    }
+
+    function initQuizLanguage() {
+      const initialLanguage = getStoredQuizLanguage() || inferDefaultLanguage();
+      saveQuizLanguage(initialLanguage);
+
+      languageSelect.addEventListener('change', (event) => {
+        const selectedLanguage = event.target.value;
+        if (selectedLanguage !== 'en' && selectedLanguage !== 'no') return;
+        saveQuizLanguage(selectedLanguage);
+      });
     }
 
     function renderFeatureModules(user) {
@@ -445,6 +495,7 @@
 
     async function init() {
       setThemeFromStorage();
+      initQuizLanguage();
       generateCaptchaQuestion();
 
       await applyUserState(null);
