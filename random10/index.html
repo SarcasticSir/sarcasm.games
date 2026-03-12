@@ -44,6 +44,11 @@
       <div class="btn-row" style="margin-top:0; margin-bottom:12px;">
         <button id="abortQuizBtn" type="button">Abort quiz</button>
       </div>
+      <div id="abortConfirmRow" class="btn-row hidden" style="margin-top:0; margin-bottom:12px;">
+        <span class="muted">Abort current quiz?</span>
+        <button id="confirmAbortBtn" type="button">Yes, abort</button>
+        <button id="cancelAbortBtn" type="button" class="btn-primary">Continue quiz</button>
+      </div>
       <h2 id="questionTitle">Question</h2>
       <p id="questionCategory" class="muted"></p>
       <form id="answerForm">
@@ -93,6 +98,9 @@
     const submitBtn = document.getElementById('submitBtn');
     const startBtn = document.getElementById('startBtn');
     const abortQuizBtn = document.getElementById('abortQuizBtn');
+    const abortConfirmRow = document.getElementById('abortConfirmRow');
+    const confirmAbortBtn = document.getElementById('confirmAbortBtn');
+    const cancelAbortBtn = document.getElementById('cancelAbortBtn');
     const answeredQuestionsList = document.getElementById('answeredQuestionsList');
 
     const state = {
@@ -194,6 +202,7 @@
       answerReveal.textContent = `Answer: ${q.answers[0]}`;
       showAnswerBtn.classList.add('hidden');
       nextQuestionBtn.classList.add('hidden');
+      abortConfirmRow.classList.add('hidden');
       submitBtn.disabled = false;
     }
 
@@ -223,6 +232,7 @@
       introError.textContent = '';
       statusText.textContent = '';
       answerReveal.classList.add('hidden');
+      abortConfirmRow.classList.add('hidden');
       setStartLoading(false);
     }
 
@@ -340,15 +350,17 @@
     });
 
     abortQuizBtn.addEventListener('click', () => {
-      const shouldAbort = window.confirm('Abort current quiz and return to start?');
-      if (!shouldAbort) return;
+      abortConfirmRow.classList.remove('hidden');
+    });
+
+    confirmAbortBtn.addEventListener('click', () => {
       resetQuizState();
       showView('intro');
     });
 
-    abortQuizBtn.addEventListener('click', () => {
-      resetQuizState();
-      showView('intro');
+    cancelAbortBtn.addEventListener('click', () => {
+      abortConfirmRow.classList.add('hidden');
+      answerInput.focus();
     });
 
     answerForm.addEventListener('submit', (event) => {
