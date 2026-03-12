@@ -107,8 +107,26 @@
     const confirmAbortBtn = document.getElementById('confirmAbortBtn');
     const cancelAbortBtn = document.getElementById('cancelAbortBtn');
     const answeredQuestionsList = document.getElementById('answeredQuestionsList');
+    const backLinks = document.querySelectorAll('a.link-btn');
+    const introHeading = introView.querySelector('h1');
+    const introParagraphs = introView.querySelectorAll('p');
+    const abortConfirmText = abortConfirmRow.querySelector('.muted');
+    const questionSectionHeading = questionView.querySelector('h2');
+    const resultHeading = resultView.querySelector('h2');
+    const resultCounterItems = resultView.querySelectorAll('ul.result-list li');
+    const answeredQuestionsHeading = resultView.querySelector('h3');
+    const playAgainBtn = document.getElementById('playAgainBtn');
+
+    function getQuizLanguage() {
+      const storedLanguage = localStorage.getItem('quizLanguage');
+      if (allowedLanguages.has(storedLanguage)) {
+        return storedLanguage;
+      }
+      return fallbackLanguage;
+    }
 
     const state = {
+      language: fallbackLanguage,
       questions: [],
       index: 0,
       correct: 0,
@@ -120,8 +138,18 @@
       quizStarted: false
     };
 
+
+    function syncLanguageFromStorage() {
+      state.language = getQuizLanguage();
+    }
+
+    function uiCopy() {
+      return copy[state.language] || copy[fallbackLanguage];
+    }
+
     function pickPositiveMessage() {
-      return positiveMessages[Math.floor(Math.random() * positiveMessages.length)];
+      const messages = uiCopy().positiveMessages;
+      return messages[Math.floor(Math.random() * messages.length)];
     }
 
     function showView(view) {
@@ -133,7 +161,8 @@
 
     function setStartLoading(isLoading) {
       startBtn.disabled = isLoading;
-      startBtn.textContent = isLoading ? 'Loading…' : 'Start Random10 quiz';
+      const c = uiCopy();
+      startBtn.textContent = isLoading ? c.loading : c.startQuiz;
     }
 
     function renderAnsweredQuestions() {
@@ -144,7 +173,7 @@
         if (entry.status === 'correct') {
           item.textContent = `✅ ${entry.prompt}`;
         } else {
-          const answerPart = entry.acceptedAnswer ? ` (Answer: ${entry.acceptedAnswer})` : '';
+          const answerPart = entry.acceptedAnswer ? ` (${uiCopy().answerPrefix.replace('{answer}', entry.acceptedAnswer)})` : '';
           item.textContent = `❌ ${entry.prompt}${answerPart}`;
         }
         answeredQuestionsList.appendChild(item);
@@ -175,27 +204,29 @@
         });
 
         if (!response.ok) {
-          throw new Error('Could not fetch quiz questions from API.');
+          throw new Error(uiCopy().fetchError);
         }
 
         const payload = await response.json();
         const questions = (payload.questions || []).map(normalizeQuestion).filter((q) => q.answers.length);
         if (questions.length < 10) {
-          throw new Error('Not enough API questions available yet.');
+          throw new Error(uiCopy().notEnoughQuestions);
         }
 
         return questions.slice(0, 10);
       } catch (error) {
-        introError.textContent = 'Could not load questions from API. Please try again.';
+        introError.textContent = uiCopy().loadingError;
         return [];
       }
     }
 
     function renderQuestion() {
       const q = state.questions[state.index];
-      progressText.textContent = `Question ${state.index + 1} / ${state.questions.length}`;
+      progressText.textContent = uiCopy().progress
+        .replace('{current}', String(state.index + 1))
+        .replace('{total}', String(state.questions.length));
       questionTitle.textContent = q.prompt;
-      questionCategory.textContent = `Category: ${q.category}`;
+      questionCategory.textContent = uiCopy().category.replace('{category}', q.category);
       answerInput.value = '';
       answerInput.disabled = false;
       answerInput.focus();
@@ -205,7 +236,7 @@
       statusText.textContent = '';
       statusText.className = 'status';
       answerReveal.classList.add('hidden');
-      answerReveal.textContent = `Answer: ${q.answers[0]}`;
+      answerReveal.textContent = uiCopy().answerPrefix.replace('{answer}', q.answers[0]);
       showAnswerBtn.classList.add('hidden');
       nextQuestionBtn.classList.add('hidden');
       abortConfirmRow.classList.add('hidden');
@@ -218,7 +249,9 @@
         document.getElementById('correctCount').textContent = String(state.correct);
         document.getElementById('wrongCount').textContent = String(state.wrong);
         renderAnsweredQuestions();
-        document.getElementById('resultSummary').textContent = `You finished Random10 with ${state.correct} / ${state.questions.length} correct answers.`;
+        document.getElementById('resultSummary').textContent = uiCopy().resultSummary
+          .replace('{correct}', String(state.correct))
+          .replace('{total}', String(state.questions.length));
         showView('result');
         return;
       }
@@ -257,12 +290,12 @@
       });
 
       if (!response.ok) {
-        throw new Error('Could not validate answer.');
+        throw new Error(uiCopy().answerValidateError);
       }
 
       const payload = await response.json();
       if (!payload || !payload.status) {
-        throw new Error('Invalid answer payload.');
+        throw new Error(uiCopy().invalidPayloadError);
       }
 
       return payload;
@@ -283,7 +316,7 @@
       } catch (error) {
         state.isSubmitting = false;
         statusText.className = 'status wrong';
-        statusText.textContent = 'Could not submit answer. Please try again.';
+        statusText.textContent = uiCopy().answerSubmitError;
         return;
       }
 
@@ -314,7 +347,7 @@
         state.awaitingRetry = true;
         state.isSubmitting = false;
         statusText.className = 'status almost';
-        statusText.textContent = 'Almost — try again.';
+        statusText.textContent = uiCopy().almostStatus;
         answerInput.value = '';
         answerInput.focus();
         return;
@@ -329,14 +362,43 @@
       state.awaitingRetry = false;
       state.isSubmitting = false;
       statusText.className = 'status wrong';
-      statusText.textContent = 'Wrong answer. You can show answer, then continue.';
+      statusText.textContent = uiCopy().wrongStatus;
       showAnswerBtn.classList.remove('hidden');
       nextQuestionBtn.classList.remove('hidden');
       submitBtn.disabled = true;
     }
 
+    function applyCopy() {
+      const c = uiCopy();
+      document.title = c.title;
+      introHeading.textContent = c.title;
+      introParagraphs[0].textContent = c.introLead;
+      introParagraphs[1].textContent = c.introFeature;
+      introParagraphs[2].innerHTML = `${c.introRules.replaceAll('Almost', '<strong>Almost</strong>')}`;
+      startBtn.textContent = c.startQuiz;
+      for (const link of backLinks) {
+        link.textContent = c.backHome;
+      }
+      abortQuizBtn.textContent = c.abortQuiz;
+      abortConfirmText.textContent = c.abortConfirm;
+      confirmAbortBtn.textContent = c.abortYes;
+      cancelAbortBtn.textContent = c.abortNo;
+      questionSectionHeading.textContent = c.questionTitle;
+      answerInput.placeholder = c.answerPlaceholder;
+      submitBtn.textContent = c.submitAnswer;
+      showAnswerBtn.textContent = c.showAnswer;
+      nextQuestionBtn.textContent = c.nextQuestion;
+      resultHeading.textContent = c.resultTitle;
+      resultCounterItems[0].lastChild.textContent = ` ${c.correctCount}`;
+      resultCounterItems[1].lastChild.textContent = ` ${c.wrongCount}`;
+      answeredQuestionsHeading.textContent = c.answeredQuestionsHeading;
+      playAgainBtn.textContent = c.playAgain;
+    }
+
     startBtn.addEventListener('click', async () => {
       if (startBtn.disabled) return;
+      syncLanguageFromStorage();
+      applyCopy();
       setStartLoading(true);
       state.questions = await loadQuestions();
       if (state.questions.length < 10) {
@@ -384,10 +446,13 @@
       moveNextQuestion();
     });
 
-    document.getElementById('playAgainBtn').addEventListener('click', () => {
+    playAgainBtn.addEventListener('click', () => {
       resetQuizState();
       showView('intro');
     });
+
+    syncLanguageFromStorage();
+    applyCopy();
   </script>
 </body>
 </html>
