@@ -57,7 +57,7 @@
       <strong id="welcomeText">Logged in as: Guest</strong>
       <div class="right">
         <div class="language-picker" aria-label="Language picker">
-          <label for="languageSelect">Language</label>
+          <label for="languageSelect" id="languageLabel">Language</label>
           <select id="languageSelect">
             <option value="en">English</option>
             <option value="no">Norsk</option>
@@ -72,24 +72,8 @@
 
     <div class="wrap">
       <h1>sarcasm.games</h1>
-      <p>Where do you want to go?</p>
-      <div class="grid">
-        <a href="/tiermaker/">Tier-maker <span class="tooltip-text">Make your own tier list.</span></a>
-        <a href="/monstercatch/">Monster catcher <span class="tooltip-text">A local game.</span></a>
-        <a href="/achievements/">Life Achievements <span class="tooltip-text">Track accomplishments</span></a>
-        <a href="/poketruefalse/">Pokemon True or False <span class="tooltip-text">Facts game!</span></a>
-        <a href="/lighthousekeeper/">Lighthouse Keeper <span class="tooltip-text">Keep the light on!</span></a>
-        <a href="/CosmicClick/">Cosmic clicker <span class="tooltip-text">Incremental clicker!</span></a>
-        <a href="/orb/">Orb Game <span class="tooltip-text">Race to the finish!</span></a>
-        <a href="/CrystalClick/">Crystal Mining <span class="tooltip-text">Second clicker!</span></a>
-        <a href="/GalacticClick/">Galactic Mining <span class="tooltip-text">Third clicker!</span></a>
-        <a href="/memory/">Guess the mon! <span class="tooltip-text">How fast are you?</span></a>
-        <a href="/random10/">Random 10 quiz <span class="tooltip-text">Quick 10-question mode</span></a>
-        <a href="/quiz-categories/">Quiz categories <span class="tooltip-text">Choose categories and play</span></a>
-        <a href="/quiz-quest/">Quiz quest <span class="tooltip-text">Quest mode (placeholder)</span></a>
-        <a href="/pokemon-quiz/">Pokémon quiz <span class="tooltip-text">Pokémon mode (placeholder)</span></a>
-        <a href="https://html.itch.zone/html/14908902/index.html">3D Platformer <span class="tooltip-text">Playable in browser</span></a>
-      </div>
+      <p id="pageSubtitle">Where do you want to go?</p>
+      <div class="grid" id="gameGrid"></div>
 
       <section class="season-card hidden" id="featureModulesSection">
         <h3 id="featureModulesTitle">Admin modules</h3>
@@ -97,7 +81,7 @@
       </section>
 
       <section id="memberListSection" class="member-list hidden">
-        <h3>Member list (admin only)</h3>
+        <h3 id="memberListTitle">Member list (admin only)</h3>
         <ul id="memberList"></ul>
       </section>
     </div>
@@ -105,26 +89,26 @@
     <div id="authShell" class="auth-shell hidden">
       <div class="auth-card">
         <button class="auth-close" id="closeLoginBtn" type="button">✕</button>
-        <h2 class="auth-title">Optional login</h2>
-        <p class="auth-subtitle">Log in for personal or admin-only features.</p>
+        <h2 class="auth-title" id="authTitle">Optional login</h2>
+        <p class="auth-subtitle" id="authSubtitle">Log in for personal or admin-only features.</p>
 
         <div class="auth-tabs">
-          <button class="tab-btn active" data-tab="login">Login</button>
-          <button class="tab-btn" data-tab="register">Create account</button>
-          <button class="tab-btn" data-tab="reset">Forgot password?</button>
+          <button class="tab-btn active" data-tab="login" id="loginTabBtn">Login</button>
+          <button class="tab-btn" data-tab="register" id="registerTabBtn">Create account</button>
+          <button class="tab-btn" data-tab="reset" id="resetTabBtn">Forgot password?</button>
         </div>
 
         <section id="loginTab" class="tab-content">
           <div class="form-group">
-            <label for="loginUsername">Username</label>
+            <label for="loginUsername" id="loginUsernameLabel">Username</label>
             <input id="loginUsername" type="text" autocomplete="username" />
           </div>
           <div class="form-group">
-            <label for="loginPassword">Password</label>
+            <label for="loginPassword" id="loginPasswordLabel">Password</label>
             <input id="loginPassword" type="password" autocomplete="current-password" />
           </div>
           <div class="form-group hidden">
-            <label for="loginWebsite">Website</label>
+            <label for="loginWebsite" id="loginWebsiteLabel">Website</label>
             <input id="loginWebsite" type="text" autocomplete="off" tabindex="-1" />
           </div>
           <div class="btn-row"><button class="btn-primary" id="loginBtn">Login</button></div>
@@ -132,19 +116,19 @@
 
         <section id="registerTab" class="tab-content hidden">
           <div class="form-group">
-            <label for="registerUser">Username</label>
+            <label for="registerUser" id="registerUserLabel">Username</label>
             <input id="registerUser" type="text" autocomplete="username" />
           </div>
           <div class="form-group">
-            <label for="registerEmail">Email</label>
+            <label for="registerEmail" id="registerEmailLabel">Email</label>
             <input id="registerEmail" type="email" autocomplete="email" />
           </div>
           <div class="form-group">
-            <label for="registerPassword">Password</label>
+            <label for="registerPassword" id="registerPasswordLabel">Password</label>
             <input id="registerPassword" type="password" autocomplete="new-password" />
           </div>
           <div class="form-group hidden">
-            <label for="registerWebsite">Website</label>
+            <label for="registerWebsite" id="registerWebsiteLabel">Website</label>
             <input id="registerWebsite" type="text" autocomplete="off" tabindex="-1" />
           </div>
           <div class="btn-row"><button class="btn-primary" id="registerBtn">Create account</button></div>
@@ -152,19 +136,19 @@
 
         <section id="resetTab" class="tab-content hidden">
           <div class="form-group">
-            <label for="resetUsername">Username</label>
+            <label for="resetUsername" id="resetUsernameLabel">Username</label>
             <input id="resetUsername" type="text" />
           </div>
           <div class="form-group">
-            <label for="resetEmail">Email</label>
+            <label for="resetEmail" id="resetEmailLabel">Email</label>
             <input id="resetEmail" type="email" />
           </div>
           <div class="form-group">
-            <label for="resetNewPassword">New password</label>
+            <label for="resetNewPassword" id="resetPasswordLabel">New password</label>
             <input id="resetNewPassword" type="password" autocomplete="new-password" />
           </div>
           <div class="form-group hidden">
-            <label for="resetWebsite">Website</label>
+            <label for="resetWebsite" id="resetWebsiteLabel">Website</label>
             <input id="resetWebsite" type="text" autocomplete="off" tabindex="-1" />
           </div>
           <div class="form-group">
@@ -185,6 +169,118 @@
   </div>
 
   <script>
+    const QUIZ_LANGUAGE_KEY = 'quizLanguage';
+    const GAMES = [
+      { href: '/tiermaker/', title: { en: 'Tier-maker', no: 'Tier-lager' }, tooltip: { en: 'Make your own tier list.', no: 'Lag din egen tier-liste.' } },
+      { href: '/monstercatch/', title: { en: 'Monster catcher', no: 'Monsterfanger' }, tooltip: { en: 'A local game.', no: 'Et lokalt spill.' } },
+      { href: '/achievements/', title: { en: 'Life Achievements', no: 'Livsmål' }, tooltip: { en: 'Track accomplishments', no: 'Følg fremgang og prestasjoner' } },
+      { href: '/poketruefalse/', title: { en: 'Pokemon True or False', no: 'Pokemon sant eller usant' }, tooltip: { en: 'Facts game!', no: 'Fakta-spill!' } },
+      { href: '/lighthousekeeper/', title: { en: 'Lighthouse Keeper', no: 'Fyrvokter' }, tooltip: { en: 'Keep the light on!', no: 'Hold lyset på!' } },
+      { href: '/CosmicClick/', title: { en: 'Cosmic clicker', no: 'Kosmisk klikker' }, tooltip: { en: 'Incremental clicker!', no: 'Incremental clicker!' } },
+      { href: '/orb/', title: { en: 'Orb Game', no: 'Orb-spill' }, tooltip: { en: 'Race to the finish!', no: 'Kappløp til mål!' } },
+      { href: '/CrystalClick/', title: { en: 'Crystal Mining', no: 'Krystallgraving' }, tooltip: { en: 'Second clicker!', no: 'Andre clicker!' } },
+      { href: '/GalacticClick/', title: { en: 'Galactic Mining', no: 'Galaktisk gruvedrift' }, tooltip: { en: 'Third clicker!', no: 'Tredje clicker!' } },
+      { href: '/memory/', title: { en: 'Guess the mon!', no: 'Gjett monsteret!' }, tooltip: { en: 'How fast are you?', no: 'Hvor rask er du?' } },
+      { href: '/random10/', title: { en: 'Random 10 quiz', no: 'Tilfeldig 10-quiz' }, tooltip: { en: 'Quick 10-question mode', no: 'Rask modus med 10 spørsmål' } },
+      { href: '/quiz-categories/', title: { en: 'Quiz categories', no: 'Quizkategorier' }, tooltip: { en: 'Choose categories and play', no: 'Velg kategorier og spill' } },
+      { href: '/quiz-quest/', title: { en: 'Quiz quest', no: 'Quiz-oppdrag' }, tooltip: { en: 'Quest mode (placeholder)', no: 'Oppdragsmodus (placeholder)' } },
+      { href: '/pokemon-quiz/', title: { en: 'Pokémon quiz', no: 'Pokémon-quiz' }, tooltip: { en: 'Pokémon mode (placeholder)', no: 'Pokémon-modus (placeholder)' } },
+      { href: 'https://html.itch.zone/html/14908902/index.html', title: { en: '3D Platformer', no: '3D-plattformspill' }, tooltip: { en: 'Playable in browser', no: 'Spillbart i nettleser' } }
+    ];
+
+    const I18N = {
+      en: {
+        welcomeGuest: 'Logged in as: Guest',
+        welcomeUser: (username) => `Logged in as: ${username}`,
+        languageLabel: 'Language',
+        activeLanguageName: 'English',
+        themeButton: '🌓 Theme',
+        loginButton: 'Login',
+        hideLoginButton: 'Hide login',
+        logoutButton: 'Logout',
+        pageSubtitle: 'Where do you want to go?',
+        memberListTitle: 'Member list (admin only)',
+        authTitle: 'Optional login',
+        authSubtitle: 'Log in for personal or admin-only features.',
+        tabLogin: 'Login',
+        tabRegister: 'Create account',
+        tabReset: 'Forgot password?',
+        usernameLabel: 'Username',
+        passwordLabel: 'Password',
+        websiteLabel: 'Website',
+        emailLabel: 'Email',
+        newPasswordLabel: 'New password',
+        securityQuestionLabel: 'Security question',
+        createAccountButton: 'Create account',
+        updatePasswordButton: 'Update password',
+        newQuestionButton: 'New question',
+        infoButton: 'Info',
+        extraModules: 'Extra modules',
+        adminModules: 'Admin modules',
+        unknownCountry: 'unknown',
+        countryLabel: 'country',
+        statusMissingLoginFields: 'Please enter both username and password.',
+        statusLoginFailed: 'Login failed.',
+        statusRegistrationFailed: 'Registration failed.',
+        statusRegistrationOk: 'Account created. Log in with username and password.',
+        statusPasswordResetFailed: 'Could not update password.',
+        statusPasswordResetOk: 'Password updated. You can now log in.',
+        statusResetHelp: 'Forgot your password? Contact admin at xxxx@gmail.com',
+        statusLoggedOut: 'Logged out.',
+        captchaPool: [
+          { id: 'site_first_word', question: 'What is the first word in this website name?' },
+          { id: 'bil_reverse', question: 'Type the word BIL backwards' },
+          { id: 'color_sky', question: 'What color is the sky on a clear day?' },
+          { id: 'two_plus_three', question: 'What is 2 + 3?' }
+        ]
+      },
+      no: {
+        welcomeGuest: 'Logget inn som: Gjest',
+        welcomeUser: (username) => `Logget inn som: ${username}`,
+        languageLabel: 'Språk',
+        activeLanguageName: 'Norsk',
+        themeButton: '🌓 Tema',
+        loginButton: 'Logg inn',
+        hideLoginButton: 'Skjul innlogging',
+        logoutButton: 'Logg ut',
+        pageSubtitle: 'Hvor vil du gå?',
+        memberListTitle: 'Medlemsliste (kun admin)',
+        authTitle: 'Valgfri innlogging',
+        authSubtitle: 'Logg inn for personlige eller admin-funksjoner.',
+        tabLogin: 'Logg inn',
+        tabRegister: 'Opprett konto',
+        tabReset: 'Glemt passord?',
+        usernameLabel: 'Brukernavn',
+        passwordLabel: 'Passord',
+        websiteLabel: 'Nettside',
+        emailLabel: 'E-post',
+        newPasswordLabel: 'Nytt passord',
+        securityQuestionLabel: 'Sikkerhetsspørsmål',
+        createAccountButton: 'Opprett konto',
+        updatePasswordButton: 'Oppdater passord',
+        newQuestionButton: 'Nytt spørsmål',
+        infoButton: 'Info',
+        extraModules: 'Ekstra moduler',
+        adminModules: 'Admin-moduler',
+        unknownCountry: 'ukjent',
+        countryLabel: 'land',
+        statusMissingLoginFields: 'Fyll inn både brukernavn og passord.',
+        statusLoginFailed: 'Innlogging feilet.',
+        statusRegistrationFailed: 'Registrering feilet.',
+        statusRegistrationOk: 'Konto opprettet. Logg inn med brukernavn og passord.',
+        statusPasswordResetFailed: 'Kunne ikke oppdatere passord.',
+        statusPasswordResetOk: 'Passord oppdatert. Du kan nå logge inn.',
+        statusResetHelp: 'Glemt passord? Kontakt admin på xxxx@gmail.com',
+        statusLoggedOut: 'Logget ut.',
+        captchaPool: [
+          { id: 'site_first_word', question: 'Hva er første ord i nettsidens navn?' },
+          { id: 'bil_reverse', question: 'Skriv ordet BIL baklengs' },
+          { id: 'color_sky', question: 'Hvilken farge har himmelen på en klar dag?' },
+          { id: 'two_plus_three', question: 'Hva er 2 + 3?' }
+        ]
+      }
+    };
+
     const FEATURE_MODULES = [
       {
         id: 'morsdag-2026',
@@ -200,17 +296,10 @@
       }
     ];
 
-    const CAPTCHA_POOL = [
-      { id: 'site_first_word', question: 'What is the first word in this website name?' },
-      { id: 'bil_reverse', question: 'Type the word BIL backwards' },
-      { id: 'color_sky', question: 'What color is the sky on a clear day?' },
-      { id: 'two_plus_three', question: 'What is 2 + 3?' }
-    ];
-
     let currentCaptcha = null;
     let failedResetAttempts = 0;
     let currentUser = null;
-    const QUIZ_LANGUAGE_KEY = 'quizLanguage';
+    let currentLanguage = 'en';
 
     const statusBox = document.getElementById('statusBox');
     const authShell = document.getElementById('authShell');
@@ -226,35 +315,55 @@
     const toggleLoginBtn = document.getElementById('toggleLoginBtn');
     const languageSelect = document.getElementById('languageSelect');
     const activeLanguageLabel = document.getElementById('activeLanguageLabel');
+    const gameGrid = document.getElementById('gameGrid');
 
-
+    function t() {
+      return I18N[currentLanguage] || I18N.en;
+    }
 
     function setStatus(message, isError = false) {
       statusBox.style.color = isError ? 'var(--danger)' : 'var(--muted)';
       statusBox.textContent = message;
     }
 
+    function renderGames() {
+      gameGrid.innerHTML = '';
+      for (const game of GAMES) {
+        const anchor = document.createElement('a');
+        anchor.href = game.href;
+        anchor.textContent = game.title[currentLanguage] || game.title.en;
+
+        const tooltip = document.createElement('span');
+        tooltip.className = 'tooltip-text';
+        tooltip.textContent = game.tooltip[currentLanguage] || game.tooltip.en;
+        anchor.appendChild(document.createTextNode(' '));
+        anchor.appendChild(tooltip);
+
+        gameGrid.appendChild(anchor);
+      }
+    }
 
     function toggleLoginPanel() {
       if (currentUser) return;
       const isHidden = authShell.classList.contains('hidden');
       if (isHidden) {
         authShell.classList.remove('hidden');
-        toggleLoginBtn.textContent = 'Hide login';
+        toggleLoginBtn.textContent = t().hideLoginButton;
       } else {
         authShell.classList.add('hidden');
-        toggleLoginBtn.textContent = 'Login';
+        toggleLoginBtn.textContent = t().loginButton;
       }
     }
 
     function closeLoginPanel() {
       authShell.classList.add('hidden');
-      if (!currentUser) toggleLoginBtn.textContent = 'Login';
+      if (!currentUser) toggleLoginBtn.textContent = t().loginButton;
     }
 
     function generateCaptchaQuestion() {
-      const index = Math.floor(Math.random() * CAPTCHA_POOL.length);
-      currentCaptcha = CAPTCHA_POOL[index];
+      const captchaPool = t().captchaPool;
+      const index = Math.floor(Math.random() * captchaPool.length);
+      currentCaptcha = captchaPool[index];
       captchaQuestion.textContent = currentCaptcha.question;
       document.getElementById('resetCaptchaAnswer').value = '';
     }
@@ -295,9 +404,55 @@
       languageSelect.value = language;
     }
 
+    function applyTranslations() {
+      const texts = t();
+      document.getElementById('languageLabel').textContent = texts.languageLabel;
+      document.getElementById('themeToggle').textContent = texts.themeButton;
+      document.getElementById('pageSubtitle').textContent = texts.pageSubtitle;
+      document.getElementById('memberListTitle').textContent = texts.memberListTitle;
+      document.getElementById('authTitle').textContent = texts.authTitle;
+      document.getElementById('authSubtitle').textContent = texts.authSubtitle;
+      document.getElementById('loginTabBtn').textContent = texts.tabLogin;
+      document.getElementById('registerTabBtn').textContent = texts.tabRegister;
+      document.getElementById('resetTabBtn').textContent = texts.tabReset;
+      document.getElementById('loginUsernameLabel').textContent = texts.usernameLabel;
+      document.getElementById('loginPasswordLabel').textContent = texts.passwordLabel;
+      document.getElementById('loginWebsiteLabel').textContent = texts.websiteLabel;
+      document.getElementById('registerUserLabel').textContent = texts.usernameLabel;
+      document.getElementById('registerEmailLabel').textContent = texts.emailLabel;
+      document.getElementById('registerPasswordLabel').textContent = texts.passwordLabel;
+      document.getElementById('registerWebsiteLabel').textContent = texts.websiteLabel;
+      document.getElementById('resetUsernameLabel').textContent = texts.usernameLabel;
+      document.getElementById('resetEmailLabel').textContent = texts.emailLabel;
+      document.getElementById('resetPasswordLabel').textContent = texts.newPasswordLabel;
+      document.getElementById('resetWebsiteLabel').textContent = texts.websiteLabel;
+      document.getElementById('resetBtn').textContent = texts.updatePasswordButton;
+      document.getElementById('newCaptchaBtn').textContent = texts.newQuestionButton;
+      document.getElementById('resetInfoBtn').textContent = texts.infoButton;
+      document.getElementById('loginBtn').textContent = texts.loginButton;
+      document.getElementById('registerBtn').textContent = texts.createAccountButton;
+      document.getElementById('logoutBtn').textContent = texts.logoutButton;
+      if (authShell.classList.contains('hidden')) {
+        toggleLoginBtn.textContent = texts.loginButton;
+      } else {
+        toggleLoginBtn.textContent = texts.hideLoginButton;
+      }
+      if (currentUser) {
+        welcomeText.textContent = texts.welcomeUser(currentUser.username);
+      } else {
+        welcomeText.textContent = texts.welcomeGuest;
+      }
+
+      generateCaptchaQuestion();
+      renderGames();
+      renderFeatureModules(currentUser);
+      updateActiveLanguageUi(currentLanguage);
+    }
+
     function saveQuizLanguage(language) {
       localStorage.setItem(QUIZ_LANGUAGE_KEY, language);
-      updateActiveLanguageUi(language);
+      currentLanguage = language;
+      applyTranslations();
     }
 
     function initQuizLanguage() {
@@ -321,7 +476,7 @@
       }
 
       const containsPublicModules = visibleModules.some((moduleConfig) => !moduleConfig.adminOnly);
-      featureModulesTitle.textContent = containsPublicModules ? 'Extra modules' : 'Admin modules';
+      featureModulesTitle.textContent = containsPublicModules ? t().extraModules : t().adminModules;
       featureModulesGrid.innerHTML = '';
 
       for (const moduleConfig of visibleModules) {
@@ -369,7 +524,7 @@
       memberList.innerHTML = '';
       for (const member of data.users || []) {
         const li = document.createElement('li');
-        li.textContent = `${member.username} (${member.email}) - country: ${member.country || 'unknown'}`;
+        li.textContent = `${member.username} (${member.email}) - ${t().countryLabel}: ${member.country || t().unknownCountry}`;
         memberList.appendChild(li);
       }
       memberListSection.classList.remove('hidden');
@@ -378,16 +533,16 @@
     async function applyUserState(user) {
       currentUser = user;
       if (user) {
-        welcomeText.textContent = `Logged in as: ${user.username}`;
+        welcomeText.textContent = t().welcomeUser(user.username);
         closeLoginPanel();
         logoutBtn.classList.remove('hidden');
         toggleLoginBtn.classList.add('hidden');
       } else {
-        welcomeText.textContent = 'Logged in as: Guest';
+        welcomeText.textContent = t().welcomeGuest;
         closeLoginPanel();
         logoutBtn.classList.add('hidden');
         toggleLoginBtn.classList.remove('hidden');
-        toggleLoginBtn.textContent = 'Login';
+        toggleLoginBtn.textContent = t().loginButton;
       }
       renderFeatureModules(user);
       await renderMemberList(user);
@@ -399,7 +554,7 @@
       const honeypot = document.getElementById('loginWebsite').value;
 
       if (!username || !password) {
-        setStatus('Please enter both username and password.', true);
+        setStatus(t().statusMissingLoginFields, true);
         return;
       }
 
@@ -412,7 +567,7 @@
 
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
-        setStatus(data.error || 'Login failed.', true);
+        setStatus(data.error || t().statusLoginFailed, true);
         return;
       }
 
@@ -435,11 +590,11 @@
 
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
-        setStatus(data.error || 'Registration failed.', true);
+        setStatus(data.error || t().statusRegistrationFailed, true);
         return;
       }
 
-      setStatus('Account created. Log in with username and password.');
+      setStatus(t().statusRegistrationOk);
       switchTab('login');
       document.getElementById('loginUsername').value = username;
       document.getElementById('loginPassword').value = '';
@@ -467,19 +622,19 @@
         failedResetAttempts += 1;
         if (failedResetAttempts >= 3) resetInfoBtn.classList.remove('hidden');
         const data = await response.json().catch(() => ({}));
-        setStatus(data.error || 'Could not update password.', true);
+        setStatus(data.error || t().statusPasswordResetFailed, true);
         generateCaptchaQuestion();
         return;
       }
 
       failedResetAttempts = 0;
       resetInfoBtn.classList.add('hidden');
-      setStatus('Password updated. You can now log in.');
+      setStatus(t().statusPasswordResetOk);
       switchTab('login');
     }
 
     function showResetHelpInfo() {
-      setStatus('Forgot your password? Contact admin at xxxx@gmail.com');
+      setStatus(t().statusResetHelp);
     }
 
     async function logout() {
@@ -490,13 +645,12 @@
         body: JSON.stringify({ honeypot: '' })
       });
       await applyUserState(null);
-      setStatus('Logged out.');
+      setStatus(t().statusLoggedOut);
     }
 
     async function init() {
       setThemeFromStorage();
       initQuizLanguage();
-      generateCaptchaQuestion();
 
       await applyUserState(null);
       const user = await fetchSession();
@@ -513,12 +667,10 @@
       document.getElementById('toggleLoginBtn').addEventListener('click', toggleLoginPanel);
       document.getElementById('closeLoginBtn').addEventListener('click', closeLoginPanel);
 
-
-
       document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape') {
           closeLoginPanel();
-            }
+        }
       });
 
       const submitOnEnter = (event) => {
@@ -533,5 +685,6 @@
 
     init();
   </script>
+
 </body>
 </html>
