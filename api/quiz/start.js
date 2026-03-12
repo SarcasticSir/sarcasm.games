@@ -70,6 +70,52 @@ function parseCategoryList(value) {
     });
 }
 
+function randomIndex(max) {
+  return Math.floor(Math.random() * max);
+}
+
+function allocateQuestionsPerCategory(availableByCategory, requestedCount) {
+  const categoriesWithQuestions = Object.entries(availableByCategory)
+    .filter(([, available]) => Number(available) > 0)
+    .map(([category]) => category);
+
+  const allocation = Object.fromEntries(categoriesWithQuestions.map((category) => [category, 0]));
+  let remaining = requestedCount;
+
+  if (!categoriesWithQuestions.length || remaining < 1) {
+    return allocation;
+  }
+
+  const categoriesToSeed = [...categoriesWithQuestions];
+
+  while (remaining > 0 && categoriesToSeed.length) {
+    const index = randomIndex(categoriesToSeed.length);
+    const category = categoriesToSeed[index];
+    allocation[category] += 1;
+    remaining -= 1;
+
+    if (allocation[category] >= Number(availableByCategory[category])) {
+      categoriesToSeed.splice(index, 1);
+    }
+  }
+
+  while (remaining > 0) {
+    const categoriesWithCapacity = categoriesWithQuestions.filter(
+      (category) => allocation[category] < Number(availableByCategory[category])
+    );
+
+    if (!categoriesWithCapacity.length) {
+      break;
+    }
+
+    const category = categoriesWithCapacity[randomIndex(categoriesWithCapacity.length)];
+    allocation[category] += 1;
+    remaining -= 1;
+  }
+
+  return allocation;
+}
+
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' });
@@ -101,14 +147,26 @@ module.exports = async function handler(req, res) {
 
       const uniqueCategories = [...new Set(selectedCategories)];
 
-      const countResult = await runQuery(
-        `SELECT COUNT(*)::int AS total
+      const availabilityResult = await runQuery(
+        `SELECT category, COUNT(*)::int AS total
          FROM quiz_questions
-         WHERE category = ANY($1)`,
+         WHERE category = ANY($1)
+         GROUP BY category`,
         [uniqueCategories]
       );
 
-      const totalAvailable = Number(countResult.rows[0]?.total || 0);
+      const availableByCategory = Object.fromEntries(
+        uniqueCategories.map((category) => [category, 0])
+      );
+
+      for (const row of availabilityResult.rows) {
+        const category = String(row.category || '');
+        if (!category) continue;
+        availableByCategory[category] = Number(row.total) || 0;
+      }
+
+      const totalAvailable = Object.values(availableByCategory)
+        .reduce((sum, value) => sum + Number(value || 0), 0);
 
       if (totalAvailable < 1) {
         res.status(400).json({ error: 'No questions available for selected categories.' });
@@ -121,13 +179,32 @@ module.exports = async function handler(req, res) {
         return;
       }
 
+      const categoryAllocation = allocateQuestionsPerCategory(availableByCategory, requestedCount);
+      const allocationJson = JSON.stringify(categoryAllocation);
+
       const query = await runQuery(
-        `SELECT id, category, question_en, question_no, answers_en, answers_no
-         FROM quiz_questions
-         WHERE category = ANY($1)
-         ORDER BY RANDOM()
-         LIMIT $2`,
-        [uniqueCategories, requestedCount]
+        `WITH limits AS (
+           SELECT key::text AS category, value::int AS max_count
+           FROM jsonb_each_text($1::jsonb)
+         ),
+         ranked_questions AS (
+           SELECT
+             q.id,
+             q.category,
+             q.question_en,
+             q.question_no,
+             q.answers_en,
+             q.answers_no,
+             l.max_count,
+             ROW_NUMBER() OVER (PARTITION BY q.category ORDER BY RANDOM()) AS category_rank
+           FROM quiz_questions q
+           INNER JOIN limits l ON l.category = q.category
+         )
+         SELECT id, category, question_en, question_no, answers_en, answers_no
+         FROM ranked_questions
+         WHERE category_rank <= max_count
+         ORDER BY RANDOM()`,
+        [allocationJson]
       );
 
       const questions = query.rows
@@ -139,6 +216,7 @@ module.exports = async function handler(req, res) {
         count: requestedCount,
         totalAvailable,
         selectedCategories: uniqueCategories,
+        categoryAllocation,
         questions
       });
       return;
