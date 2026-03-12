@@ -80,7 +80,82 @@
   </main>
 
   <script>
-    const positiveMessages = ['Good!', 'Great job!', 'Nice one!', 'Excellent!', 'Well done!'];
+    const allowedLanguages = new Set(['en', 'no']);
+    const fallbackLanguage = 'en';
+    const copy = {
+      en: {
+        title: 'Random10 quiz',
+        introLead: 'Welcome! On this page you will get 10 random questions from mixed categories.',
+        introFeature: 'New: you can reveal the answer only after a wrong guess, then move on manually.',
+        introRules: 'Answer checks follow forgiving rules for text answers: punctuation and tiny text differences are tolerated, close answers can become Almost. Numeric answers require exact numbers, but values within 10% are marked as Almost. If you get Almost, you get one extra try.',
+        startQuiz: 'Start Random10 quiz',
+        backHome: 'Back to sarcasm.games',
+        loading: 'Loading…',
+        loadingError: 'Could not load questions from API. Please try again.',
+        fetchError: 'Could not fetch quiz questions from API.',
+        notEnoughQuestions: 'Not enough API questions available yet.',
+        progress: 'Question {current} / {total}',
+        category: 'Category: {category}',
+        abortQuiz: 'Abort quiz',
+        abortConfirm: 'Abort current quiz?',
+        abortYes: 'Yes, abort',
+        abortNo: 'Continue quiz',
+        questionTitle: 'Question',
+        answerPlaceholder: 'Write your answer here',
+        submitAnswer: 'Submit answer',
+        showAnswer: 'Show answer',
+        nextQuestion: 'Next question',
+        answerPrefix: 'Answer: {answer}',
+        resultTitle: 'Quiz complete 🎉',
+        resultSummary: 'You finished Random10 with {correct} / {total} correct answers.',
+        correctCount: 'correct',
+        wrongCount: 'wrong',
+        answeredQuestionsHeading: 'Answered questions',
+        playAgain: 'Try again',
+        answerSubmitError: 'Could not submit answer. Please try again.',
+        answerValidateError: 'Could not validate answer.',
+        invalidPayloadError: 'Invalid answer payload.',
+        almostStatus: 'Almost — try again.',
+        wrongStatus: 'Wrong answer. You can show answer, then continue.',
+        positiveMessages: ['Good!', 'Great job!', 'Nice one!', 'Excellent!', 'Well done!']
+      },
+      no: {
+        title: 'Random10-quiz',
+        introLead: 'Velkommen! På denne siden får du 10 tilfeldige spørsmål fra blandede kategorier.',
+        introFeature: 'Nytt: du kan vise svaret først etter et feilforsøk, og deretter gå videre manuelt.',
+        introRules: 'Svarevaluering bruker tilgivende regler for tekstsvar: tegnsetting og små tekstforskjeller tolereres, og nære svar kan bli Almost. Numeriske svar krever eksakte tall, men verdier innenfor 10 % markeres som Almost. Får du Almost, får du ett ekstra forsøk.',
+        startQuiz: 'Start Random10-quiz',
+        backHome: 'Tilbake til sarcasm.games',
+        loading: 'Laster…',
+        loadingError: 'Kunne ikke laste spørsmål fra API. Prøv igjen.',
+        fetchError: 'Kunne ikke hente quizspørsmål fra API.',
+        notEnoughQuestions: 'Ikke nok API-spørsmål tilgjengelig ennå.',
+        progress: 'Spørsmål {current} / {total}',
+        category: 'Kategori: {category}',
+        abortQuiz: 'Avbryt quiz',
+        abortConfirm: 'Avbryte nåværende quiz?',
+        abortYes: 'Ja, avbryt',
+        abortNo: 'Fortsett quiz',
+        questionTitle: 'Spørsmål',
+        answerPlaceholder: 'Skriv svaret ditt her',
+        submitAnswer: 'Send svar',
+        showAnswer: 'Vis svar',
+        nextQuestion: 'Neste spørsmål',
+        answerPrefix: 'Svar: {answer}',
+        resultTitle: 'Quiz fullført 🎉',
+        resultSummary: 'Du fullførte Random10 med {correct} / {total} riktige svar.',
+        correctCount: 'riktige',
+        wrongCount: 'feil',
+        answeredQuestionsHeading: 'Besvarte spørsmål',
+        playAgain: 'Prøv igjen',
+        answerSubmitError: 'Kunne ikke sende svar. Prøv igjen.',
+        answerValidateError: 'Kunne ikke validere svar.',
+        invalidPayloadError: 'Ugyldig svarpayload.',
+        almostStatus: 'Nesten — prøv igjen.',
+        wrongStatus: 'Feil svar. Du kan vise svaret, og deretter fortsette.',
+        positiveMessages: ['Bra!', 'Godt jobba!', 'Nydelig!', 'Utmerket!', 'Flott!']
+      }
+    };
 
     const introView = document.getElementById('introView');
     const questionView = document.getElementById('questionView');
@@ -102,8 +177,26 @@
     const confirmAbortBtn = document.getElementById('confirmAbortBtn');
     const cancelAbortBtn = document.getElementById('cancelAbortBtn');
     const answeredQuestionsList = document.getElementById('answeredQuestionsList');
+    const backLinks = document.querySelectorAll('a.link-btn');
+    const introHeading = introView.querySelector('h1');
+    const introParagraphs = introView.querySelectorAll('p');
+    const abortConfirmText = abortConfirmRow.querySelector('.muted');
+    const questionSectionHeading = questionView.querySelector('h2');
+    const resultHeading = resultView.querySelector('h2');
+    const resultCounterItems = resultView.querySelectorAll('ul.result-list li');
+    const answeredQuestionsHeading = resultView.querySelector('h3');
+    const playAgainBtn = document.getElementById('playAgainBtn');
+
+    function getQuizLanguage() {
+      const storedLanguage = localStorage.getItem('quizLanguage');
+      if (allowedLanguages.has(storedLanguage)) {
+        return storedLanguage;
+      }
+      return fallbackLanguage;
+    }
 
     const state = {
+      language: fallbackLanguage,
       questions: [],
       index: 0,
       correct: 0,
@@ -114,8 +207,18 @@
       isAdvancing: false
     };
 
+
+    function syncLanguageFromStorage() {
+      state.language = getQuizLanguage();
+    }
+
+    function uiCopy() {
+      return copy[state.language] || copy[fallbackLanguage];
+    }
+
     function pickPositiveMessage() {
-      return positiveMessages[Math.floor(Math.random() * positiveMessages.length)];
+      const messages = uiCopy().positiveMessages;
+      return messages[Math.floor(Math.random() * messages.length)];
     }
 
     function showView(view) {
@@ -127,7 +230,8 @@
 
     function setStartLoading(isLoading) {
       startBtn.disabled = isLoading;
-      startBtn.textContent = isLoading ? 'Loading…' : 'Start Random10 quiz';
+      const c = uiCopy();
+      startBtn.textContent = isLoading ? c.loading : c.startQuiz;
     }
 
     function renderAnsweredQuestions() {
@@ -138,7 +242,7 @@
         if (entry.status === 'correct') {
           item.textContent = `✅ ${entry.prompt}`;
         } else {
-          const answerPart = entry.acceptedAnswer ? ` (Answer: ${entry.acceptedAnswer})` : '';
+          const answerPart = entry.acceptedAnswer ? ` (${uiCopy().answerPrefix.replace('{answer}', entry.acceptedAnswer)})` : '';
           item.textContent = `❌ ${entry.prompt}${answerPart}`;
         }
         answeredQuestionsList.appendChild(item);
@@ -165,31 +269,33 @@
         const response = await fetch('/api/quiz/start', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ mode: 'random10', count: 10, lang: 'en' })
+          body: JSON.stringify({ mode: 'random10', count: 10, lang: state.language })
         });
 
         if (!response.ok) {
-          throw new Error('Could not fetch quiz questions from API.');
+          throw new Error(uiCopy().fetchError);
         }
 
         const payload = await response.json();
         const questions = (payload.questions || []).map(normalizeQuestion).filter((q) => q.answers.length);
         if (questions.length < 10) {
-          throw new Error('Not enough API questions available yet.');
+          throw new Error(uiCopy().notEnoughQuestions);
         }
 
         return questions.slice(0, 10);
       } catch (error) {
-        introError.textContent = 'Could not load questions from API. Please try again.';
+        introError.textContent = uiCopy().loadingError;
         return [];
       }
     }
 
     function renderQuestion() {
       const q = state.questions[state.index];
-      progressText.textContent = `Question ${state.index + 1} / ${state.questions.length}`;
+      progressText.textContent = uiCopy().progress
+        .replace('{current}', String(state.index + 1))
+        .replace('{total}', String(state.questions.length));
       questionTitle.textContent = q.prompt;
-      questionCategory.textContent = `Category: ${q.category}`;
+      questionCategory.textContent = uiCopy().category.replace('{category}', q.category);
       answerInput.value = '';
       answerInput.disabled = false;
       answerInput.focus();
@@ -199,7 +305,7 @@
       statusText.textContent = '';
       statusText.className = 'status';
       answerReveal.classList.add('hidden');
-      answerReveal.textContent = `Answer: ${q.answers[0]}`;
+      answerReveal.textContent = uiCopy().answerPrefix.replace('{answer}', q.answers[0]);
       showAnswerBtn.classList.add('hidden');
       nextQuestionBtn.classList.add('hidden');
       abortConfirmRow.classList.add('hidden');
@@ -212,7 +318,9 @@
         document.getElementById('correctCount').textContent = String(state.correct);
         document.getElementById('wrongCount').textContent = String(state.wrong);
         renderAnsweredQuestions();
-        document.getElementById('resultSummary').textContent = `You finished Random10 with ${state.correct} / ${state.questions.length} correct answers.`;
+        document.getElementById('resultSummary').textContent = uiCopy().resultSummary
+          .replace('{correct}', String(state.correct))
+          .replace('{total}', String(state.questions.length));
         showView('result');
         return;
       }
@@ -245,17 +353,17 @@
           answer: userAnswer,
           retryAvailable,
           mode: 'random10',
-          lang: 'en'
+          lang: state.language
         })
       });
 
       if (!response.ok) {
-        throw new Error('Could not validate answer.');
+        throw new Error(uiCopy().answerValidateError);
       }
 
       const payload = await response.json();
       if (!payload || !payload.status) {
-        throw new Error('Invalid answer payload.');
+        throw new Error(uiCopy().invalidPayloadError);
       }
 
       return payload;
@@ -276,7 +384,7 @@
       } catch (error) {
         state.isSubmitting = false;
         statusText.className = 'status wrong';
-        statusText.textContent = 'Could not submit answer. Please try again.';
+        statusText.textContent = uiCopy().answerSubmitError;
         return;
       }
 
@@ -307,7 +415,7 @@
         state.awaitingRetry = true;
         state.isSubmitting = false;
         statusText.className = 'status almost';
-        statusText.textContent = 'Almost — try again.';
+        statusText.textContent = uiCopy().almostStatus;
         answerInput.value = '';
         answerInput.focus();
         return;
@@ -322,14 +430,43 @@
       state.awaitingRetry = false;
       state.isSubmitting = false;
       statusText.className = 'status wrong';
-      statusText.textContent = 'Wrong answer. You can show answer, then continue.';
+      statusText.textContent = uiCopy().wrongStatus;
       showAnswerBtn.classList.remove('hidden');
       nextQuestionBtn.classList.remove('hidden');
       submitBtn.disabled = true;
     }
 
+    function applyCopy() {
+      const c = uiCopy();
+      document.title = c.title;
+      introHeading.textContent = c.title;
+      introParagraphs[0].textContent = c.introLead;
+      introParagraphs[1].textContent = c.introFeature;
+      introParagraphs[2].innerHTML = `${c.introRules.replaceAll('Almost', '<strong>Almost</strong>')}`;
+      startBtn.textContent = c.startQuiz;
+      for (const link of backLinks) {
+        link.textContent = c.backHome;
+      }
+      abortQuizBtn.textContent = c.abortQuiz;
+      abortConfirmText.textContent = c.abortConfirm;
+      confirmAbortBtn.textContent = c.abortYes;
+      cancelAbortBtn.textContent = c.abortNo;
+      questionSectionHeading.textContent = c.questionTitle;
+      answerInput.placeholder = c.answerPlaceholder;
+      submitBtn.textContent = c.submitAnswer;
+      showAnswerBtn.textContent = c.showAnswer;
+      nextQuestionBtn.textContent = c.nextQuestion;
+      resultHeading.textContent = c.resultTitle;
+      resultCounterItems[0].lastChild.textContent = ` ${c.correctCount}`;
+      resultCounterItems[1].lastChild.textContent = ` ${c.wrongCount}`;
+      answeredQuestionsHeading.textContent = c.answeredQuestionsHeading;
+      playAgainBtn.textContent = c.playAgain;
+    }
+
     startBtn.addEventListener('click', async () => {
       if (startBtn.disabled) return;
+      syncLanguageFromStorage();
+      applyCopy();
       setStartLoading(true);
       state.questions = await loadQuestions();
       if (state.questions.length < 10) {
@@ -376,10 +513,13 @@
       moveNextQuestion();
     });
 
-    document.getElementById('playAgainBtn').addEventListener('click', () => {
+    playAgainBtn.addEventListener('click', () => {
       resetQuizState();
       showView('intro');
     });
+
+    syncLanguageFromStorage();
+    applyCopy();
   </script>
 </body>
 </html>
