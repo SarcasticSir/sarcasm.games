@@ -32,6 +32,17 @@ async function getUserByUsername(username) {
   return result.rows[0] || null;
 }
 
+async function getUserById(id) {
+  const result = await runQuery(
+    `SELECT id, username, email, password_hash, role, country, created_at, updated_at
+     FROM users
+     WHERE id = $1
+     LIMIT 1`,
+    [id]
+  );
+  return result.rows[0] || null;
+}
+
 async function insertUser({ username, email, passwordHash, role = 'user', country }) {
   const result = await runQuery(
     `INSERT INTO users (username, email, password_hash, role, country)
@@ -65,6 +76,7 @@ module.exports = {
   runQuery,
   getUserByEmail,
   getUserByUsername,
+  getUserById,
   insertUser,
   updatePasswordByUserId,
   getUsersForAdminList
