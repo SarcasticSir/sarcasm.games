@@ -19,5 +19,22 @@
     <p>This is a placeholder page. We will build this quiz mode step by step.</p>
     <a href="/">Back to sarcasm.games</a>
   </main>
+
+  <script type="module">
+    import { getQuizLanguage } from '/lib/client/quiz-language.js';
+
+    // Language is captured at page load and must stay fixed during one active round.
+    const activeLang = getQuizLanguage();
+
+    const runtimeState = {
+      activeLang,
+      quizStarted: false
+    };
+
+    // Placeholder for upcoming API integration:
+    // fetch('/api/quiz/start', { method: 'POST', body: JSON.stringify({ mode: 'quiz-quest', lang: runtimeState.activeLang }) })
+
+    window.quizQuestState = runtimeState;
+  </script>
 </body>
 </html>

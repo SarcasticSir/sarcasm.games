@@ -79,8 +79,13 @@
     </section>
   </main>
 
-  <script>
+  <script type="module">
+    import { getQuizLanguage } from '/lib/client/quiz-language.js';
+
     const positiveMessages = ['Good!', 'Great job!', 'Nice one!', 'Excellent!', 'Well done!'];
+
+    // Language is locked for this runtime session once loaded.
+    const activeLang = getQuizLanguage();
 
     const introView = document.getElementById('introView');
     const questionView = document.getElementById('questionView');
@@ -111,7 +116,8 @@
       answeredQuestions: [],
       awaitingRetry: false,
       isSubmitting: false,
-      isAdvancing: false
+      isAdvancing: false,
+      quizStarted: false
     };
 
     function pickPositiveMessage() {
@@ -165,7 +171,7 @@
         const response = await fetch('/api/quiz/start', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ mode: 'random10', count: 10, lang: 'en' })
+          body: JSON.stringify({ mode: 'random10', count: 10, lang: activeLang })
         });
 
         if (!response.ok) {
@@ -229,6 +235,7 @@
       state.awaitingRetry = false;
       state.isSubmitting = false;
       state.isAdvancing = false;
+      state.quizStarted = false;
       introError.textContent = '';
       statusText.textContent = '';
       answerReveal.classList.add('hidden');
@@ -245,7 +252,7 @@
           answer: userAnswer,
           retryAvailable,
           mode: 'random10',
-          lang: 'en'
+          lang: activeLang
         })
       });
 
@@ -344,6 +351,7 @@
       state.awaitingRetry = false;
       state.isSubmitting = false;
       state.isAdvancing = false;
+      state.quizStarted = true;
       renderQuestion();
       showView('question');
       setStartLoading(false);
