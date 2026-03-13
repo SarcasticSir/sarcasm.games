@@ -99,6 +99,71 @@ function isQuestionValid(question) {
   return Boolean(question && question.prompt && Array.isArray(question.answers) && question.answers.length);
 }
 
+async function pickRandomQuestion({ categories, userId, solvedQuestionIds }) {
+  if (userId) {
+    const countResult = await runQuery(
+      `SELECT COUNT(*)::int AS total
+       FROM quiz_questions q
+       WHERE q.category = ANY($1)
+         AND NOT EXISTS (
+           SELECT 1
+           FROM user_answers ua
+           WHERE ua.user_id = $2
+             AND ua.question_id = q.id
+             AND ua.is_correct = TRUE
+         )`,
+      [categories, userId]
+    );
+
+    const total = Number(countResult.rows[0]?.total) || 0;
+    if (total < 1) return null;
+
+    const offset = Math.floor(Math.random() * total);
+    const query = await runQuery(
+      `SELECT q.id, q.category, q.question_en, q.question_no, q.answers_en, q.answers_no
+       FROM quiz_questions q
+       WHERE q.category = ANY($1)
+         AND NOT EXISTS (
+           SELECT 1
+           FROM user_answers ua
+           WHERE ua.user_id = $2
+             AND ua.question_id = q.id
+             AND ua.is_correct = TRUE
+         )
+       ORDER BY q.id ASC
+       LIMIT 1 OFFSET $3`,
+      [categories, userId, offset]
+    );
+
+    return query.rows[0] || null;
+  }
+
+  const excludedIds = solvedQuestionIds.length ? solvedQuestionIds : [0];
+  const countResult = await runQuery(
+    `SELECT COUNT(*)::int AS total
+     FROM quiz_questions q
+     WHERE q.category = ANY($1)
+       AND NOT (q.id = ANY($2::int[]))`,
+    [categories, excludedIds]
+  );
+
+  const total = Number(countResult.rows[0]?.total) || 0;
+  if (total < 1) return null;
+
+  const offset = Math.floor(Math.random() * total);
+  const query = await runQuery(
+    `SELECT q.id, q.category, q.question_en, q.question_no, q.answers_en, q.answers_no
+     FROM quiz_questions q
+     WHERE q.category = ANY($1)
+       AND NOT (q.id = ANY($2::int[]))
+     ORDER BY q.id ASC
+     LIMIT 1 OFFSET $3`,
+    [categories, excludedIds, offset]
+  );
+
+  return query.rows[0] || null;
+}
+
 async function getOverview({ userId, solvedQuestionIds }) {
   if (userId) {
     const result = await runQuery(
@@ -185,34 +250,10 @@ module.exports = async function handler(req, res) {
         return;
       }
 
-      const query = userId
-        ? await runQuery(
-          `SELECT q.id, q.category, q.question_en, q.question_no, q.answers_en, q.answers_no
-           FROM quiz_questions q
-           LEFT JOIN user_answers ua
-             ON ua.question_id = q.id
-            AND ua.user_id = $2
-           WHERE q.category = ANY($1)
-             AND COALESCE(ua.is_correct, FALSE) = FALSE
-           ORDER BY RANDOM()
-           LIMIT 50`,
-          [categories, userId]
-        )
-        : await runQuery(
-          `SELECT q.id, q.category, q.question_en, q.question_no, q.answers_en, q.answers_no
-           FROM quiz_questions q
-           WHERE q.category = ANY($1)
-             AND NOT (q.id = ANY($2::int[]))
-           ORDER BY RANDOM()
-           LIMIT 50`,
-          [categories, solvedQuestionIds.length ? solvedQuestionIds : [0]]
-        );
+      const candidate = await pickRandomQuestion({ categories, userId, solvedQuestionIds });
+      const question = candidate ? mapQuestion(candidate, lang) : null;
 
-      const question = query.rows
-        .map((row) => mapQuestion(row, lang))
-        .find((entry) => isQuestionValid(entry));
-
-      if (!question) {
+      if (!isQuestionValid(question)) {
         res.status(200).json({ question: null });
         return;
       }

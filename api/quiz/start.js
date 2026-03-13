@@ -55,23 +55,25 @@ function mapQuestion(row, lang) {
   };
 }
 
-function parseCategoryList(value) {
-  if (!Array.isArray(value)) return [];
-
-  const seen = new Set();
-  return value
-    .map((entry) => String(entry || '').trim())
-    .filter(Boolean)
-    .filter((entry) => {
-      const key = entry.toLowerCase();
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-}
-
 function randomIndex(max) {
   return Math.floor(Math.random() * max);
+}
+
+function shuffleInPlace(values) {
+  for (let index = values.length - 1; index > 0; index -= 1) {
+    const targetIndex = randomIndex(index + 1);
+    [values[index], values[targetIndex]] = [values[targetIndex], values[index]];
+  }
+  return values;
+}
+
+function sampleWithoutReplacement(values, count) {
+  if (count <= 0 || !values.length) return [];
+  if (count >= values.length) return [...values];
+
+  const shuffled = [...values];
+  shuffleInPlace(shuffled);
+  return shuffled.slice(0, count);
 }
 
 function allocateQuestionsPerCategory(availableByCategory, requestedCount) {
@@ -114,6 +116,15 @@ function allocateQuestionsPerCategory(availableByCategory, requestedCount) {
   }
 
   return allocation;
+}
+
+function orderRowsByIdList(rows, orderedIds) {
+  const indexById = new Map(orderedIds.map((id, index) => [Number(id), index]));
+  return [...rows].sort((left, right) => {
+    const leftRank = indexById.get(Number(left.id)) ?? Number.MAX_SAFE_INTEGER;
+    const rightRank = indexById.get(Number(right.id)) ?? Number.MAX_SAFE_INTEGER;
+    return leftRank - rightRank;
+  });
 }
 
 module.exports = async function handler(req, res) {
@@ -180,34 +191,42 @@ module.exports = async function handler(req, res) {
       }
 
       const categoryAllocation = allocateQuestionsPerCategory(availableByCategory, requestedCount);
-      const allocationJson = JSON.stringify(categoryAllocation);
-
-      const query = await runQuery(
-        `WITH limits AS (
-           SELECT key::text AS category, value::int AS max_count
-           FROM jsonb_each_text($1::jsonb)
-         ),
-         ranked_questions AS (
-           SELECT
-             q.id,
-             q.category,
-             q.question_en,
-             q.question_no,
-             q.answers_en,
-             q.answers_no,
-             l.max_count,
-             ROW_NUMBER() OVER (PARTITION BY q.category ORDER BY RANDOM()) AS category_rank
-           FROM quiz_questions q
-           INNER JOIN limits l ON l.category = q.category
-         )
-         SELECT id, category, question_en, question_no, answers_en, answers_no
-         FROM ranked_questions
-         WHERE category_rank <= max_count
-         ORDER BY RANDOM()`,
-        [allocationJson]
+      const candidateQuery = await runQuery(
+        `SELECT id, category
+         FROM quiz_questions
+         WHERE category = ANY($1)
+         ORDER BY category ASC, id ASC`,
+        [uniqueCategories]
       );
 
-      const questions = query.rows
+      const idsByCategory = new Map(uniqueCategories.map((category) => [category, []]));
+      for (const row of candidateQuery.rows) {
+        const category = String(row.category || '');
+        if (!idsByCategory.has(category)) continue;
+        idsByCategory.get(category).push(Number(row.id));
+      }
+
+      const selectedIds = [];
+      for (const category of uniqueCategories) {
+        const targetCount = Number(categoryAllocation[category] || 0);
+        if (targetCount < 1) continue;
+        const candidates = idsByCategory.get(category) || [];
+        selectedIds.push(...sampleWithoutReplacement(candidates, targetCount));
+      }
+
+      shuffleInPlace(selectedIds);
+
+      const query = selectedIds.length
+        ? await runQuery(
+          `SELECT id, category, question_en, question_no, answers_en, answers_no
+           FROM quiz_questions
+           WHERE id = ANY($1::int[])`,
+          [selectedIds]
+        )
+        : { rows: [] };
+
+      const orderedRows = orderRowsByIdList(query.rows, selectedIds);
+      const questions = orderedRows
         .map((row) => mapQuestion(row, lang))
         .filter((row) => row.prompt && row.answers.length);
 
@@ -227,14 +246,28 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const query = await runQuery(
-      `SELECT id, category, question_en, question_no, answers_en, answers_no
+    const candidates = await runQuery(
+      `SELECT id
        FROM quiz_questions
-       ORDER BY RANDOM()
-       LIMIT 10`
+       ORDER BY id ASC`
     );
 
-    const questions = query.rows
+    const selectedIds = sampleWithoutReplacement(
+      candidates.rows.map((row) => Number(row.id)),
+      10
+    );
+
+    const query = selectedIds.length
+      ? await runQuery(
+        `SELECT id, category, question_en, question_no, answers_en, answers_no
+         FROM quiz_questions
+         WHERE id = ANY($1::int[])`,
+        [selectedIds]
+      )
+      : { rows: [] };
+
+    const orderedRows = orderRowsByIdList(query.rows, selectedIds);
+    const questions = orderedRows
       .map((row) => mapQuestion(row, lang))
       .filter((row) => row.prompt && row.answers.length);
 
