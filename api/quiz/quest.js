@@ -1,6 +1,8 @@
 const crypto = require('crypto');
 const { runQuery } = require('../_lib/db');
 const { parseCookies, verifySessionToken, COOKIE_NAME } = require('../_lib/auth');
+const { isRateLimited } = require('../_lib/rate-limit');
+const { sendQuizRateLimited } = require('../_lib/quiz-rate-limit-response');
 
 const GUEST_PROGRESS_TTL_MS = 1000 * 60 * 60 * 12;
 const guestProgressStore = new Map();
@@ -233,6 +235,11 @@ async function getOverview({ userId, solvedQuestionIds }) {
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' });
+    return;
+  }
+
+  if (isRateLimited(req, 'quiz:quest')) {
+    sendQuizRateLimited(res);
     return;
   }
 
