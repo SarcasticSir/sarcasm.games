@@ -1,5 +1,9 @@
+const crypto = require('crypto');
 const { runQuery } = require('../_lib/db');
 const { parseCookies, verifySessionToken, COOKIE_NAME } = require('../_lib/auth');
+
+const GUEST_PROGRESS_TTL_MS = 1000 * 60 * 60 * 12;
+const guestProgressStore = new Map();
 
 function parseBody(body) {
   if (!body) return {};
@@ -99,6 +103,77 @@ function isQuestionValid(question) {
   return Boolean(question && question.prompt && Array.isArray(question.answers) && question.answers.length);
 }
 
+function pruneGuestProgressStore() {
+  const expiresBefore = Date.now() - GUEST_PROGRESS_TTL_MS;
+  for (const [token, entry] of guestProgressStore.entries()) {
+    if (!entry || entry.updatedAt < expiresBefore) {
+      guestProgressStore.delete(token);
+    }
+  }
+}
+
+function createGuestProgressToken() {
+  let token = crypto.randomBytes(9).toString('base64url');
+  while (guestProgressStore.has(token)) {
+    token = crypto.randomBytes(9).toString('base64url');
+  }
+  return token;
+}
+
+function loadGuestProgress(body) {
+  pruneGuestProgressStore();
+
+  const legacySolvedIds = parseSolvedQuestionIds(body.solvedQuestionIds);
+  const solvedDeltas = parseSolvedQuestionIds(body.solvedQuestionIdDeltas);
+  const requestedToken = typeof body.guestProgressToken === 'string' ? body.guestProgressToken.trim() : '';
+
+  let token = null;
+  let solvedSet = new Set();
+  let shouldPersist = false;
+
+  if (requestedToken) {
+    const existing = guestProgressStore.get(requestedToken);
+    if (existing) {
+      token = requestedToken;
+      solvedSet = new Set(existing.solvedQuestionIds);
+    }
+  }
+
+  if (legacySolvedIds.length) {
+    shouldPersist = true;
+    for (const id of legacySolvedIds) solvedSet.add(id);
+  }
+
+  if (solvedDeltas.length) {
+    shouldPersist = true;
+    for (const id of solvedDeltas) solvedSet.add(id);
+  }
+
+  const shouldIssueToken = Boolean(requestedToken || legacySolvedIds.length || solvedDeltas.length);
+
+  if (!token && shouldIssueToken) {
+    token = createGuestProgressToken();
+  }
+
+  if (token && (shouldPersist || !guestProgressStore.has(token))) {
+    guestProgressStore.set(token, {
+      solvedQuestionIds: [...solvedSet],
+      updatedAt: Date.now()
+    });
+  } else if (token) {
+    const existing = guestProgressStore.get(token);
+    if (existing) {
+      existing.updatedAt = Date.now();
+      guestProgressStore.set(token, existing);
+    }
+  }
+
+  return {
+    token,
+    solvedQuestionIds: [...solvedSet]
+  };
+}
+
 async function getOverview({ userId, solvedQuestionIds }) {
   if (userId) {
     const result = await runQuery(
@@ -167,13 +242,14 @@ module.exports = async function handler(req, res) {
     const lang = body.lang === 'no' ? 'no' : 'en';
     const session = await tryGetSession(req);
     const userId = session && Number.isInteger(Number(session.id)) ? Number(session.id) : null;
-    const solvedQuestionIds = parseSolvedQuestionIds(body.solvedQuestionIds);
+    const guestProgress = userId ? { token: null, solvedQuestionIds: [] } : loadGuestProgress(body);
 
     if (action === 'overview') {
-      const categories = await getOverview({ userId, solvedQuestionIds });
+      const categories = await getOverview({ userId, solvedQuestionIds: guestProgress.solvedQuestionIds });
       res.status(200).json({
         mode: userId ? 'authenticated' : 'guest',
-        categories
+        categories,
+        ...(guestProgress.token ? { guestProgressToken: guestProgress.token } : {})
       });
       return;
     }
@@ -205,7 +281,7 @@ module.exports = async function handler(req, res) {
              AND NOT (q.id = ANY($2::int[]))
            ORDER BY RANDOM()
            LIMIT 50`,
-          [categories, solvedQuestionIds.length ? solvedQuestionIds : [0]]
+          [categories, guestProgress.solvedQuestionIds.length ? guestProgress.solvedQuestionIds : [0]]
         );
 
       const question = query.rows
@@ -213,11 +289,17 @@ module.exports = async function handler(req, res) {
         .find((entry) => isQuestionValid(entry));
 
       if (!question) {
-        res.status(200).json({ question: null });
+        res.status(200).json({
+          question: null,
+          ...(guestProgress.token ? { guestProgressToken: guestProgress.token } : {})
+        });
         return;
       }
 
-      res.status(200).json({ question });
+      res.status(200).json({
+        question,
+        ...(guestProgress.token ? { guestProgressToken: guestProgress.token } : {})
+      });
       return;
     }
 
