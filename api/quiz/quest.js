@@ -105,6 +105,73 @@ function isQuestionValid(question) {
   return Boolean(question && question.prompt && Array.isArray(question.answers) && question.answers.length);
 }
 
+
+function randomIndex(max) {
+  return Math.floor(Math.random() * max);
+}
+
+async function getNextQuestionCandidateCount({ userId, categories, solvedQuestionIds }) {
+  if (userId) {
+    const result = await runQuery(
+      `SELECT COUNT(*)::int AS total
+       FROM quiz_questions q
+       LEFT JOIN user_answers ua
+         ON ua.question_id = q.id
+        AND ua.user_id = $2
+       WHERE q.category = ANY($1)
+         AND COALESCE(ua.is_correct, FALSE) = FALSE`,
+      [categories, userId]
+    );
+
+    return Number(result.rows[0]?.total) || 0;
+  }
+
+  const excludedIds = solvedQuestionIds.length ? solvedQuestionIds : [0];
+  const result = await runQuery(
+    `SELECT COUNT(*)::int AS total
+     FROM quiz_questions q
+     WHERE q.category = ANY($1)
+       AND NOT (q.id = ANY($2::int[]))`,
+    [categories, excludedIds]
+  );
+
+  return Number(result.rows[0]?.total) || 0;
+}
+
+async function getNextQuestionCandidateAtOffset({ userId, categories, solvedQuestionIds, offset }) {
+  if (userId) {
+    const result = await runQuery(
+      `SELECT q.id, q.category, q.question_en, q.question_no, q.answers_en, q.answers_no
+       FROM quiz_questions q
+       LEFT JOIN user_answers ua
+         ON ua.question_id = q.id
+        AND ua.user_id = $2
+       WHERE q.category = ANY($1)
+         AND COALESCE(ua.is_correct, FALSE) = FALSE
+       ORDER BY q.id ASC
+       OFFSET $3
+       LIMIT 1`,
+      [categories, userId, offset]
+    );
+
+    return result.rows[0] || null;
+  }
+
+  const excludedIds = solvedQuestionIds.length ? solvedQuestionIds : [0];
+  const result = await runQuery(
+    `SELECT q.id, q.category, q.question_en, q.question_no, q.answers_en, q.answers_no
+     FROM quiz_questions q
+     WHERE q.category = ANY($1)
+       AND NOT (q.id = ANY($2::int[]))
+     ORDER BY q.id ASC
+     OFFSET $3
+     LIMIT 1`,
+    [categories, excludedIds, offset]
+  );
+
+  return result.rows[0] || null;
+}
+
 function pruneGuestProgressStore() {
   const expiresBefore = Date.now() - GUEST_PROGRESS_TTL_MS;
   for (const [token, entry] of guestProgressStore.entries()) {
@@ -268,32 +335,38 @@ module.exports = async function handler(req, res) {
         return;
       }
 
-      const query = userId
-        ? await runQuery(
-          `SELECT q.id, q.category, q.question_en, q.question_no, q.answers_en, q.answers_no
-           FROM quiz_questions q
-           LEFT JOIN user_answers ua
-             ON ua.question_id = q.id
-            AND ua.user_id = $2
-           WHERE q.category = ANY($1)
-             AND COALESCE(ua.is_correct, FALSE) = FALSE
-           ORDER BY RANDOM()
-           LIMIT 50`,
-          [categories, userId]
-        )
-        : await runQuery(
-          `SELECT q.id, q.category, q.question_en, q.question_no, q.answers_en, q.answers_no
-           FROM quiz_questions q
-           WHERE q.category = ANY($1)
-             AND NOT (q.id = ANY($2::int[]))
-           ORDER BY RANDOM()
-           LIMIT 50`,
-          [categories, guestProgress.solvedQuestionIds.length ? guestProgress.solvedQuestionIds : [0]]
-        );
+      const totalCandidates = await getNextQuestionCandidateCount({
+        userId,
+        categories,
+        solvedQuestionIds: guestProgress.solvedQuestionIds
+      });
 
-      const question = query.rows
-        .map((row) => mapQuestion(row, lang))
-        .find((entry) => isQuestionValid(entry));
+      if (totalCandidates < 1) {
+        res.status(200).json({
+          question: null,
+          ...(guestProgress.token ? { guestProgressToken: guestProgress.token } : {})
+        });
+        return;
+      }
+
+      const maxAttempts = Math.min(totalCandidates, 3);
+      let question = null;
+
+      for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+        const offset = randomIndex(totalCandidates);
+        const row = await getNextQuestionCandidateAtOffset({
+          userId,
+          categories,
+          solvedQuestionIds: guestProgress.solvedQuestionIds,
+          offset
+        });
+
+        if (!row) continue;
+        const mapped = mapQuestion(row, lang);
+        if (!isQuestionValid(mapped)) continue;
+        question = mapped;
+        break;
+      }
 
       if (!question) {
         res.status(200).json({

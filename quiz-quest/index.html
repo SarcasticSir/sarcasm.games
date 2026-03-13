@@ -429,7 +429,7 @@
           state.pendingSolvedQuestionIds = [];
         }
 
-        if (!requestPayload.guestProgressToken && !requestPayload.solvedQuestionIdDeltas) {
+        if (!requestPayload.solvedQuestionIdDeltas) {
           requestPayload.solvedQuestionIds = getGuestSolvedQuestionIds();
         }
       }
