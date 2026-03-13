@@ -1,5 +1,9 @@
+const crypto = require('crypto');
 const { runQuery } = require('../_lib/db');
 const { parseCookies, verifySessionToken, COOKIE_NAME } = require('../_lib/auth');
+
+const GUEST_PROGRESS_TTL_MS = 1000 * 60 * 60 * 12;
+const guestProgressStore = new Map();
 
 function parseBody(body) {
   if (!body) return {};
@@ -99,69 +103,75 @@ function isQuestionValid(question) {
   return Boolean(question && question.prompt && Array.isArray(question.answers) && question.answers.length);
 }
 
-async function pickRandomQuestion({ categories, userId, solvedQuestionIds }) {
-  if (userId) {
-    const countResult = await runQuery(
-      `SELECT COUNT(*)::int AS total
-       FROM quiz_questions q
-       WHERE q.category = ANY($1)
-         AND NOT EXISTS (
-           SELECT 1
-           FROM user_answers ua
-           WHERE ua.user_id = $2
-             AND ua.question_id = q.id
-             AND ua.is_correct = TRUE
-         )`,
-      [categories, userId]
-    );
+function pruneGuestProgressStore() {
+  const expiresBefore = Date.now() - GUEST_PROGRESS_TTL_MS;
+  for (const [token, entry] of guestProgressStore.entries()) {
+    if (!entry || entry.updatedAt < expiresBefore) {
+      guestProgressStore.delete(token);
+    }
+  }
+}
 
-    const total = Number(countResult.rows[0]?.total) || 0;
-    if (total < 1) return null;
+function createGuestProgressToken() {
+  let token = crypto.randomBytes(9).toString('base64url');
+  while (guestProgressStore.has(token)) {
+    token = crypto.randomBytes(9).toString('base64url');
+  }
+  return token;
+}
 
-    const offset = Math.floor(Math.random() * total);
-    const query = await runQuery(
-      `SELECT q.id, q.category, q.question_en, q.question_no, q.answers_en, q.answers_no
-       FROM quiz_questions q
-       WHERE q.category = ANY($1)
-         AND NOT EXISTS (
-           SELECT 1
-           FROM user_answers ua
-           WHERE ua.user_id = $2
-             AND ua.question_id = q.id
-             AND ua.is_correct = TRUE
-         )
-       ORDER BY q.id ASC
-       LIMIT 1 OFFSET $3`,
-      [categories, userId, offset]
-    );
+function loadGuestProgress(body) {
+  pruneGuestProgressStore();
 
-    return query.rows[0] || null;
+  const legacySolvedIds = parseSolvedQuestionIds(body.solvedQuestionIds);
+  const solvedDeltas = parseSolvedQuestionIds(body.solvedQuestionIdDeltas);
+  const requestedToken = typeof body.guestProgressToken === 'string' ? body.guestProgressToken.trim() : '';
+
+  let token = null;
+  let solvedSet = new Set();
+  let shouldPersist = false;
+
+  if (requestedToken) {
+    const existing = guestProgressStore.get(requestedToken);
+    if (existing) {
+      token = requestedToken;
+      solvedSet = new Set(existing.solvedQuestionIds);
+    }
   }
 
-  const excludedIds = solvedQuestionIds.length ? solvedQuestionIds : [0];
-  const countResult = await runQuery(
-    `SELECT COUNT(*)::int AS total
-     FROM quiz_questions q
-     WHERE q.category = ANY($1)
-       AND NOT (q.id = ANY($2::int[]))`,
-    [categories, excludedIds]
-  );
+  if (legacySolvedIds.length) {
+    shouldPersist = true;
+    for (const id of legacySolvedIds) solvedSet.add(id);
+  }
 
-  const total = Number(countResult.rows[0]?.total) || 0;
-  if (total < 1) return null;
+  if (solvedDeltas.length) {
+    shouldPersist = true;
+    for (const id of solvedDeltas) solvedSet.add(id);
+  }
 
-  const offset = Math.floor(Math.random() * total);
-  const query = await runQuery(
-    `SELECT q.id, q.category, q.question_en, q.question_no, q.answers_en, q.answers_no
-     FROM quiz_questions q
-     WHERE q.category = ANY($1)
-       AND NOT (q.id = ANY($2::int[]))
-     ORDER BY q.id ASC
-     LIMIT 1 OFFSET $3`,
-    [categories, excludedIds, offset]
-  );
+  const shouldIssueToken = Boolean(requestedToken || legacySolvedIds.length || solvedDeltas.length);
 
-  return query.rows[0] || null;
+  if (!token && shouldIssueToken) {
+    token = createGuestProgressToken();
+  }
+
+  if (token && (shouldPersist || !guestProgressStore.has(token))) {
+    guestProgressStore.set(token, {
+      solvedQuestionIds: [...solvedSet],
+      updatedAt: Date.now()
+    });
+  } else if (token) {
+    const existing = guestProgressStore.get(token);
+    if (existing) {
+      existing.updatedAt = Date.now();
+      guestProgressStore.set(token, existing);
+    }
+  }
+
+  return {
+    token,
+    solvedQuestionIds: [...solvedSet]
+  };
 }
 
 async function getOverview({ userId, solvedQuestionIds }) {
@@ -232,13 +242,14 @@ module.exports = async function handler(req, res) {
     const lang = body.lang === 'no' ? 'no' : 'en';
     const session = await tryGetSession(req);
     const userId = session && Number.isInteger(Number(session.id)) ? Number(session.id) : null;
-    const solvedQuestionIds = parseSolvedQuestionIds(body.solvedQuestionIds);
+    const guestProgress = userId ? { token: null, solvedQuestionIds: [] } : loadGuestProgress(body);
 
     if (action === 'overview') {
-      const categories = await getOverview({ userId, solvedQuestionIds });
+      const categories = await getOverview({ userId, solvedQuestionIds: guestProgress.solvedQuestionIds });
       res.status(200).json({
         mode: userId ? 'authenticated' : 'guest',
-        categories
+        categories,
+        ...(guestProgress.token ? { guestProgressToken: guestProgress.token } : {})
       });
       return;
     }
@@ -250,15 +261,45 @@ module.exports = async function handler(req, res) {
         return;
       }
 
-      const candidate = await pickRandomQuestion({ categories, userId, solvedQuestionIds });
-      const question = candidate ? mapQuestion(candidate, lang) : null;
+      const query = userId
+        ? await runQuery(
+          `SELECT q.id, q.category, q.question_en, q.question_no, q.answers_en, q.answers_no
+           FROM quiz_questions q
+           LEFT JOIN user_answers ua
+             ON ua.question_id = q.id
+            AND ua.user_id = $2
+           WHERE q.category = ANY($1)
+             AND COALESCE(ua.is_correct, FALSE) = FALSE
+           ORDER BY RANDOM()
+           LIMIT 50`,
+          [categories, userId]
+        )
+        : await runQuery(
+          `SELECT q.id, q.category, q.question_en, q.question_no, q.answers_en, q.answers_no
+           FROM quiz_questions q
+           WHERE q.category = ANY($1)
+             AND NOT (q.id = ANY($2::int[]))
+           ORDER BY RANDOM()
+           LIMIT 50`,
+          [categories, guestProgress.solvedQuestionIds.length ? guestProgress.solvedQuestionIds : [0]]
+        );
 
-      if (!isQuestionValid(question)) {
-        res.status(200).json({ question: null });
+      const question = query.rows
+        .map((row) => mapQuestion(row, lang))
+        .find((entry) => isQuestionValid(entry));
+
+      if (!question) {
+        res.status(200).json({
+          question: null,
+          ...(guestProgress.token ? { guestProgressToken: guestProgress.token } : {})
+        });
         return;
       }
 
-      res.status(200).json({ question });
+      res.status(200).json({
+        question,
+        ...(guestProgress.token ? { guestProgressToken: guestProgress.token } : {})
+      });
       return;
     }
 

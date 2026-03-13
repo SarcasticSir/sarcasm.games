@@ -233,6 +233,7 @@
 
     const activeLang = getQuizLanguage() === 'no' ? 'no' : 'en';
     const GUEST_PROGRESS_KEY = 'quizQuestGuestProgress';
+    const GUEST_PROGRESS_TOKEN_KEY = 'quizQuestGuestProgressToken';
 
     const copy = {
       en: {
@@ -310,6 +311,8 @@
       isLoadingQuestion: false,
       isSubmitting: false,
       guestProgress: readGuestProgress(),
+      guestProgressToken: readGuestProgressToken(),
+      pendingSolvedQuestionIds: [],
       roundTarget: 0,
       roundAnswered: 0,
       isQuestActive: false
@@ -372,6 +375,26 @@
       localStorage.setItem(GUEST_PROGRESS_KEY, JSON.stringify(state.guestProgress));
     }
 
+    function readGuestProgressToken() {
+      try {
+        const token = localStorage.getItem(GUEST_PROGRESS_TOKEN_KEY);
+        return typeof token === 'string' && token.trim() ? token.trim() : null;
+      } catch (error) {
+        return null;
+      }
+    }
+
+    function writeGuestProgressToken(token) {
+      const normalized = typeof token === 'string' && token.trim() ? token.trim() : null;
+      state.guestProgressToken = normalized;
+
+      if (normalized) {
+        localStorage.setItem(GUEST_PROGRESS_TOKEN_KEY, normalized);
+      } else {
+        localStorage.removeItem(GUEST_PROGRESS_TOKEN_KEY);
+      }
+    }
+
     function getGuestSolvedQuestionIds() {
       return Object.values(state.guestProgress).flat();
     }
@@ -388,22 +411,49 @@
     }
 
     async function questApi(action, payload = {}) {
+      const requestPayload = {
+        action,
+        lang: activeLang,
+        ...payload
+      };
+      let deltas = [];
+
+      if (!state.session) {
+        if (state.guestProgressToken) {
+          requestPayload.guestProgressToken = state.guestProgressToken;
+        }
+
+        if (state.pendingSolvedQuestionIds.length) {
+          deltas = [...new Set(state.pendingSolvedQuestionIds)];
+          requestPayload.solvedQuestionIdDeltas = deltas;
+          state.pendingSolvedQuestionIds = [];
+        }
+
+        if (!requestPayload.guestProgressToken && !requestPayload.solvedQuestionIdDeltas) {
+          requestPayload.solvedQuestionIds = getGuestSolvedQuestionIds();
+        }
+      }
+
       const response = await fetch('/api/quiz/quest', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action,
-          lang: activeLang,
-          solvedQuestionIds: getGuestSolvedQuestionIds(),
-          ...payload
-        })
+        body: JSON.stringify(requestPayload)
       });
 
       if (!response.ok) {
+        if (!state.session && deltas.length) {
+          state.pendingSolvedQuestionIds = [...deltas, ...state.pendingSolvedQuestionIds];
+        }
         throw new Error('request_failed');
       }
 
-      return response.json();
+      const responsePayload = await response.json();
+
+      if (!state.session && responsePayload && typeof responsePayload.guestProgressToken === 'string') {
+        writeGuestProgressToken(responsePayload.guestProgressToken);
+      }
+
+      return responsePayload;
     }
 
     function selectedCategories() {
@@ -555,6 +605,7 @@
 
       if (!state.guestProgress[question.category].includes(question.id)) {
         state.guestProgress[question.category].push(question.id);
+        state.pendingSolvedQuestionIds.push(question.id);
         writeGuestProgress();
       }
     }
@@ -751,6 +802,8 @@
           setupStatus.textContent = ui().resetUserDone;
         } else {
           delete state.guestProgress[category];
+          state.pendingSolvedQuestionIds = [];
+          writeGuestProgressToken(null);
           writeGuestProgress();
           setupStatus.className = 'status ok';
           setupStatus.textContent = ui().resetGuestDone;
