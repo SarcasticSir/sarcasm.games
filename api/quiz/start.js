@@ -1,4 +1,6 @@
 const { runQuery } = require('../_lib/db');
+const { isRateLimited } = require('../_lib/rate-limit');
+const { sendQuizRateLimited } = require('../_lib/quiz-rate-limit-response');
 
 function parseBody(body) {
   if (!body) return {};
@@ -119,6 +121,11 @@ function allocateQuestionsPerCategory(availableByCategory, requestedCount) {
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' });
+    return;
+  }
+
+  if (isRateLimited(req, 'quiz:start')) {
+    sendQuizRateLimited(res);
     return;
   }
 

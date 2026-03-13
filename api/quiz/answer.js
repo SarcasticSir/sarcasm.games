@@ -1,6 +1,8 @@
 const { runQuery } = require('../_lib/db');
 const { parseCookies, verifySessionToken, COOKIE_NAME } = require('../_lib/auth');
 const { evaluateAnswer } = require('../../lib/server/quiz-answer-evaluator');
+const { isRateLimited } = require('../_lib/rate-limit');
+const { sendQuizRateLimited } = require('../_lib/quiz-rate-limit-response');
 
 function parseBody(body) {
   if (!body) return {};
@@ -61,6 +63,11 @@ async function persistProgress(userId, questionId, isCorrect) {
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' });
+    return;
+  }
+
+  if (isRateLimited(req, 'quiz:answer')) {
+    sendQuizRateLimited(res);
     return;
   }
 

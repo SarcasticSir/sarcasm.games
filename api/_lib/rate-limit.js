@@ -1,5 +1,33 @@
-const WINDOW_MS = 60 * 1000;
-const MAX_REQUESTS_PER_WINDOW = 5;
+const DEFAULT_WINDOW_MS = 60 * 1000;
+const DEFAULT_MAX_REQUESTS_PER_WINDOW = 5;
+
+// Recommended starting thresholds (tune from production telemetry):
+// - auth: strict to slow down brute-force attempts.
+// - quiz:*: higher sustained rates than auth, plus short burst caps to dampen spikes.
+const SCOPE_LIMITS = {
+  auth: {
+    windowMs: DEFAULT_WINDOW_MS,
+    maxRequests: DEFAULT_MAX_REQUESTS_PER_WINDOW
+  },
+  'quiz:start': {
+    windowMs: 60 * 1000,
+    maxRequests: 60,
+    burstWindowMs: 10 * 1000,
+    burstMaxRequests: 12
+  },
+  'quiz:quest': {
+    windowMs: 60 * 1000,
+    maxRequests: 120,
+    burstWindowMs: 10 * 1000,
+    burstMaxRequests: 24
+  },
+  'quiz:answer': {
+    windowMs: 60 * 1000,
+    maxRequests: 180,
+    burstWindowMs: 10 * 1000,
+    burstMaxRequests: 36
+  }
+};
 
 const requestBuckets = new Map();
 
@@ -17,21 +45,47 @@ function getClientIp(req) {
   return 'unknown-ip';
 }
 
+function getScopeConfig(scope) {
+  return SCOPE_LIMITS[scope] || SCOPE_LIMITS.auth;
+}
+
 function isRateLimited(req, scope = 'auth') {
   const now = Date.now();
   const ip = getClientIp(req);
   const key = `${scope}:${ip}`;
+  const config = getScopeConfig(scope);
 
-  const bucket = requestBuckets.get(key) || [];
-  const fresh = bucket.filter((timestamp) => now - timestamp < WINDOW_MS);
+  const bucket = requestBuckets.get(key) || { windowTimestamps: [], burstTimestamps: [] };
 
-  if (fresh.length >= MAX_REQUESTS_PER_WINDOW) {
-    requestBuckets.set(key, fresh);
+  const freshWindow = bucket.windowTimestamps.filter((timestamp) => now - timestamp < config.windowMs);
+  if (freshWindow.length >= config.maxRequests) {
+    requestBuckets.set(key, {
+      windowTimestamps: freshWindow,
+      burstTimestamps: bucket.burstTimestamps
+    });
     return true;
   }
 
-  fresh.push(now);
-  requestBuckets.set(key, fresh);
+  let freshBurst = bucket.burstTimestamps;
+  if (config.burstWindowMs && config.burstMaxRequests) {
+    freshBurst = bucket.burstTimestamps.filter((timestamp) => now - timestamp < config.burstWindowMs);
+    if (freshBurst.length >= config.burstMaxRequests) {
+      requestBuckets.set(key, {
+        windowTimestamps: freshWindow,
+        burstTimestamps: freshBurst
+      });
+      return true;
+    }
+
+    freshBurst.push(now);
+  }
+
+  freshWindow.push(now);
+  requestBuckets.set(key, {
+    windowTimestamps: freshWindow,
+    burstTimestamps: freshBurst
+  });
+
   return false;
 }
 

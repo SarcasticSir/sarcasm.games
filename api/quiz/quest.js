@@ -1,5 +1,7 @@
 const { runQuery } = require('../_lib/db');
 const { parseCookies, verifySessionToken, COOKIE_NAME } = require('../_lib/auth');
+const { isRateLimited } = require('../_lib/rate-limit');
+const { sendQuizRateLimited } = require('../_lib/quiz-rate-limit-response');
 
 function parseBody(body) {
   if (!body) return {};
@@ -158,6 +160,11 @@ async function getOverview({ userId, solvedQuestionIds }) {
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' });
+    return;
+  }
+
+  if (isRateLimited(req, 'quiz:quest')) {
+    sendQuizRateLimited(res);
     return;
   }
 
