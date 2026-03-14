@@ -141,3 +141,6 @@ The system is considered ready when:
 - hot query paths avoid full scans or linear degradation
 - database connection usage remains within safe limits under peak load
 - scaling behavior is measured and documented
+
+## Execution backlog
+Implementation tasks are tracked in `docs/quiz-1000-questions-tasks.md`.
