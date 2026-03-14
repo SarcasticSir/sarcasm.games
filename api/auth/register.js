@@ -19,7 +19,7 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  if (isRateLimited(req, 'auth:register')) {
+  if (await isRateLimited(req, 'auth:register')) {
     res.status(429).json({ error: 'Too many requests. Please wait a minute.' });
     return;
   }

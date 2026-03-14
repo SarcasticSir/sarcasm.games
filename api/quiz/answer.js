@@ -3,6 +3,7 @@ const { parseCookies, verifySessionToken, COOKIE_NAME } = require('../_lib/auth'
 const { evaluateAnswer } = require('../../lib/server/quiz-answer-evaluator');
 const { isRateLimited } = require('../_lib/rate-limit');
 const { sendQuizRateLimited } = require('../_lib/quiz-rate-limit-response');
+const { createEndpointMetric } = require('../_lib/observability');
 
 function parseBody(body) {
   if (!body) return {};
@@ -61,13 +62,16 @@ async function persistProgress(userId, questionId, isCorrect) {
 }
 
 module.exports = async function handler(req, res) {
+  const flushEndpointMetric = createEndpointMetric(req, res, 'quiz/answer');
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' });
+    flushEndpointMetric();
     return;
   }
 
-  if (isRateLimited(req, 'quiz:answer')) {
+  if (await isRateLimited(req, 'quiz:answer')) {
     sendQuizRateLimited(res);
+    flushEndpointMetric();
     return;
   }
 
@@ -128,5 +132,7 @@ module.exports = async function handler(req, res) {
   } catch (error) {
     console.error('[quiz/answer] failed:', error?.message);
     res.status(500).json({ error: 'Failed to evaluate answer' });
+  } finally {
+    flushEndpointMetric();
   }
 };

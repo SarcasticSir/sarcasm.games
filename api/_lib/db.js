@@ -1,4 +1,5 @@
 const { createPool } = require('@vercel/postgres');
+const { nowInMs, createQueryMetric } = require('./observability');
 
 const DB_POOL_KEY = Symbol.for('sarcasm.games.db.pool');
 const DB_POOL_LOGGER_KEY = Symbol.for('sarcasm.games.db.poolLoggerAttached');
@@ -70,10 +71,15 @@ function getPool() {
 
 async function runQuery(text, params = []) {
   const pool = getPool();
+  const startedAtMs = nowInMs();
+  const flushQueryMetric = createQueryMetric(text, startedAtMs);
 
   try {
-    return await pool.query(text, params);
+    const result = await pool.query(text, params);
+    flushQueryMetric({ rowCount: result?.rowCount || 0 });
+    return result;
   } catch (error) {
+    flushQueryMetric({ error });
     console.error('[db] Query failed', serializeDbError(error));
     throw error;
   }
