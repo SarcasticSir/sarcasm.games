@@ -3,9 +3,15 @@ const { runQuery } = require('../_lib/db');
 const { parseCookies, verifySessionToken, COOKIE_NAME } = require('../_lib/auth');
 const { isRateLimited } = require('../_lib/rate-limit');
 const { sendQuizRateLimited } = require('../_lib/quiz-rate-limit-response');
+const { createEndpointMetric } = require('../_lib/observability');
+const {
+  getGuestProgress,
+  saveGuestProgress,
+  pruneExpiredGuestProgress,
+  normalizeSolvedQuestionIds
+} = require('../_lib/guest-progress-store');
 
-const GUEST_PROGRESS_TTL_MS = 1000 * 60 * 60 * 12;
-const guestProgressStore = new Map();
+const GUEST_PROGRESS_TTL_SECONDS = 60 * 60 * 12;
 
 function parseBody(body) {
   if (!body) return {};
@@ -17,20 +23,6 @@ function parseBody(body) {
     }
   }
   return typeof body === 'object' ? body : {};
-}
-
-function parseSolvedQuestionIds(value) {
-  if (!Array.isArray(value)) return [];
-  const seen = new Set();
-
-  return value
-    .map((entry) => Number(entry))
-    .filter((entry) => Number.isInteger(entry) && entry > 0)
-    .filter((entry) => {
-      if (seen.has(entry)) return false;
-      seen.add(entry);
-      return true;
-    });
 }
 
 function parseCategoryList(value) {
@@ -110,10 +102,10 @@ function randomIndex(max) {
   return Math.floor(Math.random() * max);
 }
 
-async function getNextQuestionCandidateCount({ userId, categories, solvedQuestionIds }) {
+async function getNextQuestionBounds({ userId, categories, solvedQuestionIds }) {
   if (userId) {
     const result = await runQuery(
-      `SELECT COUNT(*)::int AS total
+      `SELECT MIN(q.id)::int AS min_id, MAX(q.id)::int AS max_id
        FROM quiz_questions q
        LEFT JOIN user_answers ua
          ON ua.question_id = q.id
@@ -123,35 +115,60 @@ async function getNextQuestionCandidateCount({ userId, categories, solvedQuestio
       [categories, userId]
     );
 
-    return Number(result.rows[0]?.total) || 0;
+    const row = result.rows[0] || {};
+    return {
+      minId: Number(row.min_id) || null,
+      maxId: Number(row.max_id) || null
+    };
   }
 
   const excludedIds = solvedQuestionIds.length ? solvedQuestionIds : [0];
   const result = await runQuery(
-    `SELECT COUNT(*)::int AS total
+    `SELECT MIN(q.id)::int AS min_id, MAX(q.id)::int AS max_id
      FROM quiz_questions q
      WHERE q.category = ANY($1)
        AND NOT (q.id = ANY($2::int[]))`,
     [categories, excludedIds]
   );
 
-  return Number(result.rows[0]?.total) || 0;
+  const row = result.rows[0] || {};
+  return {
+    minId: Number(row.min_id) || null,
+    maxId: Number(row.max_id) || null
+  };
 }
 
-async function getNextQuestionCandidateAtOffset({ userId, categories, solvedQuestionIds, offset }) {
+async function getNextQuestionCandidateFromPivot({ userId, categories, solvedQuestionIds, pivotId }) {
   if (userId) {
     const result = await runQuery(
-      `SELECT q.id, q.category, q.question_en, q.question_no, q.answers_en, q.answers_no
-       FROM quiz_questions q
-       LEFT JOIN user_answers ua
-         ON ua.question_id = q.id
-        AND ua.user_id = $2
-       WHERE q.category = ANY($1)
-         AND COALESCE(ua.is_correct, FALSE) = FALSE
-       ORDER BY q.id ASC
-       OFFSET $3
+      `WITH preferred AS (
+         SELECT q.id, q.category, q.question_en, q.question_no, q.answers_en, q.answers_no
+         FROM quiz_questions q
+         LEFT JOIN user_answers ua
+           ON ua.question_id = q.id
+          AND ua.user_id = $2
+         WHERE q.category = ANY($1)
+           AND COALESCE(ua.is_correct, FALSE) = FALSE
+           AND q.id >= $3
+         ORDER BY q.id ASC
+         LIMIT 1
+       ), fallback AS (
+         SELECT q.id, q.category, q.question_en, q.question_no, q.answers_en, q.answers_no
+         FROM quiz_questions q
+         LEFT JOIN user_answers ua
+           ON ua.question_id = q.id
+          AND ua.user_id = $2
+         WHERE q.category = ANY($1)
+           AND COALESCE(ua.is_correct, FALSE) = FALSE
+           AND q.id < $3
+         ORDER BY q.id ASC
+         LIMIT 1
+       )
+       SELECT * FROM preferred
+       UNION ALL
+       SELECT * FROM fallback
        LIMIT 1`,
-      [categories, userId, offset]
+      [categories, userId, pivotId]
     );
 
     return result.rows[0] || null;
@@ -159,64 +176,57 @@ async function getNextQuestionCandidateAtOffset({ userId, categories, solvedQues
 
   const excludedIds = solvedQuestionIds.length ? solvedQuestionIds : [0];
   const result = await runQuery(
-    `SELECT q.id, q.category, q.question_en, q.question_no, q.answers_en, q.answers_no
-     FROM quiz_questions q
-     WHERE q.category = ANY($1)
-       AND NOT (q.id = ANY($2::int[]))
-     ORDER BY q.id ASC
-     OFFSET $3
+    `WITH preferred AS (
+       SELECT q.id, q.category, q.question_en, q.question_no, q.answers_en, q.answers_no
+       FROM quiz_questions q
+       WHERE q.category = ANY($1)
+         AND NOT (q.id = ANY($2::int[]))
+         AND q.id >= $3
+       ORDER BY q.id ASC
+       LIMIT 1
+     ), fallback AS (
+       SELECT q.id, q.category, q.question_en, q.question_no, q.answers_en, q.answers_no
+       FROM quiz_questions q
+       WHERE q.category = ANY($1)
+         AND NOT (q.id = ANY($2::int[]))
+         AND q.id < $3
+       ORDER BY q.id ASC
+       LIMIT 1
+     )
+     SELECT * FROM preferred
+     UNION ALL
+     SELECT * FROM fallback
      LIMIT 1`,
-    [categories, excludedIds, offset]
+    [categories, excludedIds, pivotId]
   );
 
   return result.rows[0] || null;
 }
 
-function pruneGuestProgressStore() {
-  const expiresBefore = Date.now() - GUEST_PROGRESS_TTL_MS;
-  for (const [token, entry] of guestProgressStore.entries()) {
-    if (!entry || entry.updatedAt < expiresBefore) {
-      guestProgressStore.delete(token);
-    }
-  }
-}
-
 function createGuestProgressToken() {
-  let token = crypto.randomBytes(9).toString('base64url');
-  while (guestProgressStore.has(token)) {
-    token = crypto.randomBytes(9).toString('base64url');
-  }
-  return token;
+  return crypto.randomBytes(18).toString('base64url');
 }
 
-function loadGuestProgress(body) {
-  pruneGuestProgressStore();
+async function loadGuestProgress(body) {
+  await pruneExpiredGuestProgress();
 
-  const legacySolvedIds = parseSolvedQuestionIds(body.solvedQuestionIds);
-  const solvedDeltas = parseSolvedQuestionIds(body.solvedQuestionIdDeltas);
+  const legacySolvedIds = normalizeSolvedQuestionIds(body.solvedQuestionIds);
+  const solvedDeltas = normalizeSolvedQuestionIds(body.solvedQuestionIdDeltas);
   const requestedToken = typeof body.guestProgressToken === 'string' ? body.guestProgressToken.trim() : '';
 
   let token = null;
   let solvedSet = new Set();
-  let shouldPersist = false;
 
   if (requestedToken) {
-    const existing = guestProgressStore.get(requestedToken);
+    const existing = await getGuestProgress(requestedToken);
     if (existing) {
-      token = requestedToken;
+      token = existing.token;
       solvedSet = new Set(existing.solvedQuestionIds);
     }
   }
 
-  if (legacySolvedIds.length) {
-    shouldPersist = true;
-    for (const id of legacySolvedIds) solvedSet.add(id);
-  }
-
-  if (solvedDeltas.length) {
-    shouldPersist = true;
-    for (const id of solvedDeltas) solvedSet.add(id);
-  }
+  for (const id of legacySolvedIds) solvedSet.add(id);
+  for (const id of solvedDeltas) solvedSet.add(id);
 
   const shouldIssueToken = Boolean(requestedToken || legacySolvedIds.length || solvedDeltas.length);
 
@@ -224,17 +234,8 @@ function loadGuestProgress(body) {
     token = createGuestProgressToken();
   }
 
-  if (token && (shouldPersist || !guestProgressStore.has(token))) {
-    guestProgressStore.set(token, {
-      solvedQuestionIds: [...solvedSet],
-      updatedAt: Date.now()
-    });
-  } else if (token) {
-    const existing = guestProgressStore.get(token);
-    if (existing) {
-      existing.updatedAt = Date.now();
-      guestProgressStore.set(token, existing);
-    }
+  if (token) {
+    await saveGuestProgress(token, [...solvedSet], GUEST_PROGRESS_TTL_SECONDS);
   }
 
   return {
@@ -300,13 +301,16 @@ async function getOverview({ userId, solvedQuestionIds }) {
 }
 
 module.exports = async function handler(req, res) {
+  const flushEndpointMetric = createEndpointMetric(req, res, 'quiz/quest');
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' });
+    flushEndpointMetric();
     return;
   }
 
-  if (isRateLimited(req, 'quiz:quest')) {
+  if (await isRateLimited(req, 'quiz:quest')) {
     sendQuizRateLimited(res);
+    flushEndpointMetric();
     return;
   }
 
@@ -316,7 +320,7 @@ module.exports = async function handler(req, res) {
     const lang = body.lang === 'no' ? 'no' : 'en';
     const session = await tryGetSession(req);
     const userId = session && Number.isInteger(Number(session.id)) ? Number(session.id) : null;
-    const guestProgress = userId ? { token: null, solvedQuestionIds: [] } : loadGuestProgress(body);
+    const guestProgress = userId ? { token: null, solvedQuestionIds: [] } : await loadGuestProgress(body);
 
     if (action === 'overview') {
       const categories = await getOverview({ userId, solvedQuestionIds: guestProgress.solvedQuestionIds });
@@ -335,13 +339,13 @@ module.exports = async function handler(req, res) {
         return;
       }
 
-      const totalCandidates = await getNextQuestionCandidateCount({
+      const bounds = await getNextQuestionBounds({
         userId,
         categories,
         solvedQuestionIds: guestProgress.solvedQuestionIds
       });
 
-      if (totalCandidates < 1) {
+      if (!Number.isInteger(bounds.minId) || !Number.isInteger(bounds.maxId) || bounds.minId > bounds.maxId) {
         res.status(200).json({
           question: null,
           ...(guestProgress.token ? { guestProgressToken: guestProgress.token } : {})
@@ -349,16 +353,17 @@ module.exports = async function handler(req, res) {
         return;
       }
 
-      const maxAttempts = Math.min(totalCandidates, 3);
+      const span = bounds.maxId - bounds.minId + 1;
+      const maxAttempts = Math.min(5, Math.max(1, span));
       let question = null;
 
       for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-        const offset = randomIndex(totalCandidates);
-        const row = await getNextQuestionCandidateAtOffset({
+        const pivotId = bounds.minId + randomIndex(span);
+        const row = await getNextQuestionCandidateFromPivot({
           userId,
           categories,
           solvedQuestionIds: guestProgress.solvedQuestionIds,
-          offset
+          pivotId
         });
 
         if (!row) continue;
@@ -413,5 +418,7 @@ module.exports = async function handler(req, res) {
   } catch (error) {
     console.error('[quiz/quest] failed:', error?.message);
     res.status(500).json({ error: 'Failed to process quiz quest request' });
+  } finally {
+    flushEndpointMetric();
   }
 };

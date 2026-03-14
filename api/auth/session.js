@@ -6,7 +6,7 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  if (isRateLimited(req, 'auth:session')) {
+  if (await isRateLimited(req, 'auth:session')) {
     res.status(429).json({ error: 'Too many requests. Please wait a minute.' });
     return;
   }

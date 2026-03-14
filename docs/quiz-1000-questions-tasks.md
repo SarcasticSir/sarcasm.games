@@ -4,11 +4,12 @@ This backlog translates the scaling plan into concrete implementation and valida
 
 ## Milestone 1 - Baseline and observability
 
-- [ ] **QZ-001: Define test environments and dataset profiles**
+- [x] **QZ-001: Define test environments and dataset profiles**
   - Create standard profiles for 1k, 5k, 10k, and 50k questions.
   - Define category skew scenarios and `user_answers` growth scenarios.
   - Document fixed runtime/database settings used during tests.
   - **Done when:** a reproducible test matrix exists in docs and can be reused by all later load tests.
+  - Deliverable: `docs/quiz-scaling-test-matrix.md` with standardized environment, dataset, and traffic profiles.
 
 - [ ] **QZ-002: Add endpoint-level latency and error instrumentation**
   - Track p50/p95/p99 latency for `quiz/start`, `quiz/quest`, `quiz/answer`.

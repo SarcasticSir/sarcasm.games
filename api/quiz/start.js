@@ -1,6 +1,7 @@
 const { runQuery } = require('../_lib/db');
 const { isRateLimited } = require('../_lib/rate-limit');
 const { sendQuizRateLimited } = require('../_lib/quiz-rate-limit-response');
+const { createEndpointMetric } = require('../_lib/observability');
 
 function parseBody(body) {
   if (!body) return {};
@@ -130,13 +131,16 @@ function orderRowsByIdList(rows, orderedIds) {
 }
 
 module.exports = async function handler(req, res) {
+  const flushEndpointMetric = createEndpointMetric(req, res, 'quiz/start');
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' });
+    flushEndpointMetric();
     return;
   }
 
-  if (isRateLimited(req, 'quiz:start')) {
+  if (await isRateLimited(req, 'quiz:start')) {
     sendQuizRateLimited(res);
+    flushEndpointMetric();
     return;
   }
 
@@ -286,5 +290,7 @@ module.exports = async function handler(req, res) {
   } catch (error) {
     console.error('[quiz/start] failed:', error?.message);
     res.status(500).json({ error: 'Failed to start quiz' });
+  } finally {
+    flushEndpointMetric();
   }
 };
