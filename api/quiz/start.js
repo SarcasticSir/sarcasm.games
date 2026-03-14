@@ -2,18 +2,7 @@ const { runQuery } = require('../_lib/db');
 const { isRateLimited } = require('../_lib/rate-limit');
 const { sendQuizRateLimited } = require('../_lib/quiz-rate-limit-response');
 const { createEndpointMetric } = require('../_lib/observability');
-
-function parseBody(body) {
-  if (!body) return {};
-  if (typeof body === 'string') {
-    try {
-      return JSON.parse(body);
-    } catch (error) {
-      return {};
-    }
-  }
-  return typeof body === 'object' ? body : {};
-}
+const { parseJsonBody } = require('../_lib/parse-body');
 
 function normalizeAnswerValues(value) {
   if (!value) return [];
@@ -130,6 +119,81 @@ function orderRowsByIdList(rows, orderedIds) {
   });
 }
 
+async function getQuestionIdBounds(category) {
+  if (category) {
+    const result = await runQuery(
+      `SELECT MIN(id)::int AS min_id, MAX(id)::int AS max_id
+       FROM quiz_questions
+       WHERE category = $1`,
+      [category]
+    );
+
+    const row = result.rows[0] || {};
+    return {
+      minId: Number(row.min_id) || null,
+      maxId: Number(row.max_id) || null
+    };
+  }
+
+  const result = await runQuery(
+    `SELECT MIN(id)::int AS min_id, MAX(id)::int AS max_id
+     FROM quiz_questions`
+  );
+
+  const row = result.rows[0] || {};
+  return {
+    minId: Number(row.min_id) || null,
+    maxId: Number(row.max_id) || null
+  };
+}
+
+async function selectIdsFromIdWindow({ category, pivotId, count }) {
+  const params = category
+    ? [category, pivotId, count]
+    : [pivotId, count];
+
+  const categoryClause = category ? 'AND category = $1' : '';
+  const pivotIndex = category ? '$2' : '$1';
+  const limitIndex = category ? '$3' : '$2';
+
+  const result = await runQuery(
+    `WITH preferred AS (
+       SELECT id
+       FROM quiz_questions
+       WHERE id >= ${pivotIndex}
+       ${categoryClause}
+       ORDER BY id ASC
+       LIMIT ${limitIndex}
+     ), fallback AS (
+       SELECT id
+       FROM quiz_questions
+       WHERE id < ${pivotIndex}
+       ${categoryClause}
+       ORDER BY id ASC
+       LIMIT ${limitIndex}
+     )
+     SELECT id FROM preferred
+     UNION ALL
+     SELECT id FROM fallback
+     LIMIT ${limitIndex}`,
+    params
+  );
+
+  return result.rows.map((row) => Number(row.id));
+}
+
+async function pickRandomQuestionIds({ count, category }) {
+  const bounds = await getQuestionIdBounds(category);
+
+  if (!bounds.minId || !bounds.maxId) {
+    return [];
+  }
+
+  const pivotId = bounds.minId + randomIndex((bounds.maxId - bounds.minId) + 1);
+  const ids = await selectIdsFromIdWindow({ category, pivotId, count });
+  return sampleWithoutReplacement(ids, count);
+}
+
 module.exports = async function handler(req, res) {
   const flushEndpointMetric = createEndpointMetric(req, res, 'quiz/start');
   if (req.method !== 'POST') {
@@ -150,7 +214,7 @@ module.exports = async function handler(req, res) {
       categories,
       count = 10,
       lang = 'en'
-    } = parseBody(req.body);
+    } = parseJsonBody(req.body);
 
     if (mode === 'categories') {
       if (!Array.isArray(categories) || !categories.length) {
@@ -202,27 +266,18 @@ module.exports = async function handler(req, res) {
       }
 
       const categoryAllocation = allocateQuestionsPerCategory(availableByCategory, requestedCount);
-      const candidateQuery = await runQuery(
-        `SELECT id, category
-         FROM quiz_questions
-         WHERE category = ANY($1)
-         ORDER BY category ASC, id ASC`,
-        [uniqueCategories]
-      );
-
-      const idsByCategory = new Map(uniqueCategories.map((category) => [category, []]));
-      for (const row of candidateQuery.rows) {
-        const category = String(row.category || '');
-        if (!idsByCategory.has(category)) continue;
-        idsByCategory.get(category).push(Number(row.id));
-      }
-
       const selectedIds = [];
+
       for (const category of uniqueCategories) {
         const targetCount = Number(categoryAllocation[category] || 0);
         if (targetCount < 1) continue;
-        const candidates = idsByCategory.get(category) || [];
-        selectedIds.push(...sampleWithoutReplacement(candidates, targetCount));
+
+        const categoryIds = await pickRandomQuestionIds({
+          category,
+          count: targetCount
+        });
+
+        selectedIds.push(...categoryIds);
       }
 
       shuffleInPlace(selectedIds);
@@ -257,16 +312,7 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const candidates = await runQuery(
-      `SELECT id
-       FROM quiz_questions
-       ORDER BY id ASC`
-    );
-
-    const selectedIds = sampleWithoutReplacement(
-      candidates.rows.map((row) => Number(row.id)),
-      10
-    );
+    const selectedIds = await pickRandomQuestionIds({ count: 10 });
 
     const query = selectedIds.length
       ? await runQuery(
