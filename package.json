@@ -9,6 +9,8 @@
   },
   "scripts": {
     "switch:main": "bash scripts/switch-to-main.sh",
-    "verify:main": "bash scripts/verify-main-ready.sh"
+    "verify:main": "bash scripts/verify-main-ready.sh",
+    "quiz:baseline": "node scripts/quiz-load-baseline.mjs",
+    "quiz:baseline:target": "node scripts/quiz-load-baseline.mjs --duration-seconds 1800 --concurrency 200"
   }
 }

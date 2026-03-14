@@ -4,18 +4,7 @@ const { evaluateAnswer } = require('../../lib/server/quiz-answer-evaluator');
 const { isRateLimited } = require('../_lib/rate-limit');
 const { sendQuizRateLimited } = require('../_lib/quiz-rate-limit-response');
 const { createEndpointMetric } = require('../_lib/observability');
-
-function parseBody(body) {
-  if (!body) return {};
-  if (typeof body === 'string') {
-    try {
-      return JSON.parse(body);
-    } catch (error) {
-      return {};
-    }
-  }
-  return typeof body === 'object' ? body : {};
-}
+const { parseJsonBody } = require('../_lib/parse-body');
 
 function normalizeAnswerValues(value) {
   if (!value) return [];
@@ -76,7 +65,7 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const body = parseBody(req.body);
+    const body = parseJsonBody(req.body);
     const { questionId: rawQuestionId, answer: rawAnswer = '', lang = 'en' } = body;
     const questionId = Number(rawQuestionId);
     const answer = String(rawAnswer).trim();

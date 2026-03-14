@@ -112,10 +112,11 @@ This backlog translates the scaling plan into concrete implementation and valida
 
 ## Milestone 6 - Dataset and traffic scale validation
 
-- [ ] **QZ-501: Build repeatable load scripts for traffic scenarios**
+- [x] **QZ-501: Build repeatable load scripts for traffic scenarios**
   - Cover steady load, ramp-up, burst, and burst-then-idle.
   - Include endpoint mix for `start`, `quest`, `answer`.
   - **Done when:** scripts can be executed consistently in CI or staging.
+  - Deliverable: `scripts/quiz-load-baseline.mjs` with endpoint mix runner and CLI options.
 
 - [ ] **QZ-502: Run dataset scale suite (1k/5k/10k/50k)**
   - Execute full load profile for each dataset size.

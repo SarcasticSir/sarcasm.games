@@ -4,6 +4,7 @@ const { parseCookies, verifySessionToken, COOKIE_NAME } = require('../_lib/auth'
 const { isRateLimited } = require('../_lib/rate-limit');
 const { sendQuizRateLimited } = require('../_lib/quiz-rate-limit-response');
 const { createEndpointMetric } = require('../_lib/observability');
+const { parseJsonBody } = require('../_lib/parse-body');
 const {
   getGuestProgress,
   saveGuestProgress,
@@ -12,18 +13,6 @@ const {
 } = require('../_lib/guest-progress-store');
 
 const GUEST_PROGRESS_TTL_SECONDS = 60 * 60 * 12;
-
-function parseBody(body) {
-  if (!body) return {};
-  if (typeof body === 'string') {
-    try {
-      return JSON.parse(body);
-    } catch (error) {
-      return {};
-    }
-  }
-  return typeof body === 'object' ? body : {};
-}
 
 function parseCategoryList(value) {
   if (!Array.isArray(value)) return [];
@@ -315,7 +304,7 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const body = parseBody(req.body);
+    const body = parseJsonBody(req.body);
     const action = String(body.action || '').trim().toLowerCase();
     const lang = body.lang === 'no' ? 'no' : 'en';
     const session = await tryGetSession(req);
