@@ -100,6 +100,10 @@ export function generateLegalMoves(state, playerId, card) {
     throw new Error(`Unknown card: ${card}`);
   }
 
+  if (card === 'JOKER') {
+    return generateJokerOptions(state, playerId);
+  }
+
   const options = [];
   const ownPieces = state.pieces.filter((piece) => piece.ownerId === playerId);
 
@@ -175,6 +179,46 @@ export function generateLegalMoves(state, playerId, card) {
  * @param {string} playerId
  * @returns {import('../shared-types/index.js').MoveOption[]}
  */
+export function generateJokerOptions(state, playerId) {
+  const mirroredCards = CARD_RANKS.filter((rank) => rank !== 'JOKER');
+  const uniqueMoves = new Map();
+
+  for (const mirroredCard of mirroredCards) {
+    const moves = generateLegalMoves(state, playerId, mirroredCard);
+
+    for (const move of moves) {
+      const jokerMove = {
+        ...move,
+        card: 'JOKER'
+      };
+
+      const key = [jokerMove.action, jokerMove.pieceId, jokerMove.from, jokerMove.to, jokerMove.steps, jokerMove.swapTargetPieceId].join('|');
+      uniqueMoves.set(key, jokerMove);
+    }
+  }
+
+  return [...uniqueMoves.values()].sort((a, b) => {
+    if (a.action !== b.action) {
+      return a.action.localeCompare(b.action);
+    }
+
+    if (a.pieceId !== b.pieceId) {
+      return a.pieceId.localeCompare(b.pieceId);
+    }
+
+    if ((a.steps ?? 0) !== (b.steps ?? 0)) {
+      return (a.steps ?? 0) - (b.steps ?? 0);
+    }
+
+    return (a.swapTargetPieceId ?? '').localeCompare(b.swapTargetPieceId ?? '');
+  });
+}
+
+/**
+ * @param {import('../shared-types/index.js').GameState} state
+ * @param {string} playerId
+ * @returns {import('../shared-types/index.js').MoveOption[]}
+ */
 export function generateJackSwapOptions(state, playerId) {
   const ownOnBoard = state.pieces.filter(
     (piece) => piece.ownerId === playerId && piece.isOnBoard && piece.position !== null && !piece.isImmune
@@ -219,6 +263,31 @@ export function buildStartIndexes(playerCount) {
   }
 
   return startIndexes;
+}
+
+
+/**
+ * @param {import('../shared-types/index.js').GameState} state
+ * @param {string} playerId
+ * @param {import('../shared-types/index.js').CardRank[]} hand
+ */
+export function evaluateHandPlayability(state, playerId, hand) {
+  const perCardMoves = {};
+  let hasAnyLegalMove = false;
+
+  for (const card of hand) {
+    const moves = generateLegalMoves(state, playerId, card);
+    perCardMoves[card] = moves;
+
+    if (moves.length > 0) {
+      hasAnyLegalMove = true;
+    }
+  }
+
+  return {
+    hasAnyLegalMove,
+    perCardMoves
+  };
 }
 
 /**
