@@ -11,6 +11,31 @@ function wrap(value, trackLength) {
 }
 
 /**
+ * @param {import('../shared-types/index.js').GameState} state
+ * @param {string} playerId
+ */
+function getHomeLane(state, playerId) {
+  return state.homeLanes?.[playerId] ?? [];
+}
+
+/**
+ * @param {import('../shared-types/index.js').GameState} state
+ * @param {string} playerId
+ */
+function getHomeEntrySquare(state, playerId) {
+  if (state.homeEntryIndexes?.[playerId] !== undefined) {
+    return state.homeEntryIndexes[playerId];
+  }
+
+  const start = state.startIndexes[playerId];
+  if (start === undefined) {
+    return undefined;
+  }
+
+  return wrap(start - 1, state.trackLength);
+}
+
+/**
  * @param {import('../shared-types/index.js').CardRank} card
  */
 export function getStepValues(card) {
@@ -21,6 +46,8 @@ export function getStepValues(card) {
       return [4, -4];
     case 'KING':
       return [13];
+    case 'SEVEN':
+      return [7];
     case 'TWO':
       return [2];
     case 'THREE':
@@ -60,6 +87,27 @@ function findPiece(state, pieceId) {
 
 /**
  * @param {import('../shared-types/index.js').GameState} state
+ * @param {number} square
+ * @param {string=} skipPieceId
+ */
+function pieceAtSquare(state, square, skipPieceId) {
+  return state.pieces.find((piece) => piece.id !== skipPieceId && piece.isOnBoard && piece.position === square);
+}
+
+/**
+ * @param {import('../shared-types/index.js').GameState} state
+ * @param {string} ownerId
+ * @param {number} homeIndex
+ * @param {string=} skipPieceId
+ */
+function pieceAtHomeIndex(state, ownerId, homeIndex, skipPieceId) {
+  return state.pieces.find(
+    (piece) => piece.id !== skipPieceId && piece.ownerId === ownerId && piece.isInHome && piece.homeIndex === homeIndex
+  );
+}
+
+/**
+ * @param {import('../shared-types/index.js').GameState} state
  * @param {number|null} square
  * @param {string} movingPieceId
  */
@@ -81,17 +129,9 @@ function sendOccupantToStartIfPresent(state, square, movingPieceId) {
   occupant.isInStart = true;
   occupant.isOnBoard = false;
   occupant.isInHome = false;
+  occupant.homeIndex = null;
   occupant.isImmune = false;
   occupant.hasCompletedLap = false;
-}
-
-/**
- * @param {import('../shared-types/index.js').GameState} state
- * @param {number} square
- * @param {string=} skipPieceId
- */
-function pieceAtSquare(state, square, skipPieceId) {
-  return state.pieces.find((piece) => piece.id !== skipPieceId && piece.isOnBoard && piece.position === square);
 }
 
 /**
@@ -118,6 +158,271 @@ function isPathBlockedByImmune(state, from, steps, movingPieceId) {
 
 /**
  * @param {import('../shared-types/index.js').GameState} state
+ * @param {import('../shared-types/index.js').PieceState} piece
+ * @param {number} steps
+ */
+function resolveForwardMove(state, piece, steps) {
+  const startSquare = state.startIndexes[piece.ownerId];
+  const homeLane = getHomeLane(state, piece.ownerId);
+  const homeEntrySquare = getHomeEntrySquare(state, piece.ownerId);
+
+  if (piece.isInHome) {
+    const targetHomeIndex = (piece.homeIndex ?? 0) + steps;
+    if (targetHomeIndex >= homeLane.length) {
+      return null;
+    }
+
+    if (pieceAtHomeIndex(state, piece.ownerId, targetHomeIndex, piece.id)) {
+      return null;
+    }
+
+    return {
+      to: null,
+      toHomeIndex: targetHomeIndex,
+      hasCompletedLap: piece.hasCompletedLap
+    };
+  }
+
+  if (!piece.isOnBoard || piece.position === null) {
+    return null;
+  }
+
+  let currentPosition = piece.position;
+  let hasCompletedLap = piece.hasCompletedLap;
+
+  for (let step = 1; step <= steps; step += 1) {
+    if (hasCompletedLap && homeLane.length > 0 && currentPosition === homeEntrySquare) {
+      const targetHomeIndex = steps - step;
+      if (targetHomeIndex >= homeLane.length) {
+        // Overshoot home lane: continue around board.
+        break;
+      }
+
+      if (pieceAtHomeIndex(state, piece.ownerId, targetHomeIndex, piece.id)) {
+        return null;
+      }
+
+      return {
+        to: null,
+        toHomeIndex: targetHomeIndex,
+        hasCompletedLap
+      };
+    }
+
+    currentPosition = wrap(currentPosition + 1, state.trackLength);
+
+    if (currentPosition === startSquare && !piece.isInStart) {
+      hasCompletedLap = true;
+    }
+
+    const occupant = pieceAtSquare(state, currentPosition, piece.id);
+    if (occupant?.isImmune) {
+      return null;
+    }
+  }
+
+  return {
+    to: wrap(piece.position + steps, state.trackLength),
+    toHomeIndex: null,
+    hasCompletedLap
+  };
+}
+
+/**
+ * @param {import('../shared-types/index.js').GameState} state
+ * @param {import('../shared-types/index.js').PieceState} piece
+ * @param {number} steps
+ */
+function resolveStandardMove(state, piece, steps) {
+  if (steps > 0) {
+    return resolveForwardMove(state, piece, steps);
+  }
+
+  if (piece.isInHome) {
+    return null;
+  }
+
+  if (!piece.isOnBoard || piece.position === null) {
+    return null;
+  }
+
+  if (isPathBlockedByImmune(state, piece.position, steps, piece.id)) {
+    return null;
+  }
+
+  const destination = wrap(piece.position + steps, state.trackLength);
+  const occupant = pieceAtSquare(state, destination, piece.id);
+  if (occupant?.isImmune) {
+    return null;
+  }
+
+  return {
+    to: destination,
+    toHomeIndex: null,
+    hasCompletedLap: piece.hasCompletedLap
+  };
+}
+
+/**
+ * @param {import('../shared-types/index.js').GameState} state
+ * @param {import('../shared-types/index.js').PieceState} piece
+ * @param {number} steps
+ */
+function stepSevenSegment(state, piece, steps) {
+  if (steps <= 0) {
+    return null;
+  }
+
+  if (!piece.isOnBoard || piece.position === null || piece.isInHome) {
+    return null;
+  }
+
+  const startSquare = state.startIndexes[piece.ownerId];
+  const homeLane = getHomeLane(state, piece.ownerId);
+  const homeEntrySquare = getHomeEntrySquare(state, piece.ownerId);
+
+  let currentPosition = piece.position;
+  let hasCompletedLap = piece.hasCompletedLap;
+
+  for (let step = 1; step <= steps; step += 1) {
+    if (hasCompletedLap && homeLane.length > 0 && currentPosition === homeEntrySquare) {
+      const targetHomeIndex = steps - step;
+      if (targetHomeIndex >= homeLane.length) {
+        break;
+      }
+
+      if (pieceAtHomeIndex(state, piece.ownerId, targetHomeIndex, piece.id)) {
+        return null;
+      }
+
+      return {
+        pieceId: piece.id,
+        card: 'SEVEN',
+        action: 'MOVE',
+        from: piece.position,
+        to: null,
+        toHomeIndex: targetHomeIndex,
+        steps,
+        hasCompletedLap
+      };
+    }
+
+    currentPosition = wrap(currentPosition + 1, state.trackLength);
+    if (currentPosition === startSquare && !piece.isInStart) {
+      hasCompletedLap = true;
+    }
+
+    const occupant = pieceAtSquare(state, currentPosition, piece.id);
+    if (occupant?.isImmune) {
+      return null;
+    }
+
+  }
+
+  return {
+    pieceId: piece.id,
+    card: 'SEVEN',
+    action: 'MOVE',
+    from: piece.position,
+    to: currentPosition,
+    toHomeIndex: null,
+    steps,
+    hasCompletedLap
+  };
+}
+
+/**
+ * @param {import('../shared-types/index.js').GameState} state
+ * @param {import('../shared-types/index.js').MoveOption[]} segments
+ */
+function applySegments(state, segments) {
+  let next = {
+    ...state,
+    pieces: state.pieces.map((piece) => ({ ...piece }))
+  };
+
+  for (const segment of segments) {
+    next = applyMovePreview(next, segment);
+  }
+
+  return next;
+}
+
+/**
+ * @param {import('../shared-types/index.js').GameState} state
+ * @param {string} playerId
+ */
+export function generateSevenSplitMoves(state, playerId) {
+  const ownMovers = state.pieces.filter(
+    (piece) => piece.ownerId === playerId && piece.isOnBoard && piece.position !== null && !piece.isInHome
+  );
+
+  const results = [];
+  const seen = new Set();
+
+  /**
+   * @param {import('../shared-types/index.js').GameState} currentState
+   * @param {number} remaining
+   * @param {import('../shared-types/index.js').MoveOption[]} segments
+   */
+  function walk(currentState, remaining, segments) {
+    if (remaining === 0) {
+      if (segments.length === 0) {
+        return;
+      }
+
+      const key = segments
+        .map((segment) => `${segment.pieceId}:${segment.from}->${segment.to ?? `H${segment.toHomeIndex}`}:${segment.steps}`)
+        .join('|');
+
+      if (!seen.has(key)) {
+        seen.add(key);
+        results.push({
+          pieceId: segments[0].pieceId,
+          card: 'SEVEN',
+          action: 'SEVEN_SPLIT',
+          from: segments[0].from,
+          to: segments[segments.length - 1].to,
+          steps: 7,
+          segments: segments.map((segment) => ({
+            pieceId: segment.pieceId,
+            from: segment.from,
+            to: segment.to,
+            toHomeIndex: segment.toHomeIndex,
+            steps: segment.steps
+          }))
+        });
+      }
+
+      return;
+    }
+
+    const candidatePieces = currentState.pieces.filter(
+      (piece) => piece.ownerId === playerId && piece.isOnBoard && piece.position !== null && !piece.isInHome
+    );
+
+    for (const candidate of candidatePieces) {
+      for (let spend = 1; spend <= remaining; spend += 1) {
+        const move = stepSevenSegment(currentState, candidate, spend);
+        if (!move) {
+          continue;
+        }
+
+        const advancedState = applyMovePreview(currentState, move);
+        walk(advancedState, remaining - spend, [...segments, move]);
+      }
+    }
+  }
+
+  if (ownMovers.length > 0) {
+    walk(state, 7, []);
+  }
+
+  return results.sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+}
+
+/**
+ * @param {import('../shared-types/index.js').GameState} state
  * @param {string} playerId
  * @param {import('../shared-types/index.js').CardRank} card
  * @returns {import('../shared-types/index.js').MoveOption[]}
@@ -131,11 +436,15 @@ export function generateLegalMoves(state, playerId, card) {
     return generateJokerOptions(state, playerId);
   }
 
+  if (card === 'SEVEN') {
+    return generateSevenSplitMoves(state, playerId);
+  }
+
   const options = [];
   const ownPieces = state.pieces.filter((piece) => piece.ownerId === playerId);
 
   for (const piece of ownPieces) {
-    if (piece.isInHome) {
+    if (piece.isInHome && !piece.isOnBoard) {
       continue;
     }
 
@@ -157,23 +466,13 @@ export function generateLegalMoves(state, playerId, card) {
       continue;
     }
 
-    if (!piece.isOnBoard || piece.position === null) {
-      continue;
-    }
-
     for (const steps of getStepValues(card)) {
       if (steps === 0) {
         continue;
       }
 
-      if (isPathBlockedByImmune(state, piece.position, steps, piece.id)) {
-        continue;
-      }
-
-      const destination = wrap(piece.position + steps, state.trackLength);
-      const occupant = pieceAtSquare(state, destination, piece.id);
-
-      if (occupant?.isImmune) {
+      const resolved = resolveStandardMove(state, piece, steps);
+      if (!resolved) {
         continue;
       }
 
@@ -181,8 +480,9 @@ export function generateLegalMoves(state, playerId, card) {
         pieceId: piece.id,
         card,
         action: 'MOVE',
-        from: piece.position,
-        to: destination,
+        from: piece.isOnBoard ? piece.position : null,
+        to: resolved.to,
+        toHomeIndex: resolved.toHomeIndex,
         steps
       });
     }
@@ -195,6 +495,10 @@ export function generateLegalMoves(state, playerId, card) {
   return options.sort((a, b) => {
     if (a.pieceId !== b.pieceId) {
       return a.pieceId.localeCompare(b.pieceId);
+    }
+
+    if ((a.toHomeIndex ?? -1) !== (b.toHomeIndex ?? -1)) {
+      return (a.toHomeIndex ?? -1) - (b.toHomeIndex ?? -1);
     }
 
     return (a.steps ?? 0) - (b.steps ?? 0);
@@ -219,26 +523,12 @@ export function generateJokerOptions(state, playerId) {
         card: 'JOKER'
       };
 
-      const key = [jokerMove.action, jokerMove.pieceId, jokerMove.from, jokerMove.to, jokerMove.steps, jokerMove.swapTargetPieceId].join('|');
+      const key = JSON.stringify(jokerMove);
       uniqueMoves.set(key, jokerMove);
     }
   }
 
-  return [...uniqueMoves.values()].sort((a, b) => {
-    if (a.action !== b.action) {
-      return a.action.localeCompare(b.action);
-    }
-
-    if (a.pieceId !== b.pieceId) {
-      return a.pieceId.localeCompare(b.pieceId);
-    }
-
-    if ((a.steps ?? 0) !== (b.steps ?? 0)) {
-      return (a.steps ?? 0) - (b.steps ?? 0);
-    }
-
-    return (a.swapTargetPieceId ?? '').localeCompare(b.swapTargetPieceId ?? '');
-  });
+  return [...uniqueMoves.values()].sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
 }
 
 /**
@@ -292,7 +582,6 @@ export function buildStartIndexes(playerCount) {
   return startIndexes;
 }
 
-
 /**
  * @param {import('../shared-types/index.js').GameState} state
  * @param {string} playerId
@@ -332,21 +621,69 @@ export function applyMovePreview(state, move) {
     throw new Error(`Unknown piece: ${move.pieceId}`);
   }
 
+  if (move.action === 'SEVEN_SPLIT') {
+    if (!move.segments || !Array.isArray(move.segments) || move.segments.length === 0) {
+      throw new Error('segments are required for SEVEN_SPLIT move');
+    }
+
+    let intermediateState = nextState;
+    for (const segment of move.segments) {
+      intermediateState = applyMovePreview(intermediateState, {
+        ...segment,
+        card: 'SEVEN',
+        action: 'MOVE'
+      });
+    }
+
+    return intermediateState;
+  }
+
   if (move.action === 'EXIT_START') {
     sendOccupantToStartIfPresent(nextState, move.to, movingPiece.id);
 
     movingPiece.isInStart = false;
     movingPiece.isOnBoard = true;
+    movingPiece.isInHome = false;
+    movingPiece.homeIndex = null;
     movingPiece.position = move.to;
     movingPiece.isImmune = true;
     return nextState;
   }
 
   if (move.action === 'MOVE') {
+    if (move.toHomeIndex !== null && move.toHomeIndex !== undefined) {
+      movingPiece.position = null;
+      movingPiece.isOnBoard = false;
+      movingPiece.isInHome = true;
+      movingPiece.homeIndex = move.toHomeIndex;
+      movingPiece.isImmune = false;
+      movingPiece.hasCompletedLap = true;
+      return nextState;
+    }
+
+    if (move.card === 'SEVEN' && move.steps > 0 && move.from !== null && move.from !== undefined && move.to !== null) {
+      for (let offset = 1; offset < move.steps; offset += 1) {
+        const passSquare = wrap(move.from + offset, nextState.trackLength);
+        sendOccupantToStartIfPresent(nextState, passSquare, movingPiece.id);
+      }
+    }
+
     sendOccupantToStartIfPresent(nextState, move.to, movingPiece.id);
 
     movingPiece.position = move.to;
+    movingPiece.isOnBoard = true;
+    movingPiece.isInHome = false;
+    movingPiece.homeIndex = null;
     movingPiece.isImmune = false;
+
+    const startSquare = nextState.startIndexes[movingPiece.ownerId];
+    if (move.from !== null && move.from !== undefined && move.to !== null && move.to !== undefined && move.steps > 0) {
+      const distanceToStart = wrap(startSquare - move.from, nextState.trackLength);
+      if (distanceToStart > 0 && move.steps >= distanceToStart) {
+        movingPiece.hasCompletedLap = true;
+      }
+    }
+
     return nextState;
   }
 
