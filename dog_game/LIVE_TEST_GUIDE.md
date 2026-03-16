@@ -1,140 +1,64 @@
-# Live test guide (4 players)
+# Live test guide (AGENTS-aligned)
 
-This guide prepares an immediate live-room test using the current authoritative room engine over WebSocket.
+This guide follows the project AGENTS direction:
 
-## 1) Start live server
+- realtime coordination via a dedicated realtime layer,
+- Supabase for auth + persistence,
+- optional fast MVP path with Supabase Realtime + Edge Functions / RPC move validation.
 
-From `dog_game/`:
+## Recommended test path now
 
-```bash
-npm install
-npm run start:live
-```
+For the fastest live test with 4 players:
 
-Defaults:
+1. Use **Supabase Realtime channel** for room presence + state updates.
+2. Keep **server-authoritative move validation** in backend functions (RPC / Edge Function).
+3. Persist room/match events to existing tables (`rooms`, `room_members`, `matches`, `match_players`, `game_events`).
 
-- HTTP health endpoint: `http://localhost:8787`
-- WebSocket endpoint: `ws://localhost:8787/ws`
+This matches the AGENTS alternative MVP path while preserving authoritative rules.
 
-Optional custom port:
+## Minimal live test checklist (4 players)
 
-```bash
-PORT=8790 npm run start:live
-```
+- [ ] Host creates room (mode config + capacity).
+- [ ] 3 friends join by room code.
+- [ ] Seat assignment follows formula `seat_no = (slot_in_team - 1) * team_count + team_no`.
+- [ ] All players set ready.
+- [ ] Host starts match.
+- [ ] For each move:
+  - client sends intent,
+  - backend validates via room engine,
+  - backend publishes resulting room snapshot/event via Supabase Realtime.
+- [ ] Reconnect one client and confirm private/public view consistency.
 
-## 2) Expose server to friends
+## Event flow shape
 
-Use your preferred tunnel/reverse proxy and share the public WebSocket URL.
+Use intent messages from client -> backend, for example:
 
-Example with cloudflared (if installed):
+- `create_room`
+- `join_room`
+- `set_ready`
+- `exchange_card`
+- `request_legal_moves`
+- `start_move_preview`
+- `cancel_move_preview`
+- `confirm_move`
 
-```bash
-cloudflared tunnel --url http://localhost:8787
-```
+Publish events to clients through Supabase Realtime, for example:
 
-Then friends connect to:
+- `room_snapshot`
+- `phase_changed`
+- `turn_changed`
+- `legal_moves`
+- `move_preview`
+- `card_played`
 
-- `wss://<public-host>/ws`
+## Important constraints
 
-## 3) Message protocol
+- Never trust client legal-move calculations.
+- Never expose opponent hand contents in public payloads.
+- Keep idempotency and version checks in backend command handling.
+- Persist an append-only event stream for replay/debugging.
 
-Send JSON messages over WebSocket.
+## Deployment note
 
-### Host creates room (solo 4-player)
-
-```json
-{
-  "type": "create_room",
-  "roomId": "DOG123",
-  "playerId": "P1",
-  "gameMode": "solo",
-  "teamCount": 4,
-  "playersPerTeam": 1
-}
-```
-
-### Friends join room
-
-```json
-{
-  "type": "join_room",
-  "roomId": "DOG123",
-  "playerId": "P2",
-  "teamNo": 2,
-  "slotInTeam": 1
-}
-```
-
-(Repeat for `P3` with `teamNo:3`, and `P4` with `teamNo:4`.)
-
-### Everyone sets ready
-
-```json
-{
-  "type": "set_ready",
-  "roomId": "DOG123",
-  "playerId": "P1",
-  "isReady": true
-}
-```
-
-### Host starts match
-
-```json
-{
-  "type": "start_match",
-  "roomId": "DOG123",
-  "playerId": "P1"
-}
-```
-
-### Request legal moves for a card
-
-```json
-{
-  "type": "request_legal_moves",
-  "roomId": "DOG123",
-  "playerId": "P1",
-  "card": "ACE"
-}
-```
-
-### Preview and confirm move
-
-```json
-{
-  "type": "start_move_preview",
-  "roomId": "DOG123",
-  "playerId": "P1",
-  "card": "ACE",
-  "move": { "pieceId": "P1-1", "card": "ACE", "action": "EXIT_START", "from": null, "to": 0 }
-}
-```
-
-```json
-{
-  "type": "confirm_move",
-  "roomId": "DOG123",
-  "playerId": "P1"
-}
-```
-
-## 4) Reconnect flow
-
-A reconnecting client can re-attach and get fresh room/private snapshot:
-
-```json
-{
-  "type": "attach",
-  "roomId": "DOG123",
-  "playerId": "P2"
-}
-```
-
-## 5) What to verify in first live test
-
-- All 4 clients receive `room_snapshot` updates.
-- Turn ownership is enforced (wrong player gets `command_error`).
-- Moves require preview -> confirm.
-- Hand info stays private (public snapshot exposes only counts).
-- Reconnect with `attach` restores consistent private/public state.
+This repository now does **not** include a dedicated local WebSocket server script.
+Use your Supabase project + backend function runtime for live test orchestration.
