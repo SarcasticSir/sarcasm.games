@@ -356,3 +356,92 @@ test('evaluateCurrentTurnPlayability reflects must-play / no-legal-move output s
   assert.equal(typeof summary.hasAnyLegalMove, 'boolean');
   assert.equal(typeof summary.perCardMoves, 'object');
 });
+
+
+test('confirm_move finishes match when winning move sends final piece home', () => {
+  let state = bootstrapFourPlayerLobby();
+  state = handleRoomCommand(state, {
+    type: 'start_match',
+    playerId: 'P1',
+    expectedVersion: state.version
+  }).state;
+
+  // Force deterministic near-win state for P1.
+  const homeEntry = (state.match.gameState.startIndexes.P1 - 1 + state.match.gameState.trackLength) % state.match.gameState.trackLength;
+  state.match.gameState.homeLanes = {
+    P1: [0, 1, 2, 3],
+    P2: [0, 1, 2, 3],
+    P3: [0, 1, 2, 3],
+    P4: [0, 1, 2, 3]
+  };
+  state.match.gameState.homeEntryIndexes = {
+    P1: homeEntry,
+    P2: (state.match.gameState.startIndexes.P2 - 1 + state.match.gameState.trackLength) % state.match.gameState.trackLength,
+    P3: (state.match.gameState.startIndexes.P3 - 1 + state.match.gameState.trackLength) % state.match.gameState.trackLength,
+    P4: (state.match.gameState.startIndexes.P4 - 1 + state.match.gameState.trackLength) % state.match.gameState.trackLength
+  };
+
+  let occupiedHomeIndex = 1;
+  for (const piece of state.match.gameState.pieces) {
+    if (piece.ownerId !== 'P1') {
+      continue;
+    }
+
+    if (piece.id === 'P1-4') {
+      piece.isInStart = false;
+      piece.isOnBoard = true;
+      piece.isInHome = false;
+      piece.homeIndex = null;
+      piece.position = homeEntry;
+      piece.hasCompletedLap = true;
+      piece.isImmune = false;
+      continue;
+    }
+
+    piece.isInStart = false;
+    piece.isOnBoard = false;
+    piece.isInHome = true;
+    piece.homeIndex = occupiedHomeIndex;
+    piece.position = null;
+    piece.hasCompletedLap = true;
+    piece.isImmune = false;
+    occupiedHomeIndex += 1;
+  }
+
+  state.match.handsByPlayerId.P1 = [{ id: 'P1-ACE', rank: 'ACE', suit: 'SPADES' }];
+  state.match.turnIndex = 0;
+
+  const legal = handleRoomCommand(state, {
+    type: 'request_legal_moves',
+    playerId: 'P1',
+    card: 'ACE',
+    expectedVersion: state.version
+  });
+
+  const winningMove = legal.response.moves.find((move) => move.pieceId === 'P1-4' && move.toHomeIndex === 0);
+  assert.ok(winningMove);
+
+  state = handleRoomCommand(state, {
+    type: 'start_move_preview',
+    playerId: 'P1',
+    card: 'ACE',
+    move: winningMove,
+    expectedVersion: state.version
+  }).state;
+
+  const confirmed = handleRoomCommand(state, {
+    type: 'confirm_move',
+    playerId: 'P1',
+    expectedVersion: state.version
+  });
+
+  state = confirmed.state;
+
+  assert.equal(confirmed.response.gameFinished, true);
+  assert.deepEqual(confirmed.response.winner, { winnerType: 'PLAYER', playerId: 'P1' });
+  assert.equal(state.status, 'finished');
+  assert.equal(state.match.phase, 'finished');
+
+  const publicView = getPublicRoomView(state);
+  assert.deepEqual(publicView.match.winner, { winnerType: 'PLAYER', playerId: 'P1' });
+});

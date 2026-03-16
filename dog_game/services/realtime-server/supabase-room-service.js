@@ -4,6 +4,7 @@ import {
   getPublicRoomView,
   handleRoomCommand
 } from './room-engine.js';
+import { buildInviteUrl } from './invite-url.js';
 
 function toEvent(type, roomId, payload) {
   return {
@@ -73,9 +74,13 @@ export function createSupabaseRoomService(deps) {
       roomId: command.roomId
     });
 
+    const inviteUrl = command.clientBaseUrl
+      ? buildInviteUrl({ baseUrl: command.clientBaseUrl, roomId: command.roomId })
+      : null;
+
     return {
       roomId: command.roomId,
-      response: { ok: true, roomId: command.roomId },
+      response: { ok: true, roomId: command.roomId, inviteUrl },
       public: getPublicRoomView(state),
       private: command.playerId ? getPlayerPrivateView(state, command.playerId).private : null
     };
@@ -90,7 +95,8 @@ export function createSupabaseRoomService(deps) {
         gameMode: command.gameMode,
         teamCount: command.teamCount,
         playersPerTeam: command.playersPerTeam,
-        idempotencyKey: command.idempotencyKey
+        idempotencyKey: command.idempotencyKey,
+        clientBaseUrl: command.clientBaseUrl
       });
     }
 
