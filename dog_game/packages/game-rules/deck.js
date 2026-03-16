@@ -110,6 +110,125 @@ export function getHandSizeForRound(roundNumber) {
 
 /**
  * @param {DeckState} deckState
+ * @param {string[]} playerIds
+ * @param {number} roundNumber
+ * @param {number} reshuffleSeed
+ */
+export function dealRoundHands(deckState, playerIds, roundNumber, reshuffleSeed = 1) {
+  if (!Array.isArray(playerIds) || playerIds.length === 0) {
+    throw new Error('playerIds must contain at least one player');
+  }
+
+  const handSize = getHandSizeForRound(roundNumber);
+  const hands = {};
+
+  let nextDeckState = {
+    drawPile: [...deckState.drawPile],
+    discardPile: [...deckState.discardPile]
+  };
+
+  for (const playerId of playerIds) {
+    const { drawn, deckState: updatedDeckState } = drawCards(nextDeckState, handSize, reshuffleSeed);
+    hands[playerId] = drawn;
+    nextDeckState = updatedDeckState;
+  }
+
+  return {
+    handSize,
+    hands,
+    deckState: nextDeckState
+  };
+}
+
+
+/**
+ * @typedef {Object} TeamExchangeAction
+ * @property {string} fromPlayerId
+ * @property {string} toPlayerId
+ * @property {string} cardId
+ */
+
+/**
+ * @param {Record<string, DeckCard[]>} hands
+ * @param {Record<string, number>} teamByPlayerId
+ * @param {TeamExchangeAction[]} exchanges
+ */
+export function applyTeamCardExchange(hands, teamByPlayerId, exchanges) {
+  if (!Array.isArray(exchanges) || exchanges.length === 0) {
+    throw new Error('exchanges must include one action per team player');
+  }
+
+  const players = Object.keys(teamByPlayerId);
+  if (players.length === 0) {
+    throw new Error('teamByPlayerId must include at least one player');
+  }
+
+  const outgoingByPlayer = new Map();
+  const incomingCountByPlayer = new Map(players.map((playerId) => [playerId, 0]));
+
+  for (const action of exchanges) {
+    const { fromPlayerId, toPlayerId, cardId } = action;
+
+    if (!(fromPlayerId in teamByPlayerId) || !(toPlayerId in teamByPlayerId)) {
+      throw new Error('Exchange action references unknown player');
+    }
+
+    if (fromPlayerId === toPlayerId) {
+      throw new Error('Player cannot exchange a card with themselves');
+    }
+
+    if (teamByPlayerId[fromPlayerId] !== teamByPlayerId[toPlayerId]) {
+      throw new Error('Exchange can only happen between teammates');
+    }
+
+    if (outgoingByPlayer.has(fromPlayerId)) {
+      throw new Error('Each player must send exactly one card');
+    }
+
+    const senderHand = hands[fromPlayerId] ?? [];
+    const selectedCard = senderHand.find((card) => card.id === cardId);
+    if (!selectedCard) {
+      throw new Error(`Player ${fromPlayerId} does not have selected card ${cardId}`);
+    }
+
+    outgoingByPlayer.set(fromPlayerId, {
+      ...action,
+      card: selectedCard
+    });
+
+    incomingCountByPlayer.set(toPlayerId, (incomingCountByPlayer.get(toPlayerId) ?? 0) + 1);
+  }
+
+  if (outgoingByPlayer.size !== players.length) {
+    throw new Error('Each player must submit exactly one exchange action');
+  }
+
+  for (const playerId of players) {
+    if ((incomingCountByPlayer.get(playerId) ?? 0) !== 1) {
+      throw new Error('Each player must receive exactly one exchanged card');
+    }
+  }
+
+  const nextHands = {};
+  for (const playerId of Object.keys(hands)) {
+    nextHands[playerId] = [...hands[playerId]];
+  }
+
+  for (const playerId of players) {
+    const action = outgoingByPlayer.get(playerId);
+    nextHands[playerId] = (nextHands[playerId] ?? []).filter((card) => card.id !== action.cardId);
+  }
+
+  for (const playerId of players) {
+    const action = outgoingByPlayer.get(playerId);
+    nextHands[action.toPlayerId].push(action.card);
+  }
+
+  return nextHands;
+}
+
+/**
+ * @param {DeckState} deckState
  * @param {number} count
  * @param {number} reshuffleSeed
  */
