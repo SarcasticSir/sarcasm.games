@@ -60,6 +60,29 @@ function findPiece(state, pieceId) {
 
 /**
  * @param {import('../shared-types/index.js').GameState} state
+ * @param {number|null} square
+ * @param {string} movingPieceId
+ */
+function sendOccupantToStartIfPresent(state, square, movingPieceId) {
+  if (square === null || square === undefined) {
+    return;
+  }
+
+  const occupant = pieceAtSquare(state, square, movingPieceId);
+  if (!occupant) {
+    return;
+  }
+
+  occupant.position = null;
+  occupant.isInStart = true;
+  occupant.isOnBoard = false;
+  occupant.isInHome = false;
+  occupant.isImmune = false;
+  occupant.hasCompletedLap = false;
+}
+
+/**
+ * @param {import('../shared-types/index.js').GameState} state
  * @param {number} square
  * @param {string=} skipPieceId
  */
@@ -306,6 +329,8 @@ export function applyMovePreview(state, move) {
   }
 
   if (move.action === 'EXIT_START') {
+    sendOccupantToStartIfPresent(nextState, move.to, movingPiece.id);
+
     movingPiece.isInStart = false;
     movingPiece.isOnBoard = true;
     movingPiece.position = move.to;
@@ -314,6 +339,8 @@ export function applyMovePreview(state, move) {
   }
 
   if (move.action === 'MOVE') {
+    sendOccupantToStartIfPresent(nextState, move.to, movingPiece.id);
+
     movingPiece.position = move.to;
     movingPiece.isImmune = false;
     return nextState;

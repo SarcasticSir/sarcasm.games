@@ -293,3 +293,78 @@ test('No-legal-move is true when all cards in hand are blocked', () => {
   assert.equal(result.perCardMoves.KING.length, 0);
   assert.equal(result.perCardMoves.JACK.length, 0);
 });
+
+test('Landing on another piece sends that piece back to start', () => {
+  const startIndexes = buildStartIndexes(4);
+
+  const mover = {
+    ...createPieceInStart('P1-A', 'P1'),
+    isInStart: false,
+    isOnBoard: true,
+    position: 5
+  };
+
+  const occupant = {
+    ...createPieceInStart('P2-A', 'P2'),
+    isInStart: false,
+    isOnBoard: true,
+    position: 9
+  };
+
+  const state = buildState({
+    trackLength: TRACK_SPACES_BETWEEN_PLAYERS * 4,
+    startIndexes,
+    pieces: [mover, occupant]
+  });
+
+  const move = generateLegalMoves(state, 'P1', 'FOUR').find((option) => option.steps === 4);
+  assert.ok(move, 'Expected a legal +4 move from 5 to 9');
+
+  const next = applyMovePreview(state, move);
+  const movedPiece = next.pieces.find((piece) => piece.id === 'P1-A');
+  const knockedPiece = next.pieces.find((piece) => piece.id === 'P2-A');
+
+  assert.equal(movedPiece.position, 9);
+  assert.equal(movedPiece.isOnBoard, true);
+
+  assert.equal(knockedPiece.position, null);
+  assert.equal(knockedPiece.isInStart, true);
+  assert.equal(knockedPiece.isOnBoard, false);
+  assert.equal(knockedPiece.isImmune, false);
+});
+
+test('Exiting start can knock a non-immune occupant back to start', () => {
+  const startIndexes = buildStartIndexes(4);
+
+  const myStartPiece = createPieceInStart('P1-A', 'P1');
+
+  const occupantOnStartSquare = {
+    ...createPieceInStart('P2-A', 'P2'),
+    isInStart: false,
+    isOnBoard: true,
+    position: startIndexes.P1,
+    isImmune: false
+  };
+
+  const state = buildState({
+    trackLength: TRACK_SPACES_BETWEEN_PLAYERS * 4,
+    startIndexes,
+    pieces: [myStartPiece, occupantOnStartSquare]
+  });
+
+  const exitMove = generateLegalMoves(state, 'P1', 'ACE').find((move) => move.action === 'EXIT_START');
+  assert.ok(exitMove, 'Expected exit-start move with ACE');
+
+  const next = applyMovePreview(state, exitMove);
+  const myPiece = next.pieces.find((piece) => piece.id === 'P1-A');
+  const knockedPiece = next.pieces.find((piece) => piece.id === 'P2-A');
+
+  assert.equal(myPiece.position, startIndexes.P1);
+  assert.equal(myPiece.isInStart, false);
+  assert.equal(myPiece.isOnBoard, true);
+  assert.equal(myPiece.isImmune, true);
+
+  assert.equal(knockedPiece.position, null);
+  assert.equal(knockedPiece.isInStart, true);
+  assert.equal(knockedPiece.isOnBoard, false);
+});
