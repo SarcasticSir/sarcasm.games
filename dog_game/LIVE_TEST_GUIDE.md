@@ -8,6 +8,11 @@ This guide follows the project AGENTS direction:
 
 ## Recommended test path now
 
+## Latest repository validation
+
+- Local `npm test` currently passes all rules/deck/room-engine/adapter test cases.
+- For a practical gap list before external playtests, see `LIVE_READINESS_STATUS.md`.
+
 For the fastest live test with 4 players:
 
 1. Use **Supabase Realtime channel** for room presence + state updates.

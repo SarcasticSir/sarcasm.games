@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dog Live Test Lobby</title>
+  <style>
+    :root {
+      --bg: #0b0c10;
+      --card: #1e1f25;
+      --txt: #eaeaea;
+      --muted: #a4acba;
+      --bd: #2f313a;
+      --accent: #4ecca3;
+      --accent-dark: #1a3c32;
+      --danger: #ff6b6b;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 18px;
+      font: 16px/1.45 system-ui, Segoe UI, Roboto, Arial;
+      background: var(--bg);
+      color: var(--txt);
+    }
+
+    .shell {
+      width: min(860px, 100%);
+      margin: 0 auto;
+      display: grid;
+      gap: 12px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--bd);
+      border-radius: 12px;
+      padding: 14px;
+    }
+
+    h1,
+    h2,
+    h3 {
+      margin: 0 0 8px;
+    }
+
+    p {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .step {
+      font-size: 0.88rem;
+      color: #c9f1e2;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 6px;
+      font-weight: 700;
+    }
+
+    .grid {
+      display: grid;
+      gap: 10px;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      margin-top: 10px;
+    }
+
+    label {
+      display: block;
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    input,
+    select,
+    button,
+    textarea {
+      width: 100%;
+      border-radius: 8px;
+      border: 1px solid var(--bd);
+      padding: 10px 12px;
+      font: inherit;
+      background: #13141a;
+      color: var(--txt);
+    }
+
+    button {
+      border: 0;
+      cursor: pointer;
+      font-weight: 700;
+      background: var(--accent);
+      color: #0b1d17;
+    }
+
+    button.secondary {
+      background: #3a3f4d;
+      color: var(--txt);
+      border: 1px solid var(--bd);
+    }
+
+    button.ghost {
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--bd);
+    }
+
+    .buttons {
+      display: grid;
+      gap: 10px;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      margin-top: 10px;
+    }
+
+    .status {
+      margin-top: 8px;
+      min-height: 22px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .status.error {
+      color: var(--danger);
+    }
+
+    .pill {
+      display: inline-block;
+      background: var(--accent-dark);
+      color: #c9f1e2;
+      border: 1px solid #286b58;
+      border-radius: 999px;
+      padding: 4px 10px;
+      margin-top: 8px;
+      font-size: 0.86rem;
+      font-weight: 700;
+    }
+
+    .invite-list {
+      margin-top: 10px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .invite-item {
+      border: 1px solid var(--bd);
+      border-radius: 8px;
+      padding: 10px;
+      background: #13141a;
+      display: grid;
+      gap: 8px;
+    }
+
+    .invite-meta {
+      font-size: 0.9rem;
+      color: #c8d0de;
+      font-weight: 700;
+    }
+
+    .invite-link {
+      font-size: 0.85rem;
+      color: var(--muted);
+      word-break: break-all;
+    }
+
+    details {
+      margin-top: 10px;
+    }
+
+    pre {
+      background: #101117;
+      border: 1px solid var(--bd);
+      border-radius: 8px;
+      padding: 10px;
+      max-height: 250px;
+      overflow: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+      margin: 8px 0 0;
+      color: #cad3e1;
+    }
+
+    .small {
+      font-size: 0.86rem;
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="card">
+      <h1>Dog live test</h1>
+      <p>Create a room, share links with three friends, and test live. Kept simple without heavy debug UI.</p>
+      <div class="pill" id="invitePill">Invite mode: off</div>
+    </section>
+
+    <section class="card">
+      <div class="step">Step 1</div>
+      <h2>Basic setup</h2>
+      <div class="grid">
+        <div>
+          <label for="roomId">Room ID</label>
+          <input id="roomId" value="DOG001" />
+        </div>
+        <div>
+          <label for="playerId">Your player ID</label>
+          <input id="playerId" />
+        </div>
+      </div>
+      <div class="buttons">
+        <button id="randomRoomBtn" class="secondary" type="button">New room ID</button>
+        <button id="randomPlayerBtn" class="secondary" type="button">New player ID</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="step">Step 2 (host)</div>
+      <h2>Create game</h2>
+      <p class="small">Standard live-test setup is 4 players free-for-all.</p>
+      <div class="grid">
+        <div>
+          <label for="gameMode">Game mode</label>
+          <select id="gameMode">
+            <option value="solo">Solo (1v1v1v1)</option>
+            <option value="teams">Teams</option>
+          </select>
+        </div>
+        <div>
+          <label for="teamCount">Team count</label>
+          <input id="teamCount" type="number" min="1" max="8" value="4" />
+        </div>
+        <div>
+          <label for="playersPerTeam">Players per team</label>
+          <input id="playersPerTeam" type="number" min="1" max="4" value="1" />
+        </div>
+      </div>
+      <p id="capacityHint" class="status"></p>
+      <div class="buttons">
+        <button id="createRoomBtn" type="button">Create room</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="step">Step 3 (host)</div>
+      <h2>Invite 3 friends</h2>
+      <p class="small">Generate ready-to-share links for your friends. They open the link and click "Join room".</p>
+      <div class="buttons">
+        <button id="buildInviteLinksBtn" class="secondary" type="button">Generate 3 invite links</button>
+        <button id="copyAllInviteLinksBtn" class="secondary" type="button">Copy all links</button>
+      </div>
+      <div class="invite-list" id="inviteList"></div>
+    </section>
+
+    <section class="card">
+      <div class="step">Step 4 (everyone)</div>
+      <h2>Join and start</h2>
+      <div class="grid">
+        <div>
+          <label for="teamNo">Team number</label>
+          <input id="teamNo" type="number" min="1" max="8" value="1" />
+        </div>
+        <div>
+          <label for="slotInTeam">Slot in team</label>
+          <input id="slotInTeam" type="number" min="1" max="4" value="1" />
+        </div>
+      </div>
+      <div class="buttons">
+        <button id="joinRoomBtn" class="secondary" type="button">Join room</button>
+        <button id="setReadyBtn" class="secondary" type="button">Set ready</button>
+        <button id="startMatchBtn" type="button">Start match (host)</button>
+      </div>
+      <p id="status" class="status">Idle.</p>
+
+      <details>
+        <summary>Show technical response</summary>
+        <pre id="output">No response yet.</pre>
+      </details>
+    </section>
+  </main>
+
+  <script>
+    const STORAGE_KEY = 'dogLiveSimple';
+    const DOG_ENDPOINT = 'https://hmwzdnebhqavatuxmtki.supabase.co/functions/v1/dog-room';
+
+    const roomIdEl = document.getElementById('roomId');
+    const playerIdEl = document.getElementById('playerId');
+    const gameModeEl = document.getElementById('gameMode');
+    const teamCountEl = document.getElementById('teamCount');
+    const playersPerTeamEl = document.getElementById('playersPerTeam');
+    const teamNoEl = document.getElementById('teamNo');
+    const slotInTeamEl = document.getElementById('slotInTeam');
+    const outputEl = document.getElementById('output');
+    const statusEl = document.getElementById('status');
+    const capacityHintEl = document.getElementById('capacityHint');
+    const inviteListEl = document.getElementById('inviteList');
+    const invitePillEl = document.getElementById('invitePill');
+
+    function randomCode(prefix, length) {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      let value = prefix;
+      for (let i = 0; i < length; i += 1) {
+        value += chars[Math.floor(Math.random() * chars.length)];
+      }
+      return value;
+    }
+
+    function setStatus(message, isError = false) {
+      statusEl.textContent = message;
+      statusEl.classList.toggle('error', isError);
+    }
+
+    function writeOutput(payload) {
+      outputEl.textContent = JSON.stringify(payload, null, 2);
+    }
+
+    function renderCapacityHint() {
+      const total = Number(teamCountEl.value || 0) * Number(playersPerTeamEl.value || 0);
+      const valid = total >= 4 && total <= 8;
+      capacityHintEl.textContent = `Capacity: ${total} players (${valid ? 'valid' : 'must be 4-8'})`;
+      capacityHintEl.classList.toggle('error', !valid);
+    }
+
+    function readState() {
+      return {
+        roomId: roomIdEl.value.trim(),
+        playerId: playerIdEl.value.trim(),
+        gameMode: gameModeEl.value,
+        teamCount: Number(teamCountEl.value),
+        playersPerTeam: Number(playersPerTeamEl.value),
+        teamNo: Number(teamNoEl.value),
+        slotInTeam: Number(slotInTeamEl.value)
+      };
+    }
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(readState()));
+    }
+
+    function loadState() {
+      try {
+        const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+        if (data.roomId) roomIdEl.value = data.roomId;
+        if (data.playerId) playerIdEl.value = data.playerId;
+        if (data.gameMode) gameModeEl.value = data.gameMode;
+        if (data.teamCount) teamCountEl.value = String(data.teamCount);
+        if (data.playersPerTeam) playersPerTeamEl.value = String(data.playersPerTeam);
+        if (data.teamNo) teamNoEl.value = String(data.teamNo);
+        if (data.slotInTeam) slotInTeamEl.value = String(data.slotInTeam);
+      } catch {
+        // ignore parse issues
+      }
+
+    }
+
+    async function sendCommand(command, successText) {
+      const cfg = readState();
+      setStatus('Working...');
+      saveState();
+
+      try {
+        const response = await fetch(DOG_ENDPOINT, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(command)
+        });
+
+        const rawBody = await response.text();
+        let body = null;
+
+        try {
+          body = rawBody ? JSON.parse(rawBody) : null;
+        } catch {
+          const trimmed = rawBody.trim();
+          const preview = trimmed.slice(0, 180);
+          writeOutput({
+            ok: false,
+            error: 'Endpoint did not return JSON.',
+            status: response.status,
+            bodyPreview: preview || '(empty)'
+          });
+
+          if (response.status === 404) {
+            setStatus('Endpoint returned 404. Supabase function may not be deployed yet.', true);
+          } else {
+            setStatus('Endpoint response was not JSON. Check endpoint URL and deployment.', true);
+          }
+
+          return null;
+        }
+
+        writeOutput(body);
+
+        if (!response.ok || body?.ok === false) {
+          setStatus(`Could not complete action: ${body?.error || response.status}`, true);
+          return null;
+        }
+
+        setStatus(successText);
+        return body;
+      } catch (error) {
+        writeOutput({ ok: false, error: String(error) });
+        setStatus('Network error. Check endpoint and try again.', true);
+        return null;
+      }
+    }
+
+    function getInviteBaseUrl() {
+      const url = new URL(window.location.href);
+      url.search = '';
+      url.hash = '';
+      return url.toString();
+    }
+
+    function buildInviteLinks() {
+      const cfg = readState();
+      if (!cfg.roomId) {
+        setStatus('Set room ID first.', true);
+        return [];
+      }
+
+      const base = getInviteBaseUrl();
+      const invites = [
+        { friend: 'Friend 1', teamNo: 2, slotInTeam: 1 },
+        { friend: 'Friend 2', teamNo: 3, slotInTeam: 1 },
+        { friend: 'Friend 3', teamNo: 4, slotInTeam: 1 }
+      ].map((seat, index) => {
+        const invitePlayerId = `P${index + 2}`;
+        const link = `${base}?room=${encodeURIComponent(cfg.roomId)}&teamNo=${seat.teamNo}&slotInTeam=${seat.slotInTeam}&player=${invitePlayerId}`;
+        return { ...seat, link };
+      });
+
+      return invites;
+    }
+
+    function renderInviteLinks(invites) {
+      inviteListEl.innerHTML = '';
+
+      invites.forEach((invite) => {
+        const item = document.createElement('div');
+        item.className = 'invite-item';
+
+        const meta = document.createElement('div');
+        meta.className = 'invite-meta';
+        meta.textContent = `${invite.friend} -> Team ${invite.teamNo}, Slot ${invite.slotInTeam}`;
+
+        const link = document.createElement('div');
+        link.className = 'invite-link';
+        link.textContent = invite.link;
+
+        const copy = document.createElement('button');
+        copy.type = 'button';
+        copy.className = 'ghost';
+        copy.textContent = `Copy ${invite.friend} link`;
+        copy.addEventListener('click', async () => {
+          await navigator.clipboard.writeText(invite.link);
+          setStatus(`${invite.friend} link copied.`);
+        });
+
+        item.appendChild(meta);
+        item.appendChild(link);
+        item.appendChild(copy);
+        inviteListEl.appendChild(item);
+      });
+    }
+
+    async function copyAllInvites() {
+      const invites = buildInviteLinks();
+      if (invites.length === 0) {
+        return;
+      }
+
+      const text = invites.map((invite) => `${invite.friend}: ${invite.link}`).join('\n');
+      await navigator.clipboard.writeText(text);
+      setStatus('All invite links copied.');
+      renderInviteLinks(invites);
+    }
+
+    function applyInviteFromQuery() {
+      const query = new URLSearchParams(window.location.search);
+      const room = query.get('room');
+      const teamNo = query.get('teamNo');
+      const slotInTeam = query.get('slotInTeam');
+      const player = query.get('player');
+
+      if (room) roomIdEl.value = room;
+      if (teamNo) teamNoEl.value = teamNo;
+      if (slotInTeam) slotInTeamEl.value = slotInTeam;
+      if (player && !playerIdEl.value.trim()) playerIdEl.value = player;
+
+      const inviteActive = Boolean(room || teamNo || slotInTeam);
+      invitePillEl.textContent = inviteActive ? 'Invite mode: on' : 'Invite mode: off';
+    }
+
+    document.getElementById('randomRoomBtn').addEventListener('click', () => {
+      roomIdEl.value = randomCode('DOG', 4);
+      saveState();
+    });
+
+    document.getElementById('randomPlayerBtn').addEventListener('click', () => {
+      playerIdEl.value = randomCode('P', 3);
+      saveState();
+    });
+
+
+    document.getElementById('createRoomBtn').addEventListener('click', async () => {
+      const cfg = readState();
+      await sendCommand(
+        {
+          type: 'create_room',
+          roomId: cfg.roomId,
+          playerId: cfg.playerId,
+          gameMode: cfg.gameMode,
+          teamCount: cfg.teamCount,
+          playersPerTeam: cfg.playersPerTeam,
+          idempotencyKey: `${cfg.playerId}-create-${cfg.roomId}`
+        },
+        `Room ${cfg.roomId} created.`
+      );
+    });
+
+    document.getElementById('buildInviteLinksBtn').addEventListener('click', () => {
+      const invites = buildInviteLinks();
+      if (invites.length === 0) {
+        return;
+      }
+
+      renderInviteLinks(invites);
+      setStatus('Invite links generated.');
+    });
+
+    document.getElementById('copyAllInviteLinksBtn').addEventListener('click', async () => {
+      try {
+        await copyAllInvites();
+      } catch {
+        setStatus('Could not copy links automatically. Copy from the list instead.', true);
+      }
+    });
+
+    document.getElementById('joinRoomBtn').addEventListener('click', async () => {
+      const cfg = readState();
+      await sendCommand(
+        {
+          type: 'join_room',
+          roomId: cfg.roomId,
+          playerId: cfg.playerId,
+          teamNo: cfg.teamNo,
+          slotInTeam: cfg.slotInTeam,
+          idempotencyKey: `${cfg.playerId}-join-${cfg.roomId}`
+        },
+        'Joined room successfully.'
+      );
+    });
+
+    document.getElementById('setReadyBtn').addEventListener('click', async () => {
+      const cfg = readState();
+      await sendCommand(
+        {
+          type: 'set_ready',
+          roomId: cfg.roomId,
+          playerId: cfg.playerId,
+          isReady: true,
+          idempotencyKey: `${cfg.playerId}-ready-${cfg.roomId}`
+        },
+        'You are ready.'
+      );
+    });
+
+    document.getElementById('startMatchBtn').addEventListener('click', async () => {
+      const cfg = readState();
+      await sendCommand(
+        {
+          type: 'start_match',
+          roomId: cfg.roomId,
+          playerId: cfg.playerId,
+          idempotencyKey: `${cfg.playerId}-start-${cfg.roomId}`
+        },
+        'Match started.'
+      );
+    });
+
+    [roomIdEl, playerIdEl, gameModeEl, teamCountEl, playersPerTeamEl, teamNoEl, slotInTeamEl].forEach((input) => {
+      input.addEventListener('change', () => {
+        saveState();
+        renderCapacityHint();
+      });
+    });
+
+    loadState();
+
+    if (!playerIdEl.value.trim()) {
+      playerIdEl.value = randomCode('P', 3);
+    }
+
+    applyInviteFromQuery();
+    renderCapacityHint();
+    saveState();
+  </script>
+</body>
+</html>
