@@ -1,6 +1,17 @@
 import { createPieceInStart } from '../../packages/shared-types/index.js';
-import { applyMovePreview, buildStartIndexes, evaluateHandPlayability, generateLegalMoves, TRACK_SPACES_BETWEEN_PLAYERS } from '../../packages/game-rules/index.js';
-import { createDeckState, dealRoundHands, discardCards } from '../../packages/game-rules/deck.js';
+import {
+  applyMovePreview,
+  buildStartIndexes,
+  evaluateHandPlayability,
+  generateLegalMoves,
+  TRACK_SPACES_BETWEEN_PLAYERS
+} from '../../packages/game-rules/index.js';
+import {
+  applyTeamCardExchange,
+  createDeckState,
+  dealRoundHands,
+  discardCards
+} from '../../packages/game-rules/deck.js';
 
 function clone(value) {
   return structuredClone(value);
@@ -37,10 +48,22 @@ function seatFromTeamSlot(teamNo, slotInTeam, teamCount) {
   return (slotInTeam - 1) * teamCount + teamNo;
 }
 
-function assertActiveTurn(state, playerId) {
+function sortPlayersBySeat(players) {
+  return [...players].sort((a, b) => a.seatNo - b.seatNo);
+}
+
+function assertMatchPhase(state, phase) {
   if (state.status !== 'active') {
     throw new Error('Match is not active');
   }
+
+  if (state.match.phase !== phase) {
+    throw new Error(`Match phase is ${state.match.phase}, expected ${phase}`);
+  }
+}
+
+function assertActiveTurn(state, playerId) {
+  assertMatchPhase(state, 'play');
 
   const activePlayerId = state.match.turnOrder[state.match.turnIndex];
   if (activePlayerId !== playerId) {
@@ -50,6 +73,10 @@ function assertActiveTurn(state, playerId) {
 
 function findCardIndexByRank(hand, rank) {
   return hand.findIndex((card) => card.rank === rank);
+}
+
+function findCardById(hand, cardId) {
+  return hand.find((card) => card.id === cardId);
 }
 
 function buildInitialPieces(playerIds) {
@@ -65,7 +92,7 @@ function buildInitialPieces(playerIds) {
 }
 
 function buildGameStateFromPlayers(players) {
-  const ordered = [...players].sort((a, b) => a.seatNo - b.seatNo);
+  const ordered = sortPlayersBySeat(players);
   const playerIds = ordered.map((player) => player.playerId);
 
   return {
@@ -75,22 +102,44 @@ function buildGameStateFromPlayers(players) {
   };
 }
 
+function getTeamByPlayerId(players) {
+  const map = {};
+
+  for (const player of players) {
+    map[player.playerId] = player.teamNo;
+  }
+
+  return map;
+}
+
+function buildRoundState(room, deckState, roundNumber) {
+  const ordered = sortPlayersBySeat(room.players);
+  const turnOrder = ordered.map((player) => player.playerId);
+  const dealt = dealRoundHands(deckState, turnOrder, roundNumber, 100 + roundNumber);
+
+  return {
+    turnOrder,
+    turnIndex: 0,
+    roundNumber,
+    handsByPlayerId: dealt.hands,
+    deckState: dealt.deckState,
+    blockedPlayerIds: [],
+    pendingPreview: null,
+    pendingExchangeByPlayerId: {},
+    phase: room.config.gameMode === 'teams' ? 'exchange' : 'play'
+  };
+}
+
 function createMatch(room) {
-  const ordered = [...room.players].sort((a, b) => a.seatNo - b.seatNo);
+  const ordered = sortPlayersBySeat(room.players);
   const playerIds = ordered.map((player) => player.playerId);
 
   const deckState = createDeckState(playerIds.length, 1);
-  const dealt = dealRoundHands(deckState, playerIds, 1, 101);
+  const roundState = buildRoundState(room, deckState, 1);
 
   return {
-    turnOrder: playerIds,
-    turnIndex: 0,
-    roundNumber: 1,
-    handsByPlayerId: dealt.hands,
-    deckState: dealt.deckState,
-    discardPile: [],
-    gameState: buildGameStateFromPlayers(ordered),
-    pendingPreview: null
+    ...roundState,
+    gameState: buildGameStateFromPlayers(ordered)
   };
 }
 
@@ -119,6 +168,87 @@ function withIdempotency(state, idempotencyKey, executor) {
     state: nextState,
     response: result.response
   };
+}
+
+function hasAnyLegalMoveForPlayer(match, playerId) {
+  const hand = (match.handsByPlayerId[playerId] ?? []).map((card) => card.rank);
+  return evaluateHandPlayability(match.gameState, playerId, hand).hasAnyLegalMove;
+}
+
+function allHandsEmpty(match) {
+  return Object.values(match.handsByPlayerId).every((hand) => hand.length === 0);
+}
+
+function startNextRound(state) {
+  const nextRoundNumber = state.match.roundNumber + 1;
+  const nextRound = buildRoundState(state, state.match.deckState, nextRoundNumber);
+
+  return {
+    ...state,
+    match: {
+      ...state.match,
+      ...nextRound
+    }
+  };
+}
+
+function advanceToNextPlayableTurn(match) {
+  const blocked = new Set(match.blockedPlayerIds);
+  let turnIndex = match.turnIndex;
+
+  for (let i = 0; i < match.turnOrder.length; i += 1) {
+    const playerId = match.turnOrder[turnIndex];
+
+    if (blocked.has(playerId)) {
+      turnIndex = (turnIndex + 1) % match.turnOrder.length;
+      continue;
+    }
+
+    const canAct = hasAnyLegalMoveForPlayer({ ...match, turnIndex }, playerId);
+    if (canAct) {
+      return {
+        turnIndex,
+        blockedPlayerIds: [...blocked],
+        allBlocked: false
+      };
+    }
+
+    blocked.add(playerId);
+    turnIndex = (turnIndex + 1) % match.turnOrder.length;
+  }
+
+  return {
+    turnIndex,
+    blockedPlayerIds: [...blocked],
+    allBlocked: true
+  };
+}
+
+function buildExchangeActions(room, pendingExchangeByPlayerId) {
+  const playersByTeam = new Map();
+
+  for (const player of sortPlayersBySeat(room.players)) {
+    if (!playersByTeam.has(player.teamNo)) {
+      playersByTeam.set(player.teamNo, []);
+    }
+
+    playersByTeam.get(player.teamNo).push(player);
+  }
+
+  const exchanges = [];
+  for (const teamPlayers of playersByTeam.values()) {
+    for (let i = 0; i < teamPlayers.length; i += 1) {
+      const from = teamPlayers[i];
+      const to = teamPlayers[(i + 1) % teamPlayers.length];
+      exchanges.push({
+        fromPlayerId: from.playerId,
+        toPlayerId: to.playerId,
+        cardId: pendingExchangeByPlayerId[from.playerId]
+      });
+    }
+  }
+
+  return exchanges;
 }
 
 export function createRoom(command) {
@@ -276,7 +406,75 @@ function handleStartMatch(state, command) {
     response: {
       ok: true,
       started: true,
-      activePlayerId: match.turnOrder[0],
+      phase: match.phase,
+      activePlayerId: match.turnOrder[match.turnIndex],
+      version: nextState.version
+    }
+  };
+}
+
+function handleExchangeCard(state, command) {
+  const { playerId, cardId } = command;
+  assertMatchPhase(state, 'exchange');
+
+  if (!state.match.turnOrder.includes(playerId)) {
+    throw new Error('Player is not part of active match');
+  }
+
+  const hand = state.match.handsByPlayerId[playerId] ?? [];
+  if (!findCardById(hand, cardId)) {
+    throw new Error(`Card ${cardId} not in hand`);
+  }
+
+  const pendingExchangeByPlayerId = {
+    ...state.match.pendingExchangeByPlayerId,
+    [playerId]: cardId
+  };
+
+  const playerCount = state.match.turnOrder.length;
+  const hasAllSelections = Object.keys(pendingExchangeByPlayerId).length === playerCount;
+
+  if (!hasAllSelections) {
+    const nextState = withVersionBump({
+      ...state,
+      match: {
+        ...state.match,
+        pendingExchangeByPlayerId
+      }
+    });
+
+    return {
+      state: nextState,
+      response: {
+        ok: true,
+        exchangeCompleted: false,
+        waitingFor: playerCount - Object.keys(pendingExchangeByPlayerId).length,
+        version: nextState.version
+      }
+    };
+  }
+
+  const teamByPlayerId = getTeamByPlayerId(state.players);
+  const exchanges = buildExchangeActions(state, pendingExchangeByPlayerId);
+  const exchangedHands = applyTeamCardExchange(state.match.handsByPlayerId, teamByPlayerId, exchanges);
+
+  const nextState = withVersionBump({
+    ...state,
+    match: {
+      ...state.match,
+      handsByPlayerId: exchangedHands,
+      pendingExchangeByPlayerId: {},
+      phase: 'play'
+    }
+  });
+
+  return {
+    state: nextState,
+    response: {
+      ok: true,
+      exchangeCompleted: true,
+      phase: 'play',
+      activePlayerId: nextState.match.turnOrder[nextState.match.turnIndex],
       version: nextState.version
     }
   };
@@ -385,18 +583,54 @@ function handleConfirmMove(state, command) {
     [playerId]: hand
   };
 
-  const discarded = discardCards(state.match.deckState, [usedCard]);
-  const turnIndex = (state.match.turnIndex + 1) % state.match.turnOrder.length;
-
-  const nextState = withVersionBump({
+  const deckState = discardCards(state.match.deckState, [usedCard]);
+  let nextState = withVersionBump({
     ...state,
     match: {
       ...state.match,
       gameState: pending.previewState,
       pendingPreview: null,
       handsByPlayerId,
-      deckState: discarded,
-      turnIndex
+      deckState,
+      turnIndex: (state.match.turnIndex + 1) % state.match.turnOrder.length
+    }
+  });
+
+  if (allHandsEmpty(nextState.match)) {
+    nextState = withVersionBump(startNextRound(nextState));
+    return {
+      state: nextState,
+      response: {
+        ok: true,
+        confirmed: true,
+        roundAdvanced: true,
+        phase: nextState.match.phase,
+        version: nextState.version
+      }
+    };
+  }
+
+  const turnResolution = advanceToNextPlayableTurn(nextState.match);
+  if (turnResolution.allBlocked) {
+    nextState = withVersionBump(startNextRound(nextState));
+    return {
+      state: nextState,
+      response: {
+        ok: true,
+        confirmed: true,
+        roundAdvanced: true,
+        phase: nextState.match.phase,
+        version: nextState.version
+      }
+    };
+  }
+
+  nextState = withVersionBump({
+    ...nextState,
+    match: {
+      ...nextState.match,
+      turnIndex: turnResolution.turnIndex,
+      blockedPlayerIds: turnResolution.blockedPlayerIds
     }
   });
 
@@ -406,6 +640,7 @@ function handleConfirmMove(state, command) {
       ok: true,
       confirmed: true,
       nextPlayerId: nextState.match.turnOrder[nextState.match.turnIndex],
+      blockedPlayerIds: nextState.match.blockedPlayerIds,
       version: nextState.version
     }
   };
@@ -422,6 +657,8 @@ export function handleRoomCommand(state, command) {
         return handleSetReady(state, command);
       case 'start_match':
         return handleStartMatch(state, command);
+      case 'exchange_card':
+        return handleExchangeCard(state, command);
       case 'request_legal_moves':
         return handleRequestLegalMoves(state, command);
       case 'start_move_preview':
@@ -437,11 +674,52 @@ export function handleRoomCommand(state, command) {
 }
 
 export function evaluateCurrentTurnPlayability(state) {
-  if (state.status !== 'active') {
-    throw new Error('Match is not active');
-  }
+  assertMatchPhase(state, 'play');
 
   const playerId = state.match.turnOrder[state.match.turnIndex];
   const hand = state.match.handsByPlayerId[playerId].map((card) => card.rank);
   return evaluateHandPlayability(state.match.gameState, playerId, hand);
+}
+
+export function getPublicRoomView(state) {
+  return {
+    roomId: state.roomId,
+    status: state.status,
+    version: state.version,
+    config: clone(state.config),
+    players: sortPlayersBySeat(state.players).map((player) => ({
+      playerId: player.playerId,
+      teamNo: player.teamNo,
+      slotInTeam: player.slotInTeam,
+      seatNo: player.seatNo,
+      ready: player.ready,
+      connected: player.connected
+    })),
+    match: state.match
+      ? {
+          phase: state.match.phase,
+          roundNumber: state.match.roundNumber,
+          turnPlayerId: state.match.turnOrder[state.match.turnIndex],
+          blockedPlayerIds: [...state.match.blockedPlayerIds],
+          handCountsByPlayerId: Object.fromEntries(
+            Object.entries(state.match.handsByPlayerId).map(([playerId, hand]) => [playerId, hand.length])
+          )
+        }
+      : null
+  };
+}
+
+export function getPlayerPrivateView(state, playerId) {
+  const publicView = getPublicRoomView(state);
+  const myHand = state.match?.handsByPlayerId[playerId] ?? [];
+
+  return {
+    ...publicView,
+    private: {
+      playerId,
+      hand: clone(myHand),
+      pendingPreview: state.match?.pendingPreview?.playerId === playerId ? clone(state.match.pendingPreview) : null,
+      pendingExchangeSubmitted: Boolean(state.match?.pendingExchangeByPlayerId?.[playerId])
+    }
+  };
 }
