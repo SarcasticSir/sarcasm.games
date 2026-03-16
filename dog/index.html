@@ -192,7 +192,7 @@
   <main class="shell">
     <section class="card">
       <h1>Dog live test</h1>
-      <p>Lag rom, del link med tre venner, og test live. Holdt enkelt uten masse debug.</p>
+      <p>Create a room, share links with three friends, and test live. Kept simple without heavy debug UI.</p>
       <div class="pill" id="invitePill">Invite mode: off</div>
     </section>
 
@@ -202,7 +202,7 @@
       <div class="grid">
         <div>
           <label for="endpointUrl">Edge endpoint</label>
-          <input id="endpointUrl" value="/api/dog-room" />
+          <input id="endpointUrl" value="https://hmwzdnebhqavatuxmtki.supabase.co/functions/v1/dog-room" />
         </div>
         <div>
           <label for="roomId">Room ID</label>
@@ -249,7 +249,7 @@
     <section class="card">
       <div class="step">Step 3 (host)</div>
       <h2>Invite 3 friends</h2>
-      <p class="small">Lag ferdige lenker til vennene dine. De åpner lenken og trykker "Join room".</p>
+      <p class="small">Generate ready-to-share links for your friends. They open the link and click "Join room".</p>
       <div class="buttons">
         <button id="buildInviteLinksBtn" class="secondary" type="button">Generate 3 invite links</button>
         <button id="copyAllInviteLinksBtn" class="secondary" type="button">Copy all links</button>
