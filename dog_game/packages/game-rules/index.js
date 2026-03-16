@@ -73,6 +73,10 @@ function sendOccupantToStartIfPresent(state, square, movingPieceId) {
     return;
   }
 
+  if (occupant.isImmune) {
+    throw new Error(`Cannot knock immune piece: ${occupant.id}`);
+  }
+
   occupant.position = null;
   occupant.isInStart = true;
   occupant.isOnBoard = false;
@@ -354,6 +358,18 @@ export function applyMovePreview(state, move) {
     const targetPiece = findPiece(nextState, move.swapTargetPieceId);
     if (!targetPiece) {
       throw new Error(`Unknown target piece: ${move.swapTargetPieceId}`);
+    }
+
+    if (!movingPiece.isOnBoard || movingPiece.position === null) {
+      throw new Error(`Cannot swap piece that is not on board: ${movingPiece.id}`);
+    }
+
+    if (!targetPiece.isOnBoard || targetPiece.position === null) {
+      throw new Error(`Cannot swap target piece that is not on board: ${targetPiece.id}`);
+    }
+
+    if (movingPiece.isImmune || targetPiece.isImmune) {
+      throw new Error('Cannot swap immune piece');
     }
 
     const from = movingPiece.position;

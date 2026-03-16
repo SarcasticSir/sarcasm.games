@@ -368,3 +368,112 @@ test('Exiting start can knock a non-immune occupant back to start', () => {
   assert.equal(knockedPiece.isInStart, true);
   assert.equal(knockedPiece.isOnBoard, false);
 });
+
+
+test('applyMovePreview rejects landing on immune piece', () => {
+  const startIndexes = buildStartIndexes(4);
+
+  const mover = {
+    ...createPieceInStart('P1-A', 'P1'),
+    isInStart: false,
+    isOnBoard: true,
+    position: 5
+  };
+
+  const immuneOccupant = {
+    ...createPieceInStart('P2-A', 'P2'),
+    isInStart: false,
+    isOnBoard: true,
+    position: 9,
+    isImmune: true
+  };
+
+  const state = buildState({
+    trackLength: TRACK_SPACES_BETWEEN_PLAYERS * 4,
+    startIndexes,
+    pieces: [mover, immuneOccupant]
+  });
+
+  assert.throws(
+    () =>
+      applyMovePreview(state, {
+        pieceId: 'P1-A',
+        card: 'FOUR',
+        action: 'MOVE',
+        from: 5,
+        to: 9,
+        steps: 4
+      }),
+    /Cannot knock immune piece/
+  );
+});
+
+test('applyMovePreview rejects swap when source or target is immune', () => {
+  const startIndexes = buildStartIndexes(4);
+
+  const myImmune = {
+    ...createPieceInStart('P1-A', 'P1'),
+    isInStart: false,
+    isOnBoard: true,
+    isImmune: true,
+    position: 3
+  };
+
+  const enemy = {
+    ...createPieceInStart('P2-A', 'P2'),
+    isInStart: false,
+    isOnBoard: true,
+    position: 11
+  };
+
+  const state = buildState({
+    trackLength: TRACK_SPACES_BETWEEN_PLAYERS * 4,
+    startIndexes,
+    pieces: [myImmune, enemy]
+  });
+
+  assert.throws(
+    () =>
+      applyMovePreview(state, {
+        pieceId: 'P1-A',
+        card: 'JACK',
+        action: 'SWAP',
+        from: 3,
+        to: 11,
+        swapTargetPieceId: 'P2-A'
+      }),
+    /Cannot swap immune piece/
+  );
+});
+
+test('applyMovePreview rejects swap when target is not on board', () => {
+  const startIndexes = buildStartIndexes(4);
+
+  const mine = {
+    ...createPieceInStart('P1-A', 'P1'),
+    isInStart: false,
+    isOnBoard: true,
+    position: 3
+  };
+
+  const enemyInStart = createPieceInStart('P2-A', 'P2');
+
+  const state = buildState({
+    trackLength: TRACK_SPACES_BETWEEN_PLAYERS * 4,
+    startIndexes,
+    pieces: [mine, enemyInStart]
+  });
+
+  assert.throws(
+    () =>
+      applyMovePreview(state, {
+        pieceId: 'P1-A',
+        card: 'JACK',
+        action: 'SWAP',
+        from: 3,
+        to: null,
+        swapTargetPieceId: 'P2-A'
+      }),
+    /Cannot swap target piece that is not on board/
+  );
+});
