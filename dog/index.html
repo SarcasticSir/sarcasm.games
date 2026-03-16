@@ -203,6 +203,7 @@
         <div>
           <label for="endpointUrl">Edge endpoint</label>
           <input id="endpointUrl" value="https://hmwzdnebhqavatuxmtki.supabase.co/functions/v1/dog-room" />
+          <p class="small">Use your Supabase Function URL ending with <code>/functions/v1/dog-room</code>.</p>
         </div>
         <div>
           <label for="roomId">Room ID</label>
@@ -376,11 +377,28 @@
           body: JSON.stringify(command)
         });
 
-        const body = await response.json();
+        const rawBody = await response.text();
+        let body = null;
+
+        try {
+          body = rawBody ? JSON.parse(rawBody) : null;
+        } catch {
+          const trimmed = rawBody.trim();
+          const preview = trimmed.slice(0, 180);
+          writeOutput({
+            ok: false,
+            error: 'Endpoint did not return JSON.',
+            status: response.status,
+            bodyPreview: preview || '(empty)'
+          });
+          setStatus('Endpoint response was not JSON. Check endpoint URL and deployment.', true);
+          return null;
+        }
+
         writeOutput(body);
 
-        if (!response.ok || body.ok === false) {
-          setStatus(`Could not complete action: ${body.error || response.status}`, true);
+        if (!response.ok || body?.ok === false) {
+          setStatus(`Could not complete action: ${body?.error || response.status}`, true);
           return null;
         }
 
