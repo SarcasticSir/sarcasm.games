@@ -6,6 +6,7 @@ import {
   generateLegalMoves,
   TRACK_SPACES_BETWEEN_PLAYERS
 } from '../../packages/game-rules/index.js';
+import { detectWinner } from '../../packages/game-rules/phase2.js';
 import {
   applyTeamCardExchange,
   createDeckState,
@@ -139,7 +140,8 @@ function createMatch(room) {
 
   return {
     ...roundState,
-    gameState: buildGameStateFromPlayers(ordered)
+    gameState: buildGameStateFromPlayers(ordered),
+    winner: null
   };
 }
 
@@ -584,11 +586,47 @@ function handleConfirmMove(state, command) {
   };
 
   const deckState = discardCards(state.match.deckState, [usedCard]);
+  const movedGameState = pending.previewState;
+  const teamByPlayerId = getTeamByPlayerId(state.players);
+  const winner = detectWinner({
+    gameMode: state.config.gameMode,
+    pieces: movedGameState.pieces,
+    playerIds: state.match.turnOrder,
+    teamByPlayerId
+  });
+
+  if (winner) {
+    const nextState = withVersionBump({
+      ...state,
+      status: 'finished',
+      match: {
+        ...state.match,
+        gameState: movedGameState,
+        pendingPreview: null,
+        handsByPlayerId,
+        deckState,
+        phase: 'finished',
+        winner
+      }
+    });
+
+    return {
+      state: nextState,
+      response: {
+        ok: true,
+        confirmed: true,
+        gameFinished: true,
+        winner,
+        version: nextState.version
+      }
+    };
+  }
+
   let nextState = withVersionBump({
     ...state,
     match: {
       ...state.match,
-      gameState: pending.previewState,
+      gameState: movedGameState,
       pendingPreview: null,
       handsByPlayerId,
       deckState,
@@ -703,7 +741,8 @@ export function getPublicRoomView(state) {
           blockedPlayerIds: [...state.match.blockedPlayerIds],
           handCountsByPlayerId: Object.fromEntries(
             Object.entries(state.match.handsByPlayerId).map(([playerId, hand]) => [playerId, hand.length])
-          )
+          ),
+          winner: state.match.winner ?? null
         }
       : null
   };
