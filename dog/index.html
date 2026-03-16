@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dog Lobby Beta</title>
+  <style>
+    :root {
+      --bg: #0b0c10;
+      --card: #1e1f25;
+      --txt: #eaeaea;
+      --bd: #2f313a;
+      --accent: #4ecca3;
+      --muted: #9aa0ad;
+      --danger: #ff6b6b;
+    }
+
+    body {
+      margin: 0;
+      font: 16px/1.45 system-ui, Segoe UI, Roboto, Arial;
+      background: var(--bg);
+      color: var(--txt);
+      min-height: 100dvh;
+      display: grid;
+      place-items: start center;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    .shell {
+      width: min(980px, 100%);
+      display: grid;
+      gap: 12px;
+    }
+
+    .card {
+      border: 1px solid var(--bd);
+      border-radius: 12px;
+      background: var(--card);
+      padding: 14px;
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: 1.6rem;
+    }
+
+    p {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .grid {
+      display: grid;
+      gap: 10px;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+    }
+
+    label {
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    input,
+    select,
+    textarea,
+    button {
+      width: 100%;
+      box-sizing: border-box;
+      border-radius: 8px;
+      border: 1px solid var(--bd);
+      background: #13141a;
+      color: var(--txt);
+      padding: 10px 12px;
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+      border: 0;
+      background: var(--accent);
+      color: #09110d;
+      font-weight: 700;
+    }
+
+    button.secondary {
+      background: #323643;
+      color: var(--txt);
+      border: 1px solid var(--bd);
+    }
+
+    button.warn {
+      background: var(--danger);
+      color: #fff;
+    }
+
+    .button-row {
+      display: grid;
+      gap: 10px;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    }
+
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.9rem;
+    }
+
+    .status {
+      margin-top: 8px;
+      color: var(--muted);
+      min-height: 22px;
+    }
+
+    .output {
+      background: #111218;
+      border: 1px solid var(--bd);
+      border-radius: 10px;
+      padding: 12px;
+      overflow: auto;
+      max-height: 320px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .note {
+      color: #f3d38b;
+      margin-top: 8px;
+      font-size: 0.92rem;
+    }
+
+    a {
+      color: var(--accent);
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="card">
+      <h1>Dog lobby (network beta)</h1>
+      <p>This page sends room commands to an Edge endpoint so you can run multiplayer Dog over network.</p>
+      <p class="note">Tip: Open this page in multiple browser tabs/devices with different player IDs.</p>
+    </section>
+
+    <section class="card">
+      <div class="grid">
+        <div class="field">
+          <label for="endpointUrl">Edge endpoint URL</label>
+          <input id="endpointUrl" value="/api/dog-room" />
+        </div>
+        <div class="field">
+          <label for="roomId">Room ID</label>
+          <input id="roomId" value="DOG001" class="mono" />
+        </div>
+        <div class="field">
+          <label for="playerId">Player ID</label>
+          <input id="playerId" class="mono" />
+        </div>
+      </div>
+      <div class="button-row" style="margin-top:10px;">
+        <button class="secondary" id="randomRoomBtn" type="button">Generate room ID</button>
+        <button class="secondary" id="randomPlayerBtn" type="button">Generate player ID</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2 style="margin-top:0;">Create room</h2>
+      <div class="grid">
+        <div class="field">
+          <label for="gameMode">Game mode</label>
+          <select id="gameMode">
+            <option value="solo">Solo (free-for-all)</option>
+            <option value="teams">Teams</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="teamCount">Team count</label>
+          <input id="teamCount" type="number" min="1" max="8" value="4" />
+        </div>
+        <div class="field">
+          <label for="playersPerTeam">Players per team</label>
+          <input id="playersPerTeam" type="number" min="1" max="4" value="1" />
+        </div>
+      </div>
+      <p id="capacityHint" class="status"></p>
+      <div class="button-row">
+        <button id="createRoomBtn" type="button">Create room</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2 style="margin-top:0;">Lobby actions</h2>
+      <div class="grid">
+        <div class="field">
+          <label for="teamNo">Join team number</label>
+          <input id="teamNo" type="number" min="1" max="8" value="1" />
+        </div>
+        <div class="field">
+          <label for="slotInTeam">Join slot in team</label>
+          <input id="slotInTeam" type="number" min="1" max="4" value="1" />
+        </div>
+      </div>
+      <div class="button-row">
+        <button class="secondary" id="joinRoomBtn" type="button">Join room</button>
+        <button class="secondary" id="setReadyBtn" type="button">Set ready = true</button>
+        <button class="secondary" id="startMatchBtn" type="button">Start match</button>
+        <button class="secondary" id="attachBtn" type="button">Attach snapshot</button>
+        <button class="warn" id="clearLogBtn" type="button">Clear output</button>
+      </div>
+      <p id="status" class="status">Idle.</p>
+    </section>
+
+    <section class="card">
+      <h2 style="margin-top:0;">Last response</h2>
+      <pre id="output" class="output mono">No response yet.</pre>
+      <p class="status">Need backend setup? See <a href="/dog_game/LIVE_TEST_GUIDE.md">LIVE_TEST_GUIDE.md</a> in repo.</p>
+    </section>
+  </main>
+
+  <script>
+    const endpointEl = document.getElementById('endpointUrl');
+    const roomIdEl = document.getElementById('roomId');
+    const playerIdEl = document.getElementById('playerId');
+    const gameModeEl = document.getElementById('gameMode');
+    const teamCountEl = document.getElementById('teamCount');
+    const playersPerTeamEl = document.getElementById('playersPerTeam');
+    const teamNoEl = document.getElementById('teamNo');
+    const slotInTeamEl = document.getElementById('slotInTeam');
+    const outputEl = document.getElementById('output');
+    const statusEl = document.getElementById('status');
+    const capacityHintEl = document.getElementById('capacityHint');
+
+    const STORAGE_KEY = 'dogLobbyBetaConfig';
+
+    function randomCode(prefix, length) {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      let value = prefix;
+      for (let i = 0; i < length; i += 1) {
+        value += chars[Math.floor(Math.random() * chars.length)];
+      }
+      return value;
+    }
+
+    function renderCapacityHint() {
+      const teamCount = Number(teamCountEl.value || 0);
+      const playersPerTeam = Number(playersPerTeamEl.value || 0);
+      const total = teamCount * playersPerTeam;
+      const inRange = total >= 4 && total <= 8;
+      capacityHintEl.textContent = `Room capacity = ${total} players (${inRange ? 'valid' : 'must be 4-8'})`;
+      capacityHintEl.style.color = inRange ? 'var(--muted)' : 'var(--danger)';
+    }
+
+    function setStatus(message, isError = false) {
+      statusEl.textContent = message;
+      statusEl.style.color = isError ? 'var(--danger)' : 'var(--muted)';
+    }
+
+    function writeOutput(payload) {
+      outputEl.textContent = JSON.stringify(payload, null, 2);
+    }
+
+    function readConfig() {
+      return {
+        endpointUrl: endpointEl.value.trim(),
+        roomId: roomIdEl.value.trim(),
+        playerId: playerIdEl.value.trim(),
+        gameMode: gameModeEl.value,
+        teamCount: Number(teamCountEl.value),
+        playersPerTeam: Number(playersPerTeamEl.value),
+        teamNo: Number(teamNoEl.value),
+        slotInTeam: Number(slotInTeamEl.value)
+      };
+    }
+
+    function saveConfig() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(readConfig()));
+    }
+
+    function loadConfig() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+        if (parsed.endpointUrl) endpointEl.value = parsed.endpointUrl;
+        if (parsed.roomId) roomIdEl.value = parsed.roomId;
+        if (parsed.playerId) playerIdEl.value = parsed.playerId;
+        if (parsed.gameMode) gameModeEl.value = parsed.gameMode;
+        if (parsed.teamCount) teamCountEl.value = String(parsed.teamCount);
+        if (parsed.playersPerTeam) playersPerTeamEl.value = String(parsed.playersPerTeam);
+        if (parsed.teamNo) teamNoEl.value = String(parsed.teamNo);
+        if (parsed.slotInTeam) slotInTeamEl.value = String(parsed.slotInTeam);
+      } catch {
+        // no-op
+      }
+    }
+
+    async function sendCommand(command) {
+      const cfg = readConfig();
+      if (!cfg.endpointUrl) {
+        setStatus('Missing endpoint URL.', true);
+        return;
+      }
+
+      saveConfig();
+      setStatus(`Sending ${command.type}...`);
+
+      try {
+        const response = await fetch(cfg.endpointUrl, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(command)
+        });
+
+        const body = await response.json();
+        writeOutput(body);
+
+        if (!response.ok || body.ok === false) {
+          const error = body.error || `HTTP ${response.status}`;
+          setStatus(`Failed: ${error}`, true);
+          return;
+        }
+
+        setStatus(`OK: ${command.type}`);
+      } catch (error) {
+        writeOutput({ ok: false, error: String(error) });
+        setStatus(`Network error: ${error}`, true);
+      }
+    }
+
+    document.getElementById('randomRoomBtn').addEventListener('click', () => {
+      roomIdEl.value = randomCode('DOG', 4);
+      saveConfig();
+    });
+
+    document.getElementById('randomPlayerBtn').addEventListener('click', () => {
+      playerIdEl.value = randomCode('P', 3);
+      saveConfig();
+    });
+
+    document.getElementById('createRoomBtn').addEventListener('click', () => {
+      const cfg = readConfig();
+      sendCommand({
+        type: 'create_room',
+        roomId: cfg.roomId,
+        playerId: cfg.playerId,
+        gameMode: cfg.gameMode,
+        teamCount: cfg.teamCount,
+        playersPerTeam: cfg.playersPerTeam,
+        idempotencyKey: `${cfg.playerId}-create-${cfg.roomId}`
+      });
+    });
+
+    document.getElementById('joinRoomBtn').addEventListener('click', () => {
+      const cfg = readConfig();
+      sendCommand({
+        type: 'join_room',
+        roomId: cfg.roomId,
+        playerId: cfg.playerId,
+        teamNo: cfg.teamNo,
+        slotInTeam: cfg.slotInTeam,
+        idempotencyKey: `${cfg.playerId}-join-${cfg.roomId}`
+      });
+    });
+
+    document.getElementById('setReadyBtn').addEventListener('click', () => {
+      const cfg = readConfig();
+      sendCommand({
+        type: 'set_ready',
+        roomId: cfg.roomId,
+        playerId: cfg.playerId,
+        isReady: true,
+        idempotencyKey: `${cfg.playerId}-ready-${cfg.roomId}`
+      });
+    });
+
+    document.getElementById('startMatchBtn').addEventListener('click', () => {
+      const cfg = readConfig();
+      sendCommand({
+        type: 'start_match',
+        roomId: cfg.roomId,
+        playerId: cfg.playerId,
+        idempotencyKey: `${cfg.playerId}-start-${cfg.roomId}`
+      });
+    });
+
+    document.getElementById('attachBtn').addEventListener('click', () => {
+      const cfg = readConfig();
+      sendCommand({
+        type: 'attach',
+        roomId: cfg.roomId,
+        playerId: cfg.playerId
+      });
+    });
+
+    document.getElementById('clearLogBtn').addEventListener('click', () => {
+      outputEl.textContent = 'No response yet.';
+      setStatus('Cleared output.');
+    });
+
+    const autoSaveFields = [
+      endpointEl,
+      roomIdEl,
+      playerIdEl,
+      gameModeEl,
+      teamCountEl,
+      playersPerTeamEl,
+      teamNoEl,
+      slotInTeamEl
+    ];
+
+    autoSaveFields.forEach((field) => {
+      field.addEventListener('change', () => {
+        saveConfig();
+        renderCapacityHint();
+      });
+    });
+
+    loadConfig();
+
+    if (!playerIdEl.value.trim()) {
+      playerIdEl.value = randomCode('P', 3);
+    }
+
+    renderCapacityHint();
+    saveConfig();
+  </script>
+</body>
+</html>
