@@ -4,15 +4,50 @@
 
 These decisions come from the latest product-owner input and are now treated as project defaults:
 
-1. **Stack**: Option A (recommended production path)
+1. **Frontend/product entrypoint**
+   - Long-term user-facing entrypoint: `https://sarcasm.games/dog/`
+   - This route will eventually handle room creation, invite/join flow, and lobby entry
+
+2. **Stack**
    - Next.js + TypeScript frontend
    - Cloudflare Workers + Durable Objects for authoritative real-time rooms
    - Supabase Auth + Supabase Postgres for identity and persistence
-2. **Mode strategy**: Build for both free-for-all and team modes from the start
+   - Vercel for frontend deployment
+
+3. **Mode strategy**
+   - Build for both free-for-all and team modes from the start
    - No 2-team hardcoding
    - Team logic must be generalized and scalable
-3. **UI priority**: Functional clarity first (simple MVP UI)
-4. **Auth scope in v1**: Support both magic-link and email/password
+
+4. **Supported room configurations**
+   - Free-for-all:
+     - 1v1v1v1
+   - Team modes:
+     - 2v2
+     - 3v3
+     - 4v4
+     - 2v2v2
+     - 2v2v2v2
+   - Maximum total players: 8
+   - No spectators
+
+5. **Auth scope in v1**
+   - Email/password is already enabled in Supabase
+   - Magic link may be added later if desired, but is not required to unblock current implementation
+
+6. **Persistence baseline**
+   - Supabase schema foundation is already established for:
+     - profiles
+     - rooms
+     - room_members
+     - matches
+     - match_players
+     - game_events
+   - Agents should build against the current schema rather than redesigning room persistence from scratch
+
+7. **UI priority**
+   - Functional clarity first
+   - Reliable room/game flow before visual polish
 
 ## Team workflow model (agent-led implementation)
 
@@ -23,6 +58,32 @@ These decisions come from the latest product-owner input and are now treated as 
   - implementation summary,
   - validation status,
   - at most 1-3 concrete decision questions.
+
+## Completed pre-implementation foundation
+
+The following persistence/auth baseline is already in place and should be treated as done enough to begin application/backend work:
+
+- Supabase project created and connected via Vercel
+- Environment variables configured
+- Supabase Auth enabled with email/password
+- `profiles` table created
+- automatic profile creation trigger implemented
+- room persistence model established
+- lobby membership model established
+- seating/team model established
+- match persistence model established
+- append-only event log table established
+
+Current persistence entities available:
+
+- `profiles`
+- `rooms`
+- `room_members`
+- `matches`
+- `match_players`
+- `game_events`
+
+Coding agents should begin from this existing foundation, not recreate the initial schema unless a real blocker is found.
 
 ## Implementation phases
 
@@ -109,29 +170,40 @@ Acceptance criteria:
 
 ## Phase 3 - Authoritative realtime room service
 
-Goal: ensure anti-desync, reconnect-safe multiplayer orchestration.
+Goal: ensure anti-desync, reconnect-safe multiplayer orchestration on top of the already-established Supabase persistence model.
 
 Implementation:
 
-- One Durable Object per game room.
+- One Durable Object per active game room
 - Intent-based command handling:
-  - `join_room`, `sit_seat`, `set_ready`
+  - `create_room`
+  - `join_room`
+  - `set_ready`
   - `exchange_card`
-  - `select_card`, `request_legal_moves`
-  - `start_move_preview`, `cancel_move_preview`, `confirm_move`
+  - `select_card`
+  - `request_legal_moves`
+  - `start_move_preview`
+  - `cancel_move_preview`
+  - `confirm_move`
   - `resume_seven_split`
-- Version/concurrency checks (room/turn version).
-- Idempotency keys for duplicate command protection.
-- Event log stream for replay/audit.
-- Reconnect handling with identity revalidation.
+- Backend-authoritative seat/team assignment based on room configuration
+- Version/concurrency checks (room/turn version)
+- Idempotency keys for duplicate command protection
+- Event log stream for replay/audit
+- Reconnect handling with identity revalidation
 - Distinct payload projections:
   - public room view
   - player-private view
 
 Acceptance criteria:
 
-- Server rejects stale/invalid commands deterministically.
-- Reconnect returns consistent authoritative state.
+- Server rejects stale/invalid commands deterministically
+- Room join/seat assignment respects:
+  - room capacity
+  - team_count
+  - players_per_team
+  - seat order formula
+- Reconnect returns consistent authoritative state
 
 ## Phase 4 - MVP web client (desktop + mobile)
 
@@ -159,26 +231,24 @@ Acceptance criteria:
 - Full turn can be played on mobile without zooming.
 - Preview cancel does not mutate authoritative state.
 
-## Phase 5 - Auth and persistence
+## Phase 5 - Auth and persistence hardening
 
-Goal: account-backed production baseline.
+Goal: complete production-safe integration on top of the existing Supabase baseline.
 
 Implementation:
 
-- Supabase Auth:
-  - magic-link
-  - email/password
-- Postgres persistence:
-  - users
-  - rooms metadata
-  - finished matches
-  - compact event logs
-- Basic profile/session handling for reconnect continuity.
+- finalize auth UX in web app
+- profile/session handling for reconnect continuity
+- persist finished matches cleanly
+- persist key audit events
+- add invite/join flow persistence if needed
+- add social/persistence expansions only after room/game flow is stable
 
 Acceptance criteria:
 
-- Users can register/login with both methods.
-- Match completion and key audit events are persisted.
+- users can register/login successfully
+- room/game flow uses the established Supabase schema correctly
+- match completion and key audit events are persisted
 
 ## Phase 6 - Hardening and post-MVP
 
@@ -190,7 +260,7 @@ Implementation:
 - Anti-cheat-oriented validation checks.
 - Replay/debug utilities.
 - Candidate next features:
-  - spectators
+  - spectators, only if explicitly approved later
   - rematch
   - host migration
   - short-window resume
@@ -217,17 +287,34 @@ To keep coding velocity high:
 
 Scope:
 
-1. Set up monorepo packages and TypeScript project references.
-2. Implement initial `shared-types` contracts for room state, commands, events.
-3. Implement rules-engine base models for board, pieces, cards, and legal move API.
-4. Add first test suite covering:
+1. Set up monorepo packages and TypeScript project references
+2. Implement initial `shared-types` contracts for:
+   - room configuration
+   - room members
+   - seating/team assignment
+   - commands
+   - events
+3. Lock in backend contracts for:
+   - `create_room`
+   - `join_room`
+   - `set_ready`
+   - `start_match`
+4. Implement rules-engine base models for board, pieces, cards, and legal move API
+5. Add first test suite covering:
    - Ace dual behavior
    - King start exit
    - 4 backward
    - immune blocker constraints
+6. Ensure persistence assumptions match the confirmed Supabase schema:
+   - `rooms`
+   - `room_members`
+   - `matches`
+   - `match_players`
+   - `game_events`
 
 Exit criteria:
 
-- end-to-end unit tests run locally,
-- deterministic state transition contract established,
-- no UI coupling in rules package.
+- end-to-end unit tests run locally
+- deterministic state transition contract established
+- no UI coupling in rules package
+- backend contracts align with the confirmed Supabase persistence model
