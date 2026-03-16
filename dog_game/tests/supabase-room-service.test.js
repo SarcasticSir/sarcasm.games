@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 import { handleEdgeRoomRequest } from '../services/realtime-server/supabase-edge-handler.js';
 import { createSupabaseRoomService } from '../services/realtime-server/supabase-room-service.js';
+import { parseInviteUrl } from '../services/realtime-server/invite-url.js';
 
 function createInMemoryStore() {
   const states = new Map();
@@ -97,6 +98,44 @@ test('supabase room service can create room and process join/ready/start command
   assert.equal(store.events.length > 0, true);
   assert.equal(publisher.roomSnapshots.length > 0, true);
   assert.equal(publisher.playerSnapshots.some((item) => item.playerId === 'P1'), true);
+});
+
+
+
+test('create_room returns invite URL that can be parsed and used for join flow', async () => {
+  const store = createInMemoryStore();
+  const service = createSupabaseRoomService({
+    store,
+    publisher: createPublisherSpy()
+  });
+
+  const created = await service.processRoomCommand({
+    type: 'create_room',
+    roomId: 'DOG-INV-1',
+    playerId: 'P1',
+    gameMode: 'solo',
+    teamCount: 4,
+    playersPerTeam: 1,
+    clientBaseUrl: 'https://sarcasm.games'
+  });
+
+  const inviteUrl = created.response.inviteUrl;
+  assert.ok(inviteUrl);
+
+  const parsed = parseInviteUrl(inviteUrl);
+  assert.equal(parsed.roomId, 'DOG-INV-1');
+
+  const joined = await service.processRoomCommand({
+    type: 'join_room',
+    roomId: parsed.roomId,
+    playerId: 'P2',
+    teamNo: 2,
+    slotInTeam: 1
+  });
+
+  assert.equal(joined.response.ok, true);
+  assert.equal(joined.response.joined, true);
+  assert.equal(joined.public.players.length, 2);
 });
 
 test('attach returns public and private snapshot for reconnecting player', async () => {
