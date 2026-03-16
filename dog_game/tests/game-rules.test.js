@@ -11,11 +11,13 @@ import {
   TRACK_SPACES_BETWEEN_PLAYERS
 } from '../packages/game-rules/index.js';
 
-function buildState({ trackLength = 64, startIndexes, pieces }) {
+function buildState({ trackLength = 64, startIndexes, pieces, homeLanes, homeEntryIndexes }) {
   return {
     trackLength,
     startIndexes,
-    pieces
+    pieces,
+    homeLanes,
+    homeEntryIndexes
   };
 }
 
@@ -292,4 +294,311 @@ test('No-legal-move is true when all cards in hand are blocked', () => {
   assert.equal(result.perCardMoves.ACE.length, 0);
   assert.equal(result.perCardMoves.KING.length, 0);
   assert.equal(result.perCardMoves.JACK.length, 0);
+});
+
+test('Landing on another piece sends that piece back to start', () => {
+  const startIndexes = buildStartIndexes(4);
+
+  const mover = {
+    ...createPieceInStart('P1-A', 'P1'),
+    isInStart: false,
+    isOnBoard: true,
+    position: 5
+  };
+
+  const occupant = {
+    ...createPieceInStart('P2-A', 'P2'),
+    isInStart: false,
+    isOnBoard: true,
+    position: 9
+  };
+
+  const state = buildState({
+    trackLength: TRACK_SPACES_BETWEEN_PLAYERS * 4,
+    startIndexes,
+    pieces: [mover, occupant]
+  });
+
+  const move = generateLegalMoves(state, 'P1', 'FOUR').find((option) => option.steps === 4);
+  assert.ok(move, 'Expected a legal +4 move from 5 to 9');
+
+  const next = applyMovePreview(state, move);
+  const movedPiece = next.pieces.find((piece) => piece.id === 'P1-A');
+  const knockedPiece = next.pieces.find((piece) => piece.id === 'P2-A');
+
+  assert.equal(movedPiece.position, 9);
+  assert.equal(movedPiece.isOnBoard, true);
+
+  assert.equal(knockedPiece.position, null);
+  assert.equal(knockedPiece.isInStart, true);
+  assert.equal(knockedPiece.isOnBoard, false);
+  assert.equal(knockedPiece.isImmune, false);
+});
+
+test('Exiting start can knock a non-immune occupant back to start', () => {
+  const startIndexes = buildStartIndexes(4);
+
+  const myStartPiece = createPieceInStart('P1-A', 'P1');
+
+  const occupantOnStartSquare = {
+    ...createPieceInStart('P2-A', 'P2'),
+    isInStart: false,
+    isOnBoard: true,
+    position: startIndexes.P1,
+    isImmune: false
+  };
+
+  const state = buildState({
+    trackLength: TRACK_SPACES_BETWEEN_PLAYERS * 4,
+    startIndexes,
+    pieces: [myStartPiece, occupantOnStartSquare]
+  });
+
+  const exitMove = generateLegalMoves(state, 'P1', 'ACE').find((move) => move.action === 'EXIT_START');
+  assert.ok(exitMove, 'Expected exit-start move with ACE');
+
+  const next = applyMovePreview(state, exitMove);
+  const myPiece = next.pieces.find((piece) => piece.id === 'P1-A');
+  const knockedPiece = next.pieces.find((piece) => piece.id === 'P2-A');
+
+  assert.equal(myPiece.position, startIndexes.P1);
+  assert.equal(myPiece.isInStart, false);
+  assert.equal(myPiece.isOnBoard, true);
+  assert.equal(myPiece.isImmune, true);
+
+  assert.equal(knockedPiece.position, null);
+  assert.equal(knockedPiece.isInStart, true);
+  assert.equal(knockedPiece.isOnBoard, false);
+});
+
+
+test('applyMovePreview rejects landing on immune piece', () => {
+  const startIndexes = buildStartIndexes(4);
+
+  const mover = {
+    ...createPieceInStart('P1-A', 'P1'),
+    isInStart: false,
+    isOnBoard: true,
+    position: 5
+  };
+
+  const immuneOccupant = {
+    ...createPieceInStart('P2-A', 'P2'),
+    isInStart: false,
+    isOnBoard: true,
+    position: 9,
+    isImmune: true
+  };
+
+  const state = buildState({
+    trackLength: TRACK_SPACES_BETWEEN_PLAYERS * 4,
+    startIndexes,
+    pieces: [mover, immuneOccupant]
+  });
+
+  assert.throws(
+    () =>
+      applyMovePreview(state, {
+        pieceId: 'P1-A',
+        card: 'FOUR',
+        action: 'MOVE',
+        from: 5,
+        to: 9,
+        steps: 4
+      }),
+    /Cannot knock immune piece/
+  );
+});
+
+test('applyMovePreview rejects swap when source or target is immune', () => {
+  const startIndexes = buildStartIndexes(4);
+
+  const myImmune = {
+    ...createPieceInStart('P1-A', 'P1'),
+    isInStart: false,
+    isOnBoard: true,
+    isImmune: true,
+    position: 3
+  };
+
+  const enemy = {
+    ...createPieceInStart('P2-A', 'P2'),
+    isInStart: false,
+    isOnBoard: true,
+    position: 11
+  };
+
+  const state = buildState({
+    trackLength: TRACK_SPACES_BETWEEN_PLAYERS * 4,
+    startIndexes,
+    pieces: [myImmune, enemy]
+  });
+
+  assert.throws(
+    () =>
+      applyMovePreview(state, {
+        pieceId: 'P1-A',
+        card: 'JACK',
+        action: 'SWAP',
+        from: 3,
+        to: 11,
+        swapTargetPieceId: 'P2-A'
+      }),
+    /Cannot swap immune piece/
+  );
+});
+
+test('applyMovePreview rejects swap when target is not on board', () => {
+  const startIndexes = buildStartIndexes(4);
+
+  const mine = {
+    ...createPieceInStart('P1-A', 'P1'),
+    isInStart: false,
+    isOnBoard: true,
+    position: 3
+  };
+
+  const enemyInStart = createPieceInStart('P2-A', 'P2');
+
+  const state = buildState({
+    trackLength: TRACK_SPACES_BETWEEN_PLAYERS * 4,
+    startIndexes,
+    pieces: [mine, enemyInStart]
+  });
+
+  assert.throws(
+    () =>
+      applyMovePreview(state, {
+        pieceId: 'P1-A',
+        card: 'JACK',
+        action: 'SWAP',
+        from: 3,
+        to: null,
+        swapTargetPieceId: 'P2-A'
+      }),
+    /Cannot swap target piece that is not on board/
+  );
+});
+
+test('Piece can enter home lane only after completed lap and with exact count', () => {
+  const startIndexes = buildStartIndexes(4);
+
+  const p1 = {
+    ...createPieceInStart('P1-A', 'P1'),
+    isInStart: false,
+    isOnBoard: true,
+    hasCompletedLap: true,
+    position: 63
+  };
+
+  const state = buildState({
+    trackLength: TRACK_SPACES_BETWEEN_PLAYERS * 4,
+    startIndexes,
+    homeLanes: { P1: [0, 1, 2, 3] },
+    homeEntryIndexes: { P1: 63 },
+    pieces: [p1]
+  });
+
+  const moveOne = generateLegalMoves(state, 'P1', 'ACE').find((move) => move.steps === 1);
+  assert.ok(moveOne);
+  assert.equal(moveOne.toHomeIndex, 0);
+  assert.equal(moveOne.to, null);
+
+  const inHome = applyMovePreview(state, moveOne).pieces.find((piece) => piece.id === 'P1-A');
+  assert.equal(inHome.isInHome, true);
+  assert.equal(inHome.isOnBoard, false);
+  assert.equal(inHome.homeIndex, 0);
+});
+
+test('Overshoot of home lane continues on track instead of entering home', () => {
+  const startIndexes = buildStartIndexes(4);
+
+  const p1 = {
+    ...createPieceInStart('P1-A', 'P1'),
+    isInStart: false,
+    isOnBoard: true,
+    hasCompletedLap: true,
+    position: 63
+  };
+
+  const state = buildState({
+    trackLength: TRACK_SPACES_BETWEEN_PLAYERS * 4,
+    startIndexes,
+    homeLanes: { P1: [0, 1, 2, 3] },
+    homeEntryIndexes: { P1: 63 },
+    pieces: [p1]
+  });
+
+  const moveKing = generateLegalMoves(state, 'P1', 'KING')[0];
+  assert.ok(moveKing);
+  assert.equal(moveKing.toHomeIndex, null);
+  assert.equal(moveKing.to, 12);
+});
+
+test('Seven split can distribute steps across multiple pieces', () => {
+  const startIndexes = buildStartIndexes(4);
+
+  const p1a = {
+    ...createPieceInStart('P1-A', 'P1'),
+    isInStart: false,
+    isOnBoard: true,
+    position: 0
+  };
+
+  const p1b = {
+    ...createPieceInStart('P1-B', 'P1'),
+    isInStart: false,
+    isOnBoard: true,
+    position: 10
+  };
+
+  const state = buildState({
+    trackLength: TRACK_SPACES_BETWEEN_PLAYERS * 4,
+    startIndexes,
+    pieces: [p1a, p1b]
+  });
+
+  const sevenMoves = generateLegalMoves(state, 'P1', 'SEVEN');
+  const hasSplit = sevenMoves.some((move) => move.action === 'SEVEN_SPLIT' && move.segments.length > 1);
+
+  assert.equal(hasSplit, true);
+});
+
+test('Seven split knocks passed pieces (including allied pieces) back to start', () => {
+  const startIndexes = buildStartIndexes(4);
+
+  const mover = {
+    ...createPieceInStart('P1-A', 'P1'),
+    isInStart: false,
+    isOnBoard: true,
+    position: 0
+  };
+
+  const allied = {
+    ...createPieceInStart('P1-B', 'P1'),
+    isInStart: false,
+    isOnBoard: true,
+    position: 2
+  };
+
+  const state = buildState({
+    trackLength: TRACK_SPACES_BETWEEN_PLAYERS * 4,
+    startIndexes,
+    pieces: [mover, allied]
+  });
+
+  const segment = {
+    pieceId: 'P1-A',
+    card: 'SEVEN',
+    action: 'MOVE',
+    from: 0,
+    to: 4,
+    steps: 4
+  };
+
+  const after = applyMovePreview(state, segment);
+  const alliedAfter = after.pieces.find((piece) => piece.id === 'P1-B');
+  assert.equal(alliedAfter.isInStart, true);
+  assert.equal(alliedAfter.isOnBoard, false);
+  assert.equal(alliedAfter.position, null);
 });
