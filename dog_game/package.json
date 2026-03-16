@@ -4,6 +4,10 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "test": "node --test tests/*.test.js"
+    "test": "node --test tests/*.test.js",
+    "start:live": "node services/realtime-server/live-server.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
   }
 }
