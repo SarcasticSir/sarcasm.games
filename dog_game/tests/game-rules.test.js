@@ -7,6 +7,7 @@ import {
   buildStartIndexes,
   generateJackSwapOptions,
   generateLegalMoves,
+  evaluateHandPlayability,
   TRACK_SPACES_BETWEEN_PLAYERS
 } from '../packages/game-rules/index.js';
 
@@ -137,4 +138,158 @@ test('Immune blocker cannot be passed, landed on, or swapped by Jack', () => {
     true,
     'Non-immune in-play piece should remain a valid Jack target'
   );
+});
+
+test('Joker mirrors legal moves from other card types', () => {
+  const startIndexes = buildStartIndexes(4);
+
+  const myOnBoard = {
+    ...createPieceInStart('P1-A', 'P1'),
+    isInStart: false,
+    isOnBoard: true,
+    position: 5,
+    isImmune: false
+  };
+
+  const myInStart = createPieceInStart('P1-B', 'P1');
+
+  const enemyOnBoard = {
+    ...createPieceInStart('P2-A', 'P2'),
+    isInStart: false,
+    isOnBoard: true,
+    position: 9,
+    isImmune: false
+  };
+
+  const state = buildState({
+    trackLength: TRACK_SPACES_BETWEEN_PLAYERS * 4,
+    startIndexes,
+    pieces: [myOnBoard, myInStart, enemyOnBoard]
+  });
+
+  const jokerMoves = generateLegalMoves(state, 'P1', 'JOKER');
+
+  assert.equal(
+    jokerMoves.some((move) => move.action === 'EXIT_START' && move.pieceId === 'P1-B' && move.to === startIndexes.P1),
+    true,
+    'Joker should include start-exit moves from Ace/King behavior'
+  );
+
+  assert.equal(
+    jokerMoves.some((move) => move.action === 'MOVE' && move.pieceId === 'P1-A' && move.steps === 13),
+    true,
+    'Joker should include king-like 13-step movement'
+  );
+
+  assert.equal(
+    jokerMoves.some((move) => move.action === 'SWAP' && move.pieceId === 'P1-A' && move.swapTargetPieceId === 'P2-A'),
+    true,
+    'Joker should include Jack-like swap options'
+  );
+});
+
+
+test('Joker equals deduplicated union of all non-Joker legal moves', () => {
+  const startIndexes = buildStartIndexes(4);
+
+  const state = buildState({
+    trackLength: TRACK_SPACES_BETWEEN_PLAYERS * 4,
+    startIndexes,
+    pieces: [
+      {
+        ...createPieceInStart('P1-A', 'P1'),
+        isInStart: false,
+        isOnBoard: true,
+        position: 5,
+        isImmune: false
+      },
+      createPieceInStart('P1-B', 'P1'),
+      {
+        ...createPieceInStart('P2-A', 'P2'),
+        isInStart: false,
+        isOnBoard: true,
+        position: 7,
+        isImmune: true
+      },
+      {
+        ...createPieceInStart('P2-B', 'P2'),
+        isInStart: false,
+        isOnBoard: true,
+        position: 9,
+        isImmune: false
+      }
+    ]
+  });
+
+  const nonJokerCards = ['ACE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN', 'EIGHT', 'NINE', 'TEN', 'JACK', 'QUEEN', 'KING'];
+
+  const expected = new Map();
+  for (const card of nonJokerCards) {
+    for (const move of generateLegalMoves(state, 'P1', card)) {
+      const jokerMove = { ...move, card: 'JOKER' };
+      const key = [
+        jokerMove.action,
+        jokerMove.pieceId,
+        jokerMove.from,
+        jokerMove.to,
+        jokerMove.steps,
+        jokerMove.swapTargetPieceId
+      ].join('|');
+      expected.set(key, jokerMove);
+    }
+  }
+
+  const actual = generateLegalMoves(state, 'P1', 'JOKER');
+  const actualKeys = new Set(
+    actual.map((move) => [move.action, move.pieceId, move.from, move.to, move.steps, move.swapTargetPieceId].join('|'))
+  );
+
+  assert.equal(actual.length, actualKeys.size, 'Joker result should not contain duplicate move entries');
+  assert.deepEqual([...actualKeys].sort(), [...expected.keys()].sort());
+});
+
+
+test('Must-play is true when at least one card in hand has legal moves', () => {
+  const startIndexes = buildStartIndexes(4);
+  const state = buildState({
+    trackLength: TRACK_SPACES_BETWEEN_PLAYERS * 4,
+    startIndexes,
+    pieces: [createPieceInStart('P1-A', 'P1')]
+  });
+
+  const hand = ['SEVEN', 'JACK', 'KING'];
+  const result = evaluateHandPlayability(state, 'P1', hand);
+
+  assert.equal(result.hasAnyLegalMove, true);
+  assert.equal(result.perCardMoves.SEVEN.length, 0);
+  assert.equal(result.perCardMoves.JACK.length, 0);
+  assert.equal(result.perCardMoves.KING.length, 1);
+  assert.equal(result.perCardMoves.KING[0].action, 'EXIT_START');
+});
+
+test('No-legal-move is true when all cards in hand are blocked', () => {
+  const startIndexes = buildStartIndexes(4);
+
+  const myStartPiece = createPieceInStart('P1-A', 'P1');
+  const enemyImmuneAtStart = {
+    ...createPieceInStart('P2-A', 'P2'),
+    isInStart: false,
+    isOnBoard: true,
+    position: startIndexes.P1,
+    isImmune: true
+  };
+
+  const state = buildState({
+    trackLength: TRACK_SPACES_BETWEEN_PLAYERS * 4,
+    startIndexes,
+    pieces: [myStartPiece, enemyImmuneAtStart]
+  });
+
+  const hand = ['ACE', 'KING', 'JACK'];
+  const result = evaluateHandPlayability(state, 'P1', hand);
+
+  assert.equal(result.hasAnyLegalMove, false);
+  assert.equal(result.perCardMoves.ACE.length, 0);
+  assert.equal(result.perCardMoves.KING.length, 0);
+  assert.equal(result.perCardMoves.JACK.length, 0);
 });
