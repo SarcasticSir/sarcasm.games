@@ -22,11 +22,19 @@ The app must be practical for a solo maintainer to ship and operate.
 
 Implement support for these room configurations:
 
-- Free-for-all
-- 2v2
-- 3v3
-- 2v2v2
-- 4v4
+- Free-for-all:
+  - 1v1v1v1
+- Team modes:
+  - 2v2
+  - 3v3
+  - 4v4
+  - 2v2v2
+  - 2v2v2v2
+
+Constraints:
+
+- maximum total players is 8
+- no spectators
 
 Agents must treat player count, team count, seat order, card exchange logic, and win conditions as mode-dependent configuration, not hardcoded assumptions.
 
@@ -222,7 +230,6 @@ Do not hardcode a 2-team assumption.
 
 ### Strongly recommended soon after MVP
 
-- Spectator mode
 - Match history
 - Friend invites / friend list
 - Rematch in same room
@@ -230,6 +237,7 @@ Do not hardcode a 2-team assumption.
 - Resume interrupted game within a short window
 - Simple anti-cheat audit log
 - Basic chat or emote/ping system
+- Spectator mode, only if explicitly approved later
 
 ### Explicit non-goals for first release
 
@@ -490,7 +498,317 @@ Recommended entities:
 - MovePreview
 - GameEvent
 
-### Room state should minimally include
+## Confirmed persistence model (Supabase baseline)
+
+The project now has an established Supabase Auth + Postgres foundation. Coding agents must treat this schema as the current persistence baseline and build application/backend logic against it rather than inventing new ad hoc room tables.
+
+## Deployment and product entrypoint
+
+Planned product entrypoint:
+
+https://sarcasm.games/dog/
+
+This path will eventually serve as the main entry flow for:
+
+- create room
+- invite players
+- join room
+- lobby / ready flow
+
+Agents should treat `/dog/` as the long-term web entrypoint for this product, even if local development or temporary routes differ during implementation.
+
+## Current Supabase/Auth status
+
+The following are already established:
+
+- Supabase project created and connected through Vercel
+- Auth configured with email/password
+- Redirect/site URL planning is based on `https://sarcasm.games`
+- `profiles` table exists
+- automatic profile creation on signup is implemented through DB trigger
+- core multiplayer persistence tables now exist
+
+Agents should avoid redesigning auth/persistence unless there is a clear product or technical reason.
+
+## Confirmed persistence responsibilities
+
+Use these meanings consistently:
+
+- `profiles` = application-facing user profile linked to Supabase Auth user
+- `rooms` = persistent lobby/room metadata
+- `room_members` = current lobby membership state before / outside a running match
+- `matches` = one concrete started game session tied to a room
+- `match_players` = locked snapshot of players/seating/team assignment at match start
+- `game_events` = append-only event/audit/replay-oriented log
+
+Do not blur these responsibilities.
+
+## Confirmed tables and intended usage
+
+### `profiles`
+
+Purpose:
+
+store app-facing profile information separate from `auth.users`
+
+Important notes:
+
+- `profiles.id` matches `auth.users.id`
+- profile row is created automatically when a new auth user is created
+- frontend/backend should treat `profiles` as the canonical app user table
+
+### `rooms`
+
+Purpose:
+
+persistent room/lobby definition
+
+Confirmed columns:
+
+- `id`
+- `host_user_id`
+- `status`
+- `created_at`
+- `max_players`
+- `game_mode`
+- `team_count`
+- `players_per_team`
+
+Confirmed status values:
+
+- `open`
+- `playing`
+- `finished`
+- `closed`
+
+Confirmed mode model:
+
+- `game_mode` is currently modeled as `solo` or `teams`
+- `team_count` and `players_per_team` are authoritative configuration fields
+- `max_players` must equal `team_count * players_per_team`
+
+Agents must not hardcode assumptions such as:
+
+- all team games have exactly 2 teams
+- all rooms have exactly 4 players
+
+The room model must support these currently confirmed configurations:
+
+Free-for-all:
+
+- 1v1v1v1
+
+Team modes:
+
+- 2v2
+- 3v3
+- 4v4
+- 2v2v2
+- 2v2v2v2
+
+Hard constraint:
+
+- maximum total players is 8
+- no spectators
+
+### `room_members`
+
+Purpose:
+
+current lobby membership and seating/team assignment before the match snapshot is created
+
+Confirmed columns:
+
+- `id`
+- `room_id`
+- `user_id`
+- `guest_name`
+- `seat_no`
+- `team_no`
+- `slot_in_team`
+- `is_ready`
+- `connected`
+- `joined_at`
+
+Important semantics:
+
+- a row must represent exactly one participant in the room
+- participant identity is either:
+  - authenticated user via `user_id`, or
+  - guest via `guest_name`
+- no row may represent a spectator
+- `room_members` is mutable lobby state, not immutable match history
+
+### Confirmed seating rule
+
+Seat order is mode-aware and must follow the physical-table alternation rule.
+
+Do not assign seats by “fill team 1 first, then team 2”.
+
+Use this seating rule:
+
+- first seat one member from each team
+- then second member from each team
+- then third member from each team
+- etc.
+
+The seat formula is:
+
+`seat_no = (slot_in_team - 1) * team_count + team_no`
+
+Examples:
+
+#### 2v2
+
+- seat 1 = team 1, slot 1
+- seat 2 = team 2, slot 1
+- seat 3 = team 1, slot 2
+- seat 4 = team 2, slot 2
+
+#### 3v3
+
+- seat 1 = team 1, slot 1
+- seat 2 = team 2, slot 1
+- seat 3 = team 1, slot 2
+- seat 4 = team 2, slot 2
+- seat 5 = team 1, slot 3
+- seat 6 = team 2, slot 3
+
+#### 2v2v2
+
+- seat 1 = team 1, slot 1
+- seat 2 = team 2, slot 1
+- seat 3 = team 3, slot 1
+- seat 4 = team 1, slot 2
+- seat 5 = team 2, slot 2
+- seat 6 = team 3, slot 2
+
+Agents must treat `seat_no` as a derived, rule-bound value, not freeform user input.
+
+### Confirmed room validation rules
+
+The persistence layer is intended to enforce these invariants for `room_members`:
+
+- room cannot exceed `rooms.max_players`
+- `team_no` must fit the room’s `team_count`
+- `slot_in_team` must fit the room’s `players_per_team`
+- `seat_no` must match the seating formula
+- each room seat must be unique
+- each `(room_id, team_no, slot_in_team)` combination must be unique
+- a participant must be either authenticated user or guest, not both, not neither
+
+Agents should not bypass these invariants in client code.
+
+### `matches`
+
+Purpose:
+
+persistent record of one started game instance for a room
+
+Confirmed columns:
+
+- `id`
+- `room_id`
+- `status`
+- `started_at`
+- `ended_at`
+- `winning_team_no`
+
+Confirmed status values:
+
+- `active`
+- `finished`
+- `abandoned`
+
+Important semantics:
+
+- `matches` is not the live room membership table
+- it marks the lifecycle of an actual started game
+
+### `match_players`
+
+Purpose:
+
+immutable/semi-immutable player snapshot at match start
+
+Confirmed columns:
+
+- `id`
+- `match_id`
+- `user_id`
+- `guest_name`
+- `seat_no`
+- `team_no`
+- `slot_in_team`
+
+Important semantics:
+
+- when a match starts, active room membership is copied/snapshotted into `match_players`
+- later room/lobby changes must not rewrite historical match composition
+- game logic and persistence should use `match_players` for match history integrity
+
+### `game_events`
+
+Purpose:
+
+append-only audit/replay/debug log
+
+Confirmed columns:
+
+- `id`
+- `room_id`
+- `actor_user_id`
+- `event_type`
+- `payload`
+- `created_at`
+
+Confirmed implementation direction:
+
+- append-only usage
+- no normal client-side update/delete flows
+- intended for replay/debug/audit support
+- intended to persist authoritative room/match events over time
+
+## Confirmed RLS/security direction
+
+RLS is enabled on relevant user-facing tables.
+
+General policy direction already established:
+
+- users may read/update only their own profile where appropriate
+- room access is scoped to room participants/owners as applicable
+- sensitive match/event creation should be treated as backend-authoritative
+- secret/service credentials must never be exposed in frontend code
+
+Agents must not place privileged Supabase keys in browser code.
+
+## Backend responsibility boundary
+
+Frontend is not authoritative for:
+
+- seat assignment
+- team assignment validation
+- room capacity validation
+- match creation
+- match snapshot creation
+- event log writes that represent authoritative game actions
+
+Frontend may request actions. Backend/server-side logic must validate and persist them.
+
+## Practical implementation rule for agents
+
+Treat the Supabase schema as sufficiently established for phase-1 product work.
+
+Do not keep redesigning persistence unless a real blocker appears during implementation of:
+
+- create room
+- join room
+- ready flow
+- start match
+- reconnect
+- authoritative game progression
+
+## Room state should minimally include
 
 - room id
 - mode
@@ -511,15 +829,15 @@ Recommended entities:
 - pending team card exchange state
 - winner / finished flag
 
-### View model guidance
+## View model guidance
 
 Do not send one identical payload to every client.
 
 Prefer distinct server-generated views:
 
-- public room state,
-- player-private room view,
-- spectator view, if spectators exist later.
+- public room state
+- player-private room view
+- spectator view, if spectators exist later
 
 Opponent hands must never be included in the wrong client payload.
 
@@ -527,46 +845,46 @@ Opponent hands must never be included in the wrong client payload.
 
 Agents must implement move resolution in this order:
 
-1. validate phase,
-2. generate legal moves,
-3. generate preview / selectable move options,
-4. apply selected move,
-5. apply collisions / knockouts,
-6. update immunity,
-7. update lap completion,
-8. resolve bo entry,
-9. advance turn/round,
-10. check win condition,
-11. emit event(s).
+1. validate phase
+2. generate legal moves
+3. generate preview / selectable move options
+4. apply selected move
+5. apply collisions / knockouts
+6. update immunity
+7. update lap completion
+8. resolve bo entry
+9. advance turn/round
+10. check win condition
+11. emit event(s)
 
 ## Move selection, preview, cancel, and confirm flow
 
 Move execution must support a two-step UX:
 
-1. select card,
-2. inspect legal move options,
-3. optionally select a piece / path / split sequence,
-4. review the resulting preview,
-5. confirm to commit,
-6. or cancel and return to card selection.
+- select card
+- inspect legal move options
+- optionally select a piece / path / split sequence
+- review the resulting preview
+- confirm to commit
+- or cancel and return to card selection
 
 This applies to normal cards and to complex actions such as 7 split.
 
 Important rules for preview flow:
 
-- selecting a card does not immediately commit the card,
-- selecting a piece does not immediately commit the move,
-- a player must be able to back out of a preview and choose another legal card,
-- cancelling a preview must not mutate authoritative game state,
-- only final confirmation commits the action,
-- the server remains authoritative over which options are legal.
+- selecting a card does not immediately commit the card
+- selecting a piece does not immediately commit the move
+- a player must be able to back out of a preview and choose another legal card
+- cancelling a preview must not mutate authoritative game state
+- only final confirmation commits the action
+- the server remains authoritative over which options are legal
 
-For 7 specifically:
+### For 7 specifically
 
-- the UI may support multi-step construction of the split,
-- the player must be able to cancel the in-progress 7 preview before final confirmation,
-- partially previewed 7 steps must not become real state until confirmed,
-- if the player confirms, the full validated sequence is committed as one authoritative action.
+- the UI may support multi-step construction of the split
+- the player must be able to cancel the in-progress 7 preview before final confirmation
+- partially previewed 7 steps must not become real state until confirmed
+- if the player confirms, the full validated sequence is committed as one authoritative action
 
 ## UX guidance for move visualization
 
@@ -574,22 +892,22 @@ The product must clearly communicate legal actions after the player selects a ca
 
 Required interaction guidance:
 
-- highlight which pieces are legal to choose for the selected card,
-- after a piece is selected, show destination or path options clearly,
-- clearly distinguish legal, blocked, and invalid targets,
-- show why an option is invalid when practical,
-- make the currently selected card and piece obvious,
-- show a clear confirm action before commit,
-- show a clear cancel/back action before commit.
+- highlight which pieces are legal to choose for the selected card
+- after a piece is selected, show destination or path options clearly
+- clearly distinguish legal, blocked, and invalid targets
+- show why an option is invalid when practical
+- make the currently selected card and piece obvious
+- show a clear confirm action before commit
+- show a clear cancel/back action before commit
 
 This is especially important for:
 
-- Ace dual values,
-- King start exit versus movement,
-- 4 forward versus backward,
-- Jack swap targets,
-- 7 split routing and hit effects,
-- exact-entry bo situations.
+- Ace dual values
+- King start exit versus movement
+- 4 forward versus backward
+- Jack swap targets
+- 7 split routing and hit effects
+- exact-entry bo situations
 
 ## Critical edge cases to cover in tests
 
@@ -652,45 +970,29 @@ Never let clients directly mutate shared state.
 
 ## Security / trust boundaries
 
-Validate every move server-side.
-
-Do not expose opponents' hands.
-
-Use signed/private room invites.
-
-Rate-limit room joins and action spam.
-
-Persist an append-only action log for dispute/debugging.
-
-Revalidate player identity on reconnect.
-
-Prevent duplicate command submission with idempotency keys.
+- Validate every move server-side.
+- Do not expose opponents' hands.
+- Use signed/private room invites.
+- Rate-limit room joins and action spam.
+- Persist an append-only action log for dispute/debugging.
+- Revalidate player identity on reconnect.
+- Prevent duplicate command submission with idempotency keys.
 
 ## UX guidance
 
 The product must be fully usable in both desktop and mobile browsers.
 
-Make legal moves obvious.
-
-Show why an action is invalid.
-
-Show whose turn it is at all times.
-
-Distinguish start area, immune square, track, and bo clearly.
-
-Make team relationships visually obvious in team modes.
-
-During exchange phase, hide received card until both exchanges are locked.
-
-Make reconnect recovery seamless.
-
-Support touch-first interactions on mobile: large hit targets, clear selected-state feedback, and no hover-only critical actions.
-
-Keep board, hand, turn indicator, and action controls readable on narrow screens without requiring desktop zoom.
-
-Prefer responsive panels/drawers over dense fixed layouts.
-
-Avoid interactions that depend on right-click, hover, or precise drag unless there is a simple tap alternative.
+- Make legal moves obvious.
+- Show why an action is invalid.
+- Show whose turn it is at all times.
+- Distinguish start area, immune square, track, and bo clearly.
+- Make team relationships visually obvious in team modes.
+- During exchange phase, hide received card until both exchanges are locked.
+- Make reconnect recovery seamless.
+- Support touch-first interactions on mobile: large hit targets, clear selected-state feedback, and no hover-only critical actions.
+- Keep board, hand, turn indicator, and action controls readable on narrow screens without requiring desktop zoom.
+- Prefer responsive panels/drawers over dense fixed layouts.
+- Avoid interactions that depend on right-click, hover, or precise drag unless there is a simple tap alternative.
 
 ## Delivery plan
 
@@ -733,7 +1035,7 @@ Avoid interactions that depend on right-click, hover, or precise drag unless the
 ### Phase 5 — polish
 
 - Animations
-- Spectators
+- Spectators, only if explicitly approved later
 - Host migration
 - Replay viewer
 
@@ -743,13 +1045,13 @@ Mobile-browser support is not a Phase 5 concern; it is a requirement from MVP on
 
 Prioritize in this order:
 
-1. rule correctness,
-2. deterministic state transitions,
-3. reconnect safety,
-4. anti-desync architecture,
-5. maintainability,
-6. visual clarity of legal actions,
-7. visual polish.
+1. rule correctness
+2. deterministic state transitions
+3. reconnect safety
+4. anti-desync architecture
+5. maintainability
+6. visual clarity of legal actions
+7. visual polish
 
 Do not sacrifice correctness for animation or flashy UI.
 
