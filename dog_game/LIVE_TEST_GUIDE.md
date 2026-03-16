@@ -62,3 +62,12 @@ Publish events to clients through Supabase Realtime, for example:
 
 This repository now does **not** include a dedicated local WebSocket server script.
 Use your Supabase project + backend function runtime for live test orchestration.
+
+## Backend adapter now included in repo
+
+You can now wire live command handling using:
+
+- `services/realtime-server/supabase-room-service.js` (state store + realtime publisher adapter around `room-engine`)
+- `services/realtime-server/supabase-edge-handler.js` (HTTP/Edge request handler for command payloads)
+
+These modules are transport/runtime friendly for Supabase Edge Functions.
