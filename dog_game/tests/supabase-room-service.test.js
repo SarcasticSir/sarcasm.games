@@ -193,3 +193,55 @@ test('edge handler routes command payloads and returns json responses', async ()
   assert.equal(attachBody.ok, true);
   assert.equal(attachBody.result.private.playerId, 'P1');
 });
+
+
+test('edge handler responds to CORS preflight OPTIONS requests', async () => {
+  const service = createSupabaseRoomService({
+    store: createInMemoryStore(),
+    publisher: createPublisherSpy()
+  });
+
+  const preflightReq = new Request('http://localhost/room-command', {
+    method: 'OPTIONS',
+    headers: {
+      origin: 'https://www.sarcasm.games',
+      'access-control-request-method': 'POST',
+      'access-control-request-headers': 'content-type, apikey'
+    }
+  });
+
+  const preflightRes = await handleEdgeRoomRequest({ request: preflightReq, roomService: service });
+
+  assert.equal(preflightRes.status, 204);
+  assert.equal(preflightRes.headers.get('access-control-allow-origin'), 'https://www.sarcasm.games');
+  assert.equal(preflightRes.headers.get('access-control-allow-methods'), 'POST, OPTIONS');
+});
+
+test('edge handler includes CORS headers on POST responses', async () => {
+  const service = createSupabaseRoomService({
+    store: createInMemoryStore(),
+    publisher: createPublisherSpy()
+  });
+
+  const createReq = new Request('http://localhost/room-command', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      origin: 'https://www.sarcasm.games'
+    },
+    body: JSON.stringify({
+      type: 'create_room',
+      roomId: 'DOG-CORS-1',
+      playerId: 'P1',
+      gameMode: 'solo',
+      teamCount: 4,
+      playersPerTeam: 1
+    })
+  });
+
+  const createRes = await handleEdgeRoomRequest({ request: createReq, roomService: service });
+
+  assert.equal(createRes.status, 200);
+  assert.equal(createRes.headers.get('access-control-allow-origin'), 'https://www.sarcasm.games');
+  assert.equal(createRes.headers.get('access-control-allow-methods'), 'POST, OPTIONS');
+});
