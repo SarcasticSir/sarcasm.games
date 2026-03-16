@@ -68,6 +68,46 @@ test('King can exit start when piece is in start', () => {
   assert.equal(movedPiece.isImmune, true);
 });
 
+test('Ace can still exit start when normal on-board Ace moves are blocked by immune piece', () => {
+  const startIndexes = buildStartIndexes(4);
+
+  const blockedMover = {
+    ...createPieceInStart('P1-A', 'P1'),
+    isInStart: false,
+    isOnBoard: true,
+    position: 2
+  };
+
+  const startPiece = createPieceInStart('P1-B', 'P1');
+
+  const immuneBlocker = {
+    ...createPieceInStart('P2-A', 'P2'),
+    isInStart: false,
+    isOnBoard: true,
+    position: 3,
+    isImmune: true
+  };
+
+  const state = buildState({
+    trackLength: TRACK_SPACES_BETWEEN_PLAYERS * 4,
+    startIndexes,
+    pieces: [blockedMover, startPiece, immuneBlocker]
+  });
+
+  const moves = generateLegalMoves(state, 'P1', 'ACE');
+
+  assert.equal(
+    moves.some((move) => move.action === 'MOVE' && move.pieceId === 'P1-A'),
+    false,
+    'On-board ACE moves should be blocked by immune piece'
+  );
+  assert.equal(
+    moves.some((move) => move.action === 'EXIT_START' && move.pieceId === 'P1-B' && move.to === startIndexes.P1),
+    true,
+    'ACE exit-from-start option should remain legal'
+  );
+});
+
 test('4 backward wraps around board boundaries', () => {
   const startIndexes = buildStartIndexes(4);
   const piece = {
@@ -601,4 +641,89 @@ test('Seven split knocks passed pieces (including allied pieces) back to start',
   assert.equal(alliedAfter.isInStart, true);
   assert.equal(alliedAfter.isOnBoard, false);
   assert.equal(alliedAfter.position, null);
+});
+
+test('Seven split has no legal routes when immune blocker is on every first step', () => {
+  const startIndexes = buildStartIndexes(4);
+
+  const p1a = {
+    ...createPieceInStart('P1-A', 'P1'),
+    isInStart: false,
+    isOnBoard: true,
+    position: 0
+  };
+
+  const p1b = {
+    ...createPieceInStart('P1-B', 'P1'),
+    isInStart: false,
+    isOnBoard: true,
+    position: 10
+  };
+
+  const immuneAheadA = {
+    ...createPieceInStart('P2-A', 'P2'),
+    isInStart: false,
+    isOnBoard: true,
+    position: 1,
+    isImmune: true
+  };
+
+  const immuneAheadB = {
+    ...createPieceInStart('P2-B', 'P2'),
+    isInStart: false,
+    isOnBoard: true,
+    position: 11,
+    isImmune: true
+  };
+
+  const state = buildState({
+    trackLength: TRACK_SPACES_BETWEEN_PLAYERS * 4,
+    startIndexes,
+    pieces: [p1a, p1b, immuneAheadA, immuneAheadB]
+  });
+
+  const sevenMoves = generateLegalMoves(state, 'P1', 'SEVEN');
+  assert.equal(sevenMoves.length, 0);
+});
+
+test('Must-play remains true when hand has exactly one obscure legal move', () => {
+  const startIndexes = buildStartIndexes(4);
+
+  const myOnBoard = {
+    ...createPieceInStart('P1-A', 'P1'),
+    isInStart: false,
+    isOnBoard: true,
+    position: 1
+  };
+
+  const enemyImmuneForwardOne = {
+    ...createPieceInStart('P2-A', 'P2'),
+    isInStart: false,
+    isOnBoard: true,
+    position: 2,
+    isImmune: true
+  };
+
+  const enemyImmuneForwardEleven = {
+    ...createPieceInStart('P2-B', 'P2'),
+    isInStart: false,
+    isOnBoard: true,
+    position: 12,
+    isImmune: true
+  };
+
+  const state = buildState({
+    trackLength: TRACK_SPACES_BETWEEN_PLAYERS * 4,
+    startIndexes,
+    pieces: [myOnBoard, enemyImmuneForwardOne, enemyImmuneForwardEleven]
+  });
+
+  const hand = ['ACE', 'KING', 'FOUR'];
+  const result = evaluateHandPlayability(state, 'P1', hand);
+
+  assert.equal(result.hasAnyLegalMove, true);
+  assert.equal(result.perCardMoves.ACE.length, 0);
+  assert.equal(result.perCardMoves.KING.length, 0);
+  assert.equal(result.perCardMoves.FOUR.some((move) => move.steps === -4), true);
+  assert.equal(result.perCardMoves.FOUR.some((move) => move.steps === 4), false);
 });
