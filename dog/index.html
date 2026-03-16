@@ -201,11 +201,6 @@
       <h2>Basic setup</h2>
       <div class="grid">
         <div>
-          <label for="endpointUrl">Edge endpoint</label>
-          <input id="endpointUrl" value="https://hmwzdnebhqavatuxmtki.supabase.co/functions/v1/dog-room" />
-          <p class="small">Use your Supabase Function URL ending with <code>/functions/v1/dog-room</code>.</p>
-        </div>
-        <div>
           <label for="roomId">Room ID</label>
           <input id="roomId" value="DOG001" />
         </div>
@@ -223,7 +218,7 @@
     <section class="card">
       <div class="step">Step 2 (host)</div>
       <h2>Create game</h2>
-      <p class="small">Standard live-test setup er 4 spillere free-for-all.</p>
+      <p class="small">Standard live-test setup is 4 players free-for-all.</p>
       <div class="grid">
         <div>
           <label for="gameMode">Game mode</label>
@@ -287,8 +282,8 @@
 
   <script>
     const STORAGE_KEY = 'dogLiveSimple';
+    const DOG_ENDPOINT = 'https://hmwzdnebhqavatuxmtki.supabase.co/functions/v1/dog-room';
 
-    const endpointEl = document.getElementById('endpointUrl');
     const roomIdEl = document.getElementById('roomId');
     const playerIdEl = document.getElementById('playerId');
     const gameModeEl = document.getElementById('gameMode');
@@ -329,7 +324,6 @@
 
     function readState() {
       return {
-        endpointUrl: endpointEl.value.trim(),
         roomId: roomIdEl.value.trim(),
         playerId: playerIdEl.value.trim(),
         gameMode: gameModeEl.value,
@@ -347,7 +341,6 @@
     function loadState() {
       try {
         const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-        if (data.endpointUrl) endpointEl.value = data.endpointUrl;
         if (data.roomId) roomIdEl.value = data.roomId;
         if (data.playerId) playerIdEl.value = data.playerId;
         if (data.gameMode) gameModeEl.value = data.gameMode;
@@ -358,20 +351,16 @@
       } catch {
         // ignore parse issues
       }
+
     }
 
     async function sendCommand(command, successText) {
       const cfg = readState();
-      if (!cfg.endpointUrl) {
-        setStatus('Missing endpoint URL.', true);
-        return null;
-      }
-
       setStatus('Working...');
       saveState();
 
       try {
-        const response = await fetch(cfg.endpointUrl, {
+        const response = await fetch(DOG_ENDPOINT, {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify(command)
@@ -391,7 +380,13 @@
             status: response.status,
             bodyPreview: preview || '(empty)'
           });
-          setStatus('Endpoint response was not JSON. Check endpoint URL and deployment.', true);
+
+          if (response.status === 404) {
+            setStatus('Endpoint returned 404. Supabase function may not be deployed yet.', true);
+          } else {
+            setStatus('Endpoint response was not JSON. Check endpoint URL and deployment.', true);
+          }
+
           return null;
         }
 
@@ -426,14 +421,13 @@
       }
 
       const base = getInviteBaseUrl();
-      const endpoint = cfg.endpointUrl;
       const invites = [
         { friend: 'Friend 1', teamNo: 2, slotInTeam: 1 },
         { friend: 'Friend 2', teamNo: 3, slotInTeam: 1 },
         { friend: 'Friend 3', teamNo: 4, slotInTeam: 1 }
       ].map((seat, index) => {
         const invitePlayerId = `P${index + 2}`;
-        const link = `${base}?room=${encodeURIComponent(cfg.roomId)}&endpoint=${encodeURIComponent(endpoint)}&teamNo=${seat.teamNo}&slotInTeam=${seat.slotInTeam}&player=${invitePlayerId}`;
+        const link = `${base}?room=${encodeURIComponent(cfg.roomId)}&teamNo=${seat.teamNo}&slotInTeam=${seat.slotInTeam}&player=${invitePlayerId}`;
         return { ...seat, link };
       });
 
@@ -486,13 +480,11 @@
     function applyInviteFromQuery() {
       const query = new URLSearchParams(window.location.search);
       const room = query.get('room');
-      const endpoint = query.get('endpoint');
       const teamNo = query.get('teamNo');
       const slotInTeam = query.get('slotInTeam');
       const player = query.get('player');
 
       if (room) roomIdEl.value = room;
-      if (endpoint) endpointEl.value = endpoint;
       if (teamNo) teamNoEl.value = teamNo;
       if (slotInTeam) slotInTeamEl.value = slotInTeam;
       if (player && !playerIdEl.value.trim()) playerIdEl.value = player;
@@ -510,6 +502,7 @@
       playerIdEl.value = randomCode('P', 3);
       saveState();
     });
+
 
     document.getElementById('createRoomBtn').addEventListener('click', async () => {
       const cfg = readState();
@@ -587,7 +580,7 @@
       );
     });
 
-    [endpointEl, roomIdEl, playerIdEl, gameModeEl, teamCountEl, playersPerTeamEl, teamNoEl, slotInTeamEl].forEach((input) => {
+    [roomIdEl, playerIdEl, gameModeEl, teamCountEl, playersPerTeamEl, teamNoEl, slotInTeamEl].forEach((input) => {
       input.addEventListener('change', () => {
         saveState();
         renderCapacityHint();
