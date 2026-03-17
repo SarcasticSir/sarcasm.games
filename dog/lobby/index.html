@@ -26,6 +26,8 @@
     .pill{display:inline-block;border-radius:999px;padding:2px 8px;font-size:.82rem;font-weight:700}
     .open{background:#203a31;color:#9cf0d0;border:1px solid #2d6351}
     .taken{background:#3a2931;color:#ffb4c3;border:1px solid #6c3c4a}
+    .ready{background:#1f3e31;color:#9cf0d0;border:1px solid #2d6351}
+    .not-ready{background:#3d3223;color:#ffd28f;border:1px solid #7a5d31}
     .invite-list{display:grid;gap:8px;margin-top:10px}
     .invite-item{border:1px solid var(--border);padding:10px;border-radius:10px;background:#131722}
 
@@ -125,6 +127,11 @@
     let preferredSeat = null;
     let pollTimer = null;
     let selectedCardId = null;
+    let selectedExchangeCardId = null;
+    let legalMovesForCard = [];
+    let selectedMoveIndex = -1;
+    let isLoadingRoom = false;
+    let refreshRequestedWhileLoading = false;
 
     const roomIdEl = document.getElementById('roomId');
     const playerIdEl = document.getElementById('playerId');
@@ -170,16 +177,35 @@
       return body.result;
     }
 
+    function buildIdempotencyKey(prefix) {
+      return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    }
+
     function normalize(result) {
-      if (result && result.public) return { public: result.public, private: result.private ?? null };
-      return { public: result, private: null };
+      if (result && result.public) {
+        return {
+          public: result.public,
+          private: result.private ?? null,
+          response: result.response ?? null
+        };
+      }
+      return { public: result, private: null, response: null };
     }
 
     async function call(command) {
       const next = normalize(await request(command));
-      snapshot = next.public;
-      privateView = next.private;
-      return next;
+      const incomingVersion = Number(next.public?.version ?? -1);
+      const currentVersion = Number(snapshot?.version ?? -1);
+
+      if (incomingVersion >= currentVersion) {
+        snapshot = next.public;
+        privateView = next.private;
+      }
+
+      return {
+        ...next,
+        wasStale: incomingVersion < currentVersion
+      };
     }
 
     function seatNo(teamNo, slotInTeam, teamCount) {
@@ -270,6 +296,25 @@
       return cards.find((card) => card.id === selectedCardId) || null;
     }
 
+    function getCurrentPlayerId() {
+      return playerIdEl.value.trim();
+    }
+
+    function isLocalPlayersTurn() {
+      return Boolean(snapshot?.match?.phase === 'play' && snapshot?.match?.turnPlayerId === getCurrentPlayerId());
+    }
+
+    function resetMoveSelection() {
+      legalMovesForCard = [];
+      selectedMoveIndex = -1;
+    }
+
+    function resetAllSelections() {
+      selectedCardId = null;
+      selectedExchangeCardId = null;
+      resetMoveSelection();
+    }
+
     function buildActionText(rank) {
       if (!rank) return 'Velg et kort for å se mulige handlinger.';
       if (rank === '7') return '7 split: velg rute over flere brikker, og bekreft hele sekvensen.';
@@ -282,10 +327,14 @@
 
     function renderPanels() {
       const match = snapshot.match || {};
+      const currentPlayerId = getCurrentPlayerId();
+      const localTurn = isLocalPlayersTurn();
+      const pendingPreview = privateView?.pendingPreview || null;
       turnPanelEl.innerHTML = `
         <h3>Tur</h3>
         <p>Aktiv spiller: <strong>${match.turnPlayerId ?? '-'}</strong></p>
         <p>Fase: <strong>${match.phase ?? '-'}</strong></p>
+        <p>${localTurn ? 'Det er din tur.' : 'Venter på annen spiller.'}</p>
       `;
 
       const cards = privateView?.hand || [];
@@ -297,25 +346,184 @@
       myHandEl.querySelectorAll('[data-card-id]').forEach((button) => {
         button.addEventListener('click', () => {
           selectedCardId = button.getAttribute('data-card-id');
+          selectedExchangeCardId = button.getAttribute('data-card-id');
+          resetMoveSelection();
           renderPanels();
         });
       });
 
+      if (match.phase === 'exchange') {
+        const exchangeSubmitted = Boolean(privateView?.pendingExchangeSubmitted);
+        const selectedExchangeCard = cards.find((entry) => entry.id === selectedExchangeCardId) || null;
+
+        actionPanelEl.innerHTML = `
+          <h3>Handling</h3>
+          <p class="helper">Exchange-fase: velg ett kort og send til lagkamerat.</p>
+          <p class="helper">${exchangeSubmitted ? 'Kort er sendt. Venter på andre spillere.' : 'Du må sende ett kort for å komme videre.'}</p>
+          <p class="helper">Valgt kort: <strong>${selectedExchangeCard ? `${selectedExchangeCard.rank}${selectedExchangeCard.suit ? ` ${selectedExchangeCard.suit}` : ''}` : '-'}</strong></p>
+          <div class="actions" style="margin-top:10px;grid-template-columns:1fr 1fr;">
+            <button type="button" id="submitExchangeBtn" ${selectedExchangeCard && !exchangeSubmitted ? '' : 'disabled'}>Send exchange card</button>
+            <button type="button" class="ghost" id="clearExchangeChoiceBtn" ${selectedExchangeCard && !exchangeSubmitted ? '' : 'disabled'}>Clear selection</button>
+          </div>
+        `;
+
+        const submitExchangeBtn = document.getElementById('submitExchangeBtn');
+        if (submitExchangeBtn) {
+          submitExchangeBtn.addEventListener('click', async () => {
+            if (!selectedExchangeCard || !currentPlayerId) return;
+            try {
+              await call({
+                type: 'exchange_card',
+                roomId: snapshot.roomId,
+                playerId: currentPlayerId,
+                cardId: selectedExchangeCard.id,
+                expectedVersion: snapshot.version,
+                idempotencyKey: buildIdempotencyKey('exchange-card')
+              });
+              setStatus('Exchange-kort sendt. Venter på resten av laget/spillerne.');
+              await loadRoom();
+            } catch (error) {
+              setStatus(`Kunne ikke sende exchange-kort: ${String(error)}`, true);
+            }
+          });
+        }
+
+        const clearExchangeChoiceBtn = document.getElementById('clearExchangeChoiceBtn');
+        if (clearExchangeChoiceBtn) {
+          clearExchangeChoiceBtn.addEventListener('click', () => {
+            selectedExchangeCardId = null;
+            renderPanels();
+          });
+        }
+
+        return;
+      }
+
       const card = selectedCard();
       const rank = card?.rank || null;
+      const hasSelectedMove = selectedMoveIndex >= 0 && selectedMoveIndex < legalMovesForCard.length;
+      const legalMoveOptions = legalMovesForCard.length
+        ? legalMovesForCard.map((move, index) => `<button type="button" class="card-btn ${index === selectedMoveIndex ? 'active' : ''}" data-move-index="${index}">${index + 1}. ${JSON.stringify(move)}</button>`).join('')
+        : '<p class="helper">Ingen lovlige trekk lastet.</p>';
+
       actionPanelEl.innerHTML = `
         <h3>Handling</h3>
         <p class="helper">${buildActionText(rank)}</p>
+        <p class="helper">${pendingPreview ? 'Preview er aktiv. Bekreft eller avbryt.' : 'Hent lovlige trekk før preview.'}</p>
         <div class="actions" style="margin-top:10px;grid-template-columns:1fr 1fr;">
-          <button type="button" ${rank ? '' : 'disabled'}>Confirm</button>
-          <button type="button" class="secondary" id="cancelChoice" ${rank ? '' : 'disabled'}>Cancel</button>
+          <button type="button" id="loadMovesBtn" ${rank && localTurn ? '' : 'disabled'}>Load legal moves</button>
+          <button type="button" id="previewMoveBtn" class="secondary" ${rank && localTurn && hasSelectedMove && !pendingPreview ? '' : 'disabled'}>Start preview</button>
+        </div>
+        <div class="cards" style="margin-top:10px;">${legalMoveOptions}</div>
+        <div class="actions" style="margin-top:10px;grid-template-columns:1fr 1fr;">
+          <button type="button" id="confirmMoveBtn" ${pendingPreview && localTurn ? '' : 'disabled'}>Confirm</button>
+          <button type="button" class="secondary" id="cancelPreviewBtn" ${pendingPreview && localTurn ? '' : 'disabled'}>Cancel preview</button>
+        </div>
+        <div class="actions" style="margin-top:10px;grid-template-columns:1fr 1fr;">
+          <button type="button" class="ghost" id="clearChoiceBtn" ${rank ? '' : 'disabled'}>Clear selection</button>
+          <span></span>
         </div>
       `;
 
-      const cancelBtn = document.getElementById('cancelChoice');
-      if (cancelBtn) {
-        cancelBtn.addEventListener('click', () => {
+      actionPanelEl.querySelectorAll('[data-move-index]').forEach((button) => {
+        button.addEventListener('click', () => {
+          selectedMoveIndex = Number(button.getAttribute('data-move-index'));
+          renderPanels();
+        });
+      });
+
+      const loadMovesBtn = document.getElementById('loadMovesBtn');
+      if (loadMovesBtn) {
+        loadMovesBtn.addEventListener('click', async () => {
+          if (!rank || !currentPlayerId) return;
+          try {
+            const result = await call({
+              type: 'request_legal_moves',
+              roomId: snapshot.roomId,
+              playerId: currentPlayerId,
+              card: rank,
+              expectedVersion: snapshot.version,
+              idempotencyKey: buildIdempotencyKey('legal-moves')
+            });
+            legalMovesForCard = result.response?.moves || [];
+            selectedMoveIndex = legalMovesForCard.length ? 0 : -1;
+            setStatus(legalMovesForCard.length ? `Fant ${legalMovesForCard.length} lovlige trekk.` : 'Ingen lovlige trekk for valgt kort.', !legalMovesForCard.length);
+            renderPanels();
+          } catch (error) {
+            setStatus(`Kunne ikke hente lovlige trekk: ${String(error)}`, true);
+          }
+        });
+      }
+
+      const previewMoveBtn = document.getElementById('previewMoveBtn');
+      if (previewMoveBtn) {
+        previewMoveBtn.addEventListener('click', async () => {
+          const move = legalMovesForCard[selectedMoveIndex];
+          if (!rank || !move || !currentPlayerId) return;
+          try {
+            await call({
+              type: 'start_move_preview',
+              roomId: snapshot.roomId,
+              playerId: currentPlayerId,
+              card: rank,
+              move,
+              expectedVersion: snapshot.version,
+              idempotencyKey: buildIdempotencyKey('start-preview')
+            });
+            setStatus('Preview startet. Bekreft eller avbryt.');
+            await loadRoom();
+          } catch (error) {
+            setStatus(`Kunne ikke starte preview: ${String(error)}`, true);
+          }
+        });
+      }
+
+      const confirmMoveBtn = document.getElementById('confirmMoveBtn');
+      if (confirmMoveBtn) {
+        confirmMoveBtn.addEventListener('click', async () => {
+          if (!currentPlayerId) return;
+          try {
+            await call({
+              type: 'confirm_move',
+              roomId: snapshot.roomId,
+              playerId: currentPlayerId,
+              expectedVersion: snapshot.version,
+              idempotencyKey: buildIdempotencyKey('confirm-move')
+            });
+            resetAllSelections();
+            setStatus('Trekk bekreftet.');
+            await loadRoom();
+          } catch (error) {
+            setStatus(`Kunne ikke bekrefte trekk: ${String(error)}`, true);
+          }
+        });
+      }
+
+      const cancelPreviewBtn = document.getElementById('cancelPreviewBtn');
+      if (cancelPreviewBtn) {
+        cancelPreviewBtn.addEventListener('click', async () => {
+          if (!currentPlayerId) return;
+          try {
+            await call({
+              type: 'cancel_move_preview',
+              roomId: snapshot.roomId,
+              playerId: currentPlayerId,
+              expectedVersion: snapshot.version,
+              idempotencyKey: buildIdempotencyKey('cancel-preview')
+            });
+            setStatus('Preview avbrutt.');
+            await loadRoom();
+          } catch (error) {
+            setStatus(`Kunne ikke avbryte preview: ${String(error)}`, true);
+          }
+        });
+      }
+
+      const clearBtn = document.getElementById('clearChoiceBtn');
+      if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
           selectedCardId = null;
+          resetMoveSelection();
           renderPanels();
         });
       }
@@ -328,8 +536,9 @@
       const currentPlayer = playerIdEl.value.trim();
       const isHost = currentPlayer && snapshot.hostPlayerId === currentPlayer;
       const full = players.length === snapshot.maxPlayers;
+      const allReady = full && players.every((player) => player.ready === true);
 
-      roomMetaEl.innerHTML = `<p>Rom: <strong>${snapshot.roomId}</strong> · ${players.length}/${snapshot.maxPlayers} spillere · status: ${snapshot.status}</p>`;
+      roomMetaEl.innerHTML = `<p>Rom: <strong>${snapshot.roomId}</strong> · ${players.length}/${snapshot.maxPlayers} spillere · status: ${snapshot.status} · ready: ${players.filter((player) => player.ready).length}/${snapshot.maxPlayers}</p>`;
       seatsEl.innerHTML = '';
       invitesEl.innerHTML = '';
 
@@ -341,6 +550,7 @@
           <strong>Sete ${seat.seatNo}</strong>
           <div>Lag ${seat.teamNo}, plass ${seat.slotInTeam}</div>
           <span class="pill ${player ? 'taken' : 'open'}">${player ? `Tatt av ${player.playerId}` : 'Ledig'}</span>
+          ${player ? `<span class="pill ${player.ready ? 'ready' : 'not-ready'}">${player.ready ? 'Ready' : 'Not ready'}</span>` : ''}
         `;
 
         if (!player && currentPlayer && snapshot.status === 'lobby') {
@@ -350,7 +560,15 @@
           joinBtn.textContent = 'Ta denne plassen';
           joinBtn.addEventListener('click', async () => {
             try {
-              await call({ type: 'join_room', roomId: snapshot.roomId, playerId: currentPlayer, teamNo: seat.teamNo, slotInTeam: seat.slotInTeam });
+              await call({
+                type: 'join_room',
+                roomId: snapshot.roomId,
+                playerId: currentPlayer,
+                teamNo: seat.teamNo,
+                slotInTeam: seat.slotInTeam,
+                expectedVersion: snapshot.version,
+                idempotencyKey: buildIdempotencyKey('join-room')
+              });
               setStatus(`Du tok sete ${seat.seatNo}.`);
               await loadRoom();
             } catch (error) {
@@ -358,6 +576,30 @@
             }
           });
           item.appendChild(joinBtn);
+        }
+
+        if (player && currentPlayer && player.playerId === currentPlayer && snapshot.status === 'lobby') {
+          const readyBtn = document.createElement('button');
+          readyBtn.type = 'button';
+          readyBtn.className = player.ready ? 'ghost' : '';
+          readyBtn.textContent = player.ready ? 'Sett som ikke ready' : 'Sett som ready';
+          readyBtn.addEventListener('click', async () => {
+            try {
+              await call({
+                type: 'set_ready',
+                roomId: snapshot.roomId,
+                playerId: currentPlayer,
+                isReady: !player.ready,
+                expectedVersion: snapshot.version,
+                idempotencyKey: buildIdempotencyKey('set-ready')
+              });
+              setStatus(!player.ready ? 'Du er markert som ready.' : 'Du er markert som ikke ready.');
+              await loadRoom();
+            } catch (error) {
+              setStatus(`Kunne ikke oppdatere ready-status: ${String(error)}`, true);
+            }
+          });
+          item.appendChild(readyBtn);
         }
 
         seatsEl.appendChild(item);
@@ -384,7 +626,7 @@
         }
       });
 
-      startMatchBtnEl.disabled = !isHost || !full || snapshot.status !== 'lobby';
+      startMatchBtnEl.disabled = !isHost || !allReady || snapshot.status !== 'lobby';
 
       const hasMatch = snapshot.status !== 'lobby' && snapshot.match;
       lobbyIntroEl.classList.toggle('hidden', hasMatch);
@@ -396,18 +638,16 @@
       if (hasMatch) {
         renderBoard();
         renderPanels();
+        if (snapshot.match?.winner) {
+          setStatus(`Spillet er ferdig. Vinner: ${JSON.stringify(snapshot.match.winner)}`);
+        }
+      } else {
+        resetAllSelections();
       }
     }
 
     async function fetchSnapshot(roomId, playerId) {
-      if (playerId) {
-        try {
-          return await call({ type: 'attach', roomId, playerId });
-        } catch (_) {
-          return call({ type: 'get_room', roomId });
-        }
-      }
-      return call({ type: 'get_room', roomId });
+      return call({ type: 'attach', roomId, playerId: playerId || undefined });
     }
 
     async function tryAutoJoinPreferredSeat() {
@@ -425,7 +665,15 @@
         preferredSeat = null;
         return;
       }
-      await call({ type: 'join_room', roomId: snapshot.roomId, playerId: currentPlayer, teamNo: preferredSeat.teamNo, slotInTeam: preferredSeat.slotInTeam });
+      await call({
+        type: 'join_room',
+        roomId: snapshot.roomId,
+        playerId: currentPlayer,
+        teamNo: preferredSeat.teamNo,
+        slotInTeam: preferredSeat.slotInTeam,
+        expectedVersion: snapshot.version,
+        idempotencyKey: buildIdempotencyKey('autojoin-seat')
+      });
       setStatus('Du ble automatisk satt i setet fra invite-linken.');
       preferredSeat = null;
       await fetchSnapshot(snapshot.roomId, currentPlayer);
@@ -440,13 +688,29 @@
         return;
       }
 
+      if (isLoadingRoom) {
+        refreshRequestedWhileLoading = true;
+        return;
+      }
+
+      isLoadingRoom = true;
       try {
-        await fetchSnapshot(roomId, playerId);
+        const result = await fetchSnapshot(roomId, playerId);
         render();
         await tryAutoJoinPreferredSeat();
-        setStatus('Romstatus oppdatert.');
+        if (result.wasStale) {
+          setStatus('Ignorerte utdatert snapshot.');
+        } else {
+          setStatus('Romstatus oppdatert.');
+        }
       } catch (error) {
         setStatus(`Kunne ikke hente rom: ${String(error)}`, true);
+      } finally {
+        isLoadingRoom = false;
+        if (refreshRequestedWhileLoading) {
+          refreshRequestedWhileLoading = false;
+          loadRoom();
+        }
       }
     }
 
@@ -458,7 +722,13 @@
         return;
       }
       try {
-        await call({ type: 'start_match', roomId, playerId });
+        await call({
+          type: 'start_match',
+          roomId,
+          playerId,
+          expectedVersion: snapshot?.version,
+          idempotencyKey: buildIdempotencyKey('start-match')
+        });
         setStatus('Spillet er startet.');
         await loadRoom();
       } catch (error) {
