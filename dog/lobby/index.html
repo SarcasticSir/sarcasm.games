@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dog · Lobby</title>
+  <style>
+    :root { --bg:#0b0c10; --card:#1d1f27; --text:#eef1f7; --muted:#aeb6c8; --border:#303444; --accent:#50d3a2; --danger:#ff6b6b; }
+    *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,Segoe UI,Roboto,Arial;padding:20px}
+    .wrap{max-width:980px;margin:0 auto;display:grid;gap:14px}.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px}
+    h1,h2{margin:0 0 8px} p{margin:0;color:var(--muted)} .grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));margin-top:12px}
+    label{display:block;margin-bottom:6px;color:var(--muted);font-size:.93rem} input,button{width:100%;padding:11px 12px;border-radius:10px;border:1px solid var(--border);background:#12141c;color:var(--text);font:inherit}
+    button{cursor:pointer;border:0;background:var(--accent);font-weight:700;color:#082117} button.secondary{background:#3b4254;color:var(--text);border:1px solid var(--border)} button.ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}
+    .actions{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));margin-top:12px}
+    .status{min-height:20px;margin-top:8px;font-weight:600;color:var(--muted)} .status.error{color:var(--danger)}
+    .seats{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:10px}
+    .seat{border:1px solid var(--border);border-radius:10px;padding:10px;background:#131722;display:grid;gap:8px}
+    .seat strong{font-size:1rem}.pill{display:inline-block;border-radius:999px;padding:2px 8px;font-size:.82rem;font-weight:700}
+    .open{background:#203a31;color:#9cf0d0;border:1px solid #2d6351}.taken{background:#3a2931;color:#ffb4c3;border:1px solid #6c3c4a}
+    .invite-list{display:grid;gap:8px;margin-top:10px}.invite-item{border:1px solid var(--border);padding:10px;border-radius:10px;background:#131722}
+    code{word-break:break-all}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="card">
+      <h1>Dog lobby</h1>
+      <p>Join med romkode + velg ledig sete. Host kan starte når alle seter er fylt.</p>
+    </section>
+
+    <section class="card">
+      <h2>Rom</h2>
+      <div class="grid">
+        <div>
+          <label for="roomId">Romkode</label>
+          <input id="roomId" placeholder="DOG7K2" />
+        </div>
+        <div>
+          <label for="playerId">Ditt navn / spiller-ID</label>
+          <input id="playerId" placeholder="f.eks. Marius" />
+        </div>
+      </div>
+      <div class="actions">
+        <button id="loadRoomBtn" class="secondary" type="button">Hent romstatus</button>
+        <button id="copyRoomCodeBtn" class="ghost" type="button">Kopier romkode</button>
+        <button id="newRoomBtn" class="secondary" type="button">Lag nytt rom</button>
+      </div>
+      <p id="status" class="status">Klar.</p>
+    </section>
+
+    <section class="card">
+      <h2>Seter</h2>
+      <div id="roomMeta"></div>
+      <div id="seats" class="seats"></div>
+      <div class="actions">
+        <button id="startMatchBtn" type="button">Start spill (host)</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Invite-lenker per sete</h2>
+      <p>Host kan kopiere en lenke per ledig plass og sende direkte til venn.</p>
+      <div id="invites" class="invite-list"></div>
+    </section>
+  </main>
+
+  <script>
+    const DOG_ENDPOINT = 'https://hmwzdnebhqavatuxmtki.supabase.co/functions/v1/dog-room';
+    let snapshot = null;
+    let pollTimer = null;
+    let preferredSeat = null;
+
+    const roomIdEl = document.getElementById('roomId');
+    const playerIdEl = document.getElementById('playerId');
+    const statusEl = document.getElementById('status');
+    const roomMetaEl = document.getElementById('roomMeta');
+    const seatsEl = document.getElementById('seats');
+    const invitesEl = document.getElementById('invites');
+    const startMatchBtnEl = document.getElementById('startMatchBtn');
+
+    function setStatus(text, isError = false) {
+      statusEl.textContent = text;
+      statusEl.classList.toggle('error', isError);
+    }
+
+    function getQueryDefaults() {
+      const params = new URLSearchParams(window.location.search);
+      const room = params.get('room');
+      const player = params.get('player');
+      const teamNo = params.get('teamNo');
+      const slotInTeam = params.get('slotInTeam');
+      if (room) roomIdEl.value = room;
+      if (player) playerIdEl.value = player;
+      if (teamNo && slotInTeam) preferredSeat = { teamNo: Number(teamNo), slotInTeam: Number(slotInTeam) };
+    }
+
+    async function call(command) {
+      const res = await fetch(DOG_ENDPOINT, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(command)
+      });
+      const body = await res.json();
+      if (!res.ok || !body.ok) throw new Error(body.error || 'Request failed');
+      return body.result.public;
+    }
+
+    function seatNo(teamNo, slotInTeam, teamCount) {
+      return (slotInTeam - 1) * teamCount + teamNo;
+    }
+
+    function allSeats(config) {
+      const seats = [];
+      for (let slot = 1; slot <= config.playersPerTeam; slot += 1) {
+        for (let team = 1; team <= config.teamCount; team += 1) {
+          seats.push({ teamNo: team, slotInTeam: slot, seatNo: seatNo(team, slot, config.teamCount) });
+        }
+      }
+      return seats.sort((a, b) => a.seatNo - b.seatNo);
+    }
+
+    function render() {
+      if (!snapshot) return;
+
+      const players = snapshot.players || [];
+      const seats = allSeats(snapshot.config);
+      const currentPlayer = playerIdEl.value.trim();
+      const isHost = currentPlayer && snapshot.hostPlayerId === currentPlayer;
+      const full = players.length === snapshot.maxPlayers;
+
+      roomMetaEl.innerHTML = `<p>Rom: <strong>${snapshot.roomId}</strong> · ${players.length}/${snapshot.maxPlayers} spillere · status: ${snapshot.status}</p>`;
+      seatsEl.innerHTML = '';
+      invitesEl.innerHTML = '';
+
+      seats.forEach((seat) => {
+        const player = players.find((p) => p.teamNo === seat.teamNo && p.slotInTeam === seat.slotInTeam);
+        const item = document.createElement('div');
+        item.className = 'seat';
+        const statusClass = player ? 'taken' : 'open';
+        item.innerHTML = `
+          <strong>Sete ${seat.seatNo}</strong>
+          <div>Lag ${seat.teamNo}, plass ${seat.slotInTeam}</div>
+          <span class="pill ${statusClass}">${player ? `Tatt av ${player.playerId}` : 'Ledig'}</span>
+        `;
+
+        if (!player && currentPlayer && snapshot.status === 'lobby') {
+          const joinBtn = document.createElement('button');
+          joinBtn.type = 'button';
+          joinBtn.className = 'secondary';
+          joinBtn.textContent = 'Ta denne plassen';
+          joinBtn.addEventListener('click', async () => {
+            try {
+              await call({ type: 'join_room', roomId: snapshot.roomId, playerId: currentPlayer, teamNo: seat.teamNo, slotInTeam: seat.slotInTeam });
+              setStatus(`Du tok sete ${seat.seatNo}.`);
+              await loadRoom();
+            } catch (error) {
+              setStatus(`Kunne ikke ta sete: ${String(error)}`, true);
+            }
+          });
+          item.appendChild(joinBtn);
+        }
+
+        seatsEl.appendChild(item);
+
+        if (!player) {
+          const inviteUrl = new URL(window.location.href);
+          inviteUrl.search = '';
+          inviteUrl.searchParams.set('room', snapshot.roomId);
+          inviteUrl.searchParams.set('teamNo', String(seat.teamNo));
+          inviteUrl.searchParams.set('slotInTeam', String(seat.slotInTeam));
+          const invite = document.createElement('div');
+          invite.className = 'invite-item';
+          invite.innerHTML = `<div>Sete ${seat.seatNo} (lag ${seat.teamNo}, plass ${seat.slotInTeam})</div><code>${inviteUrl.toString()}</code>`;
+          const copyBtn = document.createElement('button');
+          copyBtn.type = 'button';
+          copyBtn.className = 'ghost';
+          copyBtn.textContent = 'Kopier link';
+          copyBtn.addEventListener('click', async () => {
+            await navigator.clipboard.writeText(inviteUrl.toString());
+            setStatus(`Invite-link for sete ${seat.seatNo} kopiert.`);
+          });
+          invite.appendChild(copyBtn);
+          invitesEl.appendChild(invite);
+        }
+      });
+
+      startMatchBtnEl.disabled = !isHost || !full || snapshot.status !== 'lobby';
+    }
+
+
+    async function tryAutoJoinPreferredSeat() {
+      if (!snapshot || !preferredSeat) return;
+      const currentPlayer = playerIdEl.value.trim();
+      if (!currentPlayer) return;
+      const alreadyJoined = (snapshot.players || []).some((p) => p.playerId === currentPlayer);
+      if (alreadyJoined) {
+        preferredSeat = null;
+        return;
+      }
+      const taken = (snapshot.players || []).some((p) => p.teamNo === preferredSeat.teamNo && p.slotInTeam === preferredSeat.slotInTeam);
+      if (taken) {
+        setStatus('Setet i invite-linken er allerede tatt. Velg et annet.', true);
+        preferredSeat = null;
+        return;
+      }
+      await call({ type: 'join_room', roomId: snapshot.roomId, playerId: currentPlayer, teamNo: preferredSeat.teamNo, slotInTeam: preferredSeat.slotInTeam });
+      setStatus('Du ble automatisk satt i setet fra invite-linken.');
+      preferredSeat = null;
+      const pub = await call({ type: 'get_room', roomId: snapshot.roomId });
+      snapshot = pub;
+      render();
+    }
+
+    async function loadRoom() {
+      const roomId = roomIdEl.value.trim().toUpperCase();
+      if (!roomId) {
+        setStatus('Skriv inn romkode først.', true);
+        return;
+      }
+
+      try {
+        const pub = await call({ type: 'get_room', roomId });
+        snapshot = pub;
+        render();
+        await tryAutoJoinPreferredSeat();
+        setStatus('Romstatus oppdatert.');
+      } catch (error) {
+        setStatus(`Kunne ikke hente rom: ${String(error)}`, true);
+      }
+    }
+
+    async function startMatch() {
+      const roomId = roomIdEl.value.trim().toUpperCase();
+      const playerId = playerIdEl.value.trim();
+      if (!roomId || !playerId) {
+        setStatus('Du må ha både romkode og spiller-ID.', true);
+        return;
+      }
+      try {
+        await call({ type: 'start_match', roomId, playerId });
+        setStatus('Spillet er startet.');
+        await loadRoom();
+      } catch (error) {
+        setStatus(`Kunne ikke starte: ${String(error)}`, true);
+      }
+    }
+
+    document.getElementById('loadRoomBtn').addEventListener('click', loadRoom);
+    document.getElementById('startMatchBtn').addEventListener('click', startMatch);
+    document.getElementById('newRoomBtn').addEventListener('click', () => { window.location.href = '/dog/'; });
+    document.getElementById('copyRoomCodeBtn').addEventListener('click', async () => {
+      const roomId = roomIdEl.value.trim().toUpperCase();
+      if (!roomId) return;
+      await navigator.clipboard.writeText(roomId);
+      setStatus('Romkode kopiert.');
+    });
+
+    roomIdEl.addEventListener('change', loadRoom);
+
+    getQueryDefaults();
+    if (roomIdEl.value) loadRoom();
+    pollTimer = setInterval(() => { if (roomIdEl.value.trim()) loadRoom(); }, 3000);
+    window.addEventListener('beforeunload', () => clearInterval(pollTimer));
+  </script>
+</body>
+</html>
