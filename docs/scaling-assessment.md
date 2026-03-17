@@ -2,7 +2,7 @@
 
 ## Current stack
 - Hosting/runtime: Vercel serverless functions.
-- Database: Postgres via `@vercel/postgres`.
+- Database: Postgres (Supabase) via the `pg` driver.
 
 ## 1) Shared state in serverless
 Status: **Partly at risk**.
