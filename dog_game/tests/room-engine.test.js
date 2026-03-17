@@ -294,6 +294,95 @@ test('confirm_move advances to next round when all players are blocked', () => {
   assert.equal(state.match.roundNumber, 2);
 });
 
+test('round advance discards all remaining hand cards before new deal', () => {
+  let state = bootstrapFourPlayerLobby();
+  state = handleRoomCommand(state, {
+    type: 'start_match',
+    playerId: 'P1',
+    expectedVersion: state.version
+  }).state;
+
+  // Force a state where everyone is blocked with cards still in hand,
+  // while keeping total card count intact by reusing dealt card IDs.
+  state.match.handsByPlayerId = Object.fromEntries(
+    Object.entries(state.match.handsByPlayerId).map(([playerId, hand]) => [
+      playerId,
+      hand.map((card) => ({ ...card, rank: 'JACK' }))
+    ])
+  );
+
+  const totalCardsBefore =
+    state.match.deckState.drawPile.length +
+    state.match.deckState.discardPile.length +
+    Object.values(state.match.handsByPlayerId).reduce((sum, hand) => sum + hand.length, 0);
+
+  state.match.turnIndex = 0;
+
+  state = handleRoomCommand(state, {
+    type: 'pass_turn_if_blocked',
+    playerId: 'P1',
+    expectedVersion: state.version
+  }).state;
+
+  const totalCardsAfter =
+    state.match.deckState.drawPile.length +
+    state.match.deckState.discardPile.length +
+    Object.values(state.match.handsByPlayerId).reduce((sum, hand) => sum + hand.length, 0);
+
+  assert.equal(state.match.roundNumber, 2);
+  assert.equal(totalCardsAfter, totalCardsBefore);
+});
+
+test('pass_turn_if_blocked advances turn when active player has no legal moves', () => {
+  let state = bootstrapFourPlayerLobby();
+  state = handleRoomCommand(state, {
+    type: 'start_match',
+    playerId: 'P1',
+    expectedVersion: state.version
+  }).state;
+
+  state.match.handsByPlayerId = {
+    P1: [{ id: 'P1-BLK', rank: 'JACK', suit: 'HEARTS' }],
+    P2: [{ id: 'P2-ACE', rank: 'ACE', suit: 'SPADES' }],
+    P3: [{ id: 'P3-BLK', rank: 'JACK', suit: 'HEARTS' }],
+    P4: [{ id: 'P4-BLK', rank: 'JACK', suit: 'HEARTS' }]
+  };
+  state.match.turnIndex = 0;
+
+  const passed = handleRoomCommand(state, {
+    type: 'pass_turn_if_blocked',
+    playerId: 'P1',
+    expectedVersion: state.version
+  });
+
+  state = passed.state;
+  assert.equal(passed.response.passed, true);
+  assert.equal(state.match.turnOrder[state.match.turnIndex], 'P2');
+  assert.equal(state.match.blockedPlayerIds.includes('P1'), true);
+});
+
+test('pass_turn_if_blocked rejects pass when legal moves exist', () => {
+  let state = bootstrapFourPlayerLobby();
+  state = handleRoomCommand(state, {
+    type: 'start_match',
+    playerId: 'P1',
+    expectedVersion: state.version
+  }).state;
+
+  state.match.handsByPlayerId.P1 = [{ id: 'P1-ACE', rank: 'ACE', suit: 'SPADES' }];
+  state.match.turnIndex = 0;
+
+  assert.throws(
+    () =>
+      handleRoomCommand(state, {
+        type: 'pass_turn_if_blocked',
+        playerId: 'P1',
+        expectedVersion: state.version
+      }),
+    /Cannot pass turn while legal moves are available/
+  );
+});
+
 test('idempotency key returns stable response for duplicate command submissions', () => {
   let state = createRoom({
     roomId: 'ROOM3',
@@ -340,6 +429,7 @@ test('public/private projections hide opponent hands and keep own hand visible',
   const privateView = getPlayerPrivateView(state, 'P1');
 
   assert.equal(publicView.match.handCountsByPlayerId.P1, 6);
+  assert.ok(Array.isArray(publicView.match.gameState.pieces));
   assert.equal(privateView.private.hand.length, 6);
   assert.equal('handsByPlayerId' in publicView.match, false);
 });

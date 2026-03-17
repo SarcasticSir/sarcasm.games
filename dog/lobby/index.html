@@ -47,6 +47,7 @@
     .zone-label{font-size:.68rem;color:#cfe8da;font-weight:700;text-align:center}
     .piece-row{display:flex;gap:4px;flex-wrap:wrap;justify-content:center}
     .piece{width:10px;height:10px;border-radius:50%;border:1px solid #ffffff99}
+    .piece-token{position:absolute;transform:translate(-50%,-50%);width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.55rem;font-weight:700;border:1px solid #fff;color:#07101f;z-index:4;box-shadow:0 1px 4px #0008}
     .team-1{background:#d85f8f}.team-2{background:#5fc7d8}.team-3{background:#c6d85f}.team-4{background:#9d7dff}
 
     .side-panel{display:grid;gap:10px}
@@ -119,7 +120,19 @@
   </main>
 
   <script>
-    const DOG_ENDPOINT = 'https://hmwzdnebhqavatuxmtki.supabase.co/functions/v1/dog-room';
+    const DEFAULT_DOG_ENDPOINT = 'https://hmwzdnebhqavatuxmtki.supabase.co/functions/v1/dog-room';
+
+    function resolveDogEndpoint() {
+      const params = new URLSearchParams(window.location.search);
+      const fromQuery = params.get('endpoint');
+      const fromGlobal = window.DOG_ENDPOINT;
+      const fromStorage = window.localStorage.getItem('dog.endpoint');
+      const endpoint = fromQuery || fromGlobal || fromStorage || DEFAULT_DOG_ENDPOINT;
+      window.localStorage.setItem('dog.endpoint', endpoint);
+      return endpoint;
+    }
+
+    const DOG_ENDPOINT = resolveDogEndpoint();
     const TRACK_SPACES_BETWEEN_PLAYERS = 16;
 
     let snapshot = null;
@@ -255,6 +268,15 @@
       const players = [...(snapshot.players || [])].sort((a, b) => a.seatNo - b.seatNo);
       const playerCount = Math.max(snapshot.maxPlayers || players.length, 4);
       const trackNodeCount = playerCount * TRACK_SPACES_BETWEEN_PLAYERS;
+      const gameState = snapshot.match?.gameState || null;
+      const pieces = gameState?.pieces || [];
+      const piecesByOwner = Object.fromEntries(players.map((player) => [player.playerId, []]));
+
+      pieces.forEach((piece) => {
+        if (piecesByOwner[piece.ownerId]) {
+          piecesByOwner[piece.ownerId].push(piece);
+        }
+      });
 
       for (let i = 0; i < trackNodeCount; i += 1) {
         const angle = (-Math.PI / 2) + ((Math.PI * 2) * i / trackNodeCount);
@@ -277,18 +299,49 @@
 
         const startPoint = toPoint(angle, 55);
         const startZone = appendNode(`start-zone ${teamClass(player.teamNo)}`, startPoint);
+        const ownerPieces = piecesByOwner[player.playerId] || [];
+        const inStartCount = ownerPieces.filter((piece) => piece.isInStart).length;
+        const inHomeCount = ownerPieces.filter((piece) => piece.isInHome).length;
         startZone.innerHTML = `
           <div class="zone-label">BO · ${player.playerId}</div>
+          <div class="zone-label" style="font-size:.72rem;opacity:.85;">Start: ${inStartCount} · Home: ${inHomeCount}</div>
           <div class="piece-row"></div>
         `;
 
         const pieceRow = startZone.querySelector('.piece-row');
-        for (let pieceIndex = 0; pieceIndex < 4; pieceIndex += 1) {
+        for (let pieceIndex = 0; pieceIndex < inStartCount; pieceIndex += 1) {
           const piece = document.createElement('span');
           piece.className = `piece ${teamClass(player.teamNo)}`;
           pieceRow.appendChild(piece);
         }
+
+        ownerPieces
+          .filter((piece) => piece.isInHome)
+          .forEach((piece) => {
+            const laneStep = (piece.homeIndex ?? 0) + 1;
+            const lanePoint = toPoint(angle, 41 - (laneStep * 7));
+            const token = appendNode(`piece-token ${teamClass(player.teamNo)}`, lanePoint);
+            token.textContent = player.playerId.slice(0, 1).toUpperCase();
+          });
       });
+
+      pieces
+        .filter((piece) => piece.isOnBoard && Number.isInteger(piece.position))
+        .forEach((piece) => {
+          const owner = players.find((player) => player.playerId === piece.ownerId);
+          if (!owner) {
+            return;
+          }
+
+          const square = ((piece.position % trackNodeCount) + trackNodeCount) % trackNodeCount;
+          const angle = (-Math.PI / 2) + ((Math.PI * 2) * square / trackNodeCount);
+          const point = toPoint(angle, 41);
+          const token = appendNode(`piece-token ${teamClass(owner.teamNo)}`, point);
+          token.textContent = owner.playerId.slice(0, 1).toUpperCase();
+          if (piece.isImmune) {
+            token.style.outline = '2px solid #ffe066';
+          }
+        });
     }
 
     function selectedCard() {
@@ -420,8 +473,8 @@
           <button type="button" class="secondary" id="cancelPreviewBtn" ${pendingPreview && localTurn ? '' : 'disabled'}>Cancel preview</button>
         </div>
         <div class="actions" style="margin-top:10px;grid-template-columns:1fr 1fr;">
+          <button type="button" class="ghost" id="passTurnBtn" ${localTurn && !pendingPreview ? '' : 'disabled'}>Pass (blocked)</button>
           <button type="button" class="ghost" id="clearChoiceBtn" ${rank ? '' : 'disabled'}>Clear selection</button>
-          <span></span>
         </div>
       `;
 
@@ -519,6 +572,28 @@
         });
       }
 
+
+      const passTurnBtn = document.getElementById('passTurnBtn');
+      if (passTurnBtn) {
+        passTurnBtn.addEventListener('click', async () => {
+          if (!currentPlayerId) return;
+          try {
+            await call({
+              type: 'pass_turn_if_blocked',
+              roomId: snapshot.roomId,
+              playerId: currentPlayerId,
+              expectedVersion: snapshot.version,
+              idempotencyKey: buildIdempotencyKey('pass-turn')
+            });
+            resetAllSelections();
+            setStatus('Tur passert (ingen lovlige trekk).');
+            await loadRoom();
+          } catch (error) {
+            setStatus(`Kunne ikke passe tur: ${String(error)}`, true);
+          }
+        });
+      }
+
       const clearBtn = document.getElementById('clearChoiceBtn');
       if (clearBtn) {
         clearBtn.addEventListener('click', () => {
@@ -610,6 +685,7 @@
           inviteUrl.searchParams.set('room', snapshot.roomId);
           inviteUrl.searchParams.set('teamNo', String(seat.teamNo));
           inviteUrl.searchParams.set('slotInTeam', String(seat.slotInTeam));
+          inviteUrl.searchParams.set('endpoint', DOG_ENDPOINT);
           const invite = document.createElement('div');
           invite.className = 'invite-item';
           invite.innerHTML = `<div>Sete ${seat.seatNo} (lag ${seat.teamNo}, plass ${seat.slotInTeam})</div><code>${inviteUrl.toString()}</code>`;
@@ -738,7 +814,11 @@
 
     document.getElementById('loadRoomBtn').addEventListener('click', loadRoom);
     document.getElementById('startMatchBtn').addEventListener('click', startMatch);
-    document.getElementById('newRoomBtn').addEventListener('click', () => { window.location.href = '/dog/'; });
+    document.getElementById('newRoomBtn').addEventListener('click', () => {
+      const target = new URL('/dog/', window.location.origin);
+      target.searchParams.set('endpoint', DOG_ENDPOINT);
+      window.location.href = target.toString();
+    });
     document.getElementById('copyRoomCodeBtn').addEventListener('click', async () => {
       const roomId = roomIdEl.value.trim().toUpperCase();
       if (!roomId) return;
