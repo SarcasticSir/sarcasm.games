@@ -62,8 +62,10 @@ function sortPlayersBySeat(players: Player[]) {
 function toPublic(state: RoomState) {
   return {
     roomId: state.roomId,
+    hostPlayerId: state.hostPlayerId,
     status: state.status,
     version: state.version,
+    maxPlayers: state.maxPlayers,
     config: state.config,
     players: sortPlayersBySeat(state.players).map((p) => ({
       playerId: p.playerId,
@@ -152,6 +154,14 @@ function updateRoom(command: any) {
         roomId,
         public: toPublic(state),
         private: { playerId: command.playerId ?? null }
+      };
+    }
+
+    case 'get_room': {
+      return {
+        ok: true,
+        roomId,
+        public: toPublic(state)
       };
     }
 
@@ -248,10 +258,6 @@ function updateRoom(command: any) {
 
       if (state.players.length !== state.maxPlayers) {
         throw new Error('Room is not full');
-      }
-
-      if (state.players.some((p) => p.ready !== true)) {
-        throw new Error('All players must be ready');
       }
 
       state.status = 'active';
