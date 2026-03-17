@@ -44,6 +44,10 @@ Then put your handler implementation into:
 
 ## 2.1) Recommended `index.ts` shape (copy/paste)
 
+> Important: if you edit code directly in Supabase Dashboard, you do **not** have access
+> to local repo paths like `../../../../services/...`. Use the standalone template in
+> `dog_game/supabase/functions/dog-room/index.ts` exactly as-is.
+
 Use a function file that:
 
 - answers `OPTIONS` before loading game modules,
@@ -163,6 +167,19 @@ curl -i -X POST \
    - `Set ready`
 5. Host clicks:
    - `Start match`
+
+
+### If you see this exact error
+
+```json
+{
+  "ok": false,
+  "error": "Module not found: file:///var/tmp/services/realtime-server/supabase-room-service.js"
+}
+```
+
+It means the function still references repository-relative imports that do not exist
+in Supabase runtime. Replace function code with the standalone template and redeploy.
 
 ## 7) If something fails
 
