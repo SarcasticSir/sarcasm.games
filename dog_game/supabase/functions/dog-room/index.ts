@@ -45,6 +45,7 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 const ALLOW_IN_MEMORY_FALLBACK = Deno.env.get('DOG_ALLOW_IN_MEMORY_FALLBACK') === '1';
 const ROOM_TABLE = 'dog_room_states';
+const STORAGE_TIMEOUT_MS = 5000;
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -112,14 +113,22 @@ async function loadState(roomId: string): Promise<RoomState | null> {
   }
 
   const url = `${SUPABASE_URL}/rest/v1/${ROOM_TABLE}?room_id=eq.${encodeURIComponent(roomId)}&select=state&limit=1`;
-  const response = await fetch(url, {
-    method: 'GET',
-    headers: {
-      apikey: SERVICE_ROLE_KEY,
-      authorization: `Bearer ${SERVICE_ROLE_KEY}`,
-      accept: 'application/json'
-    }
-  });
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        apikey: SERVICE_ROLE_KEY,
+        authorization: `Bearer ${SERVICE_ROLE_KEY}`,
+        accept: 'application/json'
+      },
+      signal: AbortSignal.timeout(STORAGE_TIMEOUT_MS)
+    });
+  } catch (error) {
+    throw new Error(
+      `Room load request failed (${roomId}): ${error instanceof Error ? error.message : String(error)}`
+    );
+  }
 
   if (!response.ok) {
     const details = (await response.text()).slice(0, 220);
@@ -145,22 +154,30 @@ async function saveState(state: RoomState) {
   }
 
   const url = `${SUPABASE_URL}/rest/v1/${ROOM_TABLE}`;
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      apikey: SERVICE_ROLE_KEY,
-      authorization: `Bearer ${SERVICE_ROLE_KEY}`,
-      'content-type': 'application/json',
-      prefer: 'resolution=merge-duplicates'
-    },
-    body: JSON.stringify([
-      {
-        room_id: state.roomId,
-        state,
-        updated_at: new Date().toISOString()
-      }
-    ])
-  });
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        apikey: SERVICE_ROLE_KEY,
+        authorization: `Bearer ${SERVICE_ROLE_KEY}`,
+        'content-type': 'application/json',
+        prefer: 'resolution=merge-duplicates'
+      },
+      body: JSON.stringify([
+        {
+          room_id: state.roomId,
+          state,
+          updated_at: new Date().toISOString()
+        }
+      ]),
+      signal: AbortSignal.timeout(STORAGE_TIMEOUT_MS)
+    });
+  } catch (error) {
+    throw new Error(
+      `Room save request failed (${state.roomId}): ${error instanceof Error ? error.message : String(error)}`
+    );
+  }
 
   if (!response.ok) {
     const details = (await response.text()).slice(0, 220);
