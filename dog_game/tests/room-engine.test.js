@@ -358,6 +358,56 @@ test('evaluateCurrentTurnPlayability reflects must-play / no-legal-move output s
 });
 
 
+test('team support-play lets completed player use teammate pieces for legal moves', () => {
+  let state = bootstrapFourPlayerTeamsLobby();
+  state = handleRoomCommand(state, {
+    type: 'start_match',
+    playerId: 'P1',
+    expectedVersion: state.version
+  }).state;
+
+  state.match.phase = 'play';
+  state.match.turnIndex = 0;
+  state.match.pendingExchangeByPlayerId = {};
+
+  for (const piece of state.match.gameState.pieces) {
+    if (piece.ownerId === 'P1') {
+      piece.isInStart = false;
+      piece.isOnBoard = false;
+      piece.isInHome = true;
+      piece.homeIndex = 0;
+      piece.position = null;
+      piece.isImmune = false;
+      piece.hasCompletedLap = true;
+    }
+
+    if (piece.ownerId === 'P3') {
+      piece.isInStart = true;
+      piece.isOnBoard = false;
+      piece.isInHome = false;
+      piece.homeIndex = null;
+      piece.position = null;
+      piece.isImmune = false;
+      piece.hasCompletedLap = false;
+    }
+  }
+
+  state.match.handsByPlayerId.P1 = [{ id: 'P1-ACE', rank: 'ACE', suit: 'SPADES' }];
+
+  const legal = handleRoomCommand(state, {
+    type: 'request_legal_moves',
+    playerId: 'P1',
+    card: 'ACE',
+    expectedVersion: state.version
+  });
+
+  const teammateExit = legal.response.moves.find((move) => move.action === 'EXIT_START' && move.pieceId.startsWith('P3-'));
+  assert.ok(teammateExit);
+
+  const playability = evaluateCurrentTurnPlayability(state);
+  assert.equal(playability.hasAnyLegalMove, true);
+});
+
 test('confirm_move finishes match when winning move sends final piece home', () => {
   let state = bootstrapFourPlayerLobby();
   state = handleRoomCommand(state, {
