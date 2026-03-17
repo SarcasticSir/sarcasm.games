@@ -119,11 +119,14 @@
     </section>
   </main>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     const HOST_DEFAULT_ENDPOINTS = Object.freeze({
       'sarcasm.games': 'https://hmwzdnebhqavatuxmtki.supabase.co/functions/v1/dog-room',
       'www.sarcasm.games': 'https://hmwzdnebhqavatuxmtki.supabase.co/functions/v1/dog-room'
     });
+
+    const REALTIME_HEALTHY_GRACE_MS = 10000;
 
     function resolveDogEndpoint() {
       const params = new URLSearchParams(window.location.search);
@@ -132,11 +135,32 @@
       const fromStorage = window.localStorage.getItem('dog.endpoint');
       const inferred = HOST_DEFAULT_ENDPOINTS[window.location.hostname] || '';
       const endpoint = fromQuery || fromGlobal || fromStorage || inferred;
-      if (endpoint) window.localStorage.setItem('dog.endpoint', endpoint);
+      if (fromQuery || fromGlobal || fromStorage) {
+        window.localStorage.setItem('dog.endpoint', endpoint);
+      }
       return endpoint;
     }
 
     const DOG_ENDPOINT = resolveDogEndpoint();
+    const SHOULD_EMBED_ENDPOINT_IN_INVITES = !HOST_DEFAULT_ENDPOINTS[window.location.hostname];
+    const SUPABASE_URL = (() => {
+      if (!DOG_ENDPOINT) return '';
+      try {
+        const endpointUrl = new URL(DOG_ENDPOINT);
+        return `${endpointUrl.protocol}//${endpointUrl.hostname}`;
+      } catch (_error) {
+        return '';
+      }
+    })();
+    const SUPABASE_ANON_KEY = (() => {
+      const params = new URLSearchParams(window.location.search);
+      const fromQuery = params.get('supabaseAnonKey');
+      const fromGlobal = window.DOG_SUPABASE_ANON_KEY;
+      const fromStorage = window.localStorage.getItem('dog.supabaseAnonKey');
+      const key = fromQuery || fromGlobal || fromStorage || '';
+      if (key) window.localStorage.setItem('dog.supabaseAnonKey', key);
+      return key;
+    })();
     const TRACK_SPACES_BETWEEN_PLAYERS = 16;
 
     let snapshot = null;
@@ -149,6 +173,11 @@
     let selectedMoveIndex = -1;
     let isLoadingRoom = false;
     let refreshRequestedWhileLoading = false;
+    let pendingLoadRoomOptions = null;
+    let lastRealtimeMessageAt = 0;
+    let realtimeClient = null;
+    let realtimeRoomChannel = null;
+    let subscribedRoomId = null;
 
     const roomIdEl = document.getElementById('roomId');
     const playerIdEl = document.getElementById('playerId');
@@ -198,6 +227,14 @@
 
     function buildIdempotencyKey(prefix) {
       return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    }
+
+    function markRealtimeHealthy() {
+      lastRealtimeMessageAt = Date.now();
+    }
+
+    function isRealtimeHealthy() {
+      return Boolean(lastRealtimeMessageAt && (Date.now() - lastRealtimeMessageAt) <= REALTIME_HEALTHY_GRACE_MS);
     }
 
     function normalize(result) {
@@ -691,7 +728,7 @@
           inviteUrl.searchParams.set('room', snapshot.roomId);
           inviteUrl.searchParams.set('teamNo', String(seat.teamNo));
           inviteUrl.searchParams.set('slotInTeam', String(seat.slotInTeam));
-          if (DOG_ENDPOINT) inviteUrl.searchParams.set('endpoint', DOG_ENDPOINT);
+          if (DOG_ENDPOINT && SHOULD_EMBED_ENDPOINT_IN_INVITES) inviteUrl.searchParams.set('endpoint', DOG_ENDPOINT);
           const invite = document.createElement('div');
           invite.className = 'invite-item';
           invite.innerHTML = `<div>Sete ${seat.seatNo} (lag ${seat.teamNo}, plass ${seat.slotInTeam})</div><code>${inviteUrl.toString()}</code>`;
@@ -733,6 +770,85 @@
       return call({ type: 'attach', roomId, playerId: playerId || undefined });
     }
 
+    async function handleRealtimeRoomUpdate(payload) {
+      const rowState = payload?.new?.state;
+      const incomingVersion = Number(rowState?.version ?? -1);
+      const currentVersion = Number(snapshot?.version ?? -1);
+      markRealtimeHealthy();
+
+      if (!Number.isFinite(incomingVersion) || incomingVersion < 0) {
+        await loadRoom({ forceAttach: true, source: 'realtime-invalid-payload' });
+        return;
+      }
+
+      if (incomingVersion < currentVersion) {
+        return;
+      }
+
+      await loadRoom({ forceAttach: true, source: 'realtime-update' });
+    }
+
+    function initRealtimeClient() {
+      if (realtimeClient || !SUPABASE_URL || !SUPABASE_ANON_KEY || !window.supabase?.createClient) {
+        return;
+      }
+
+      realtimeClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        realtime: { params: { eventsPerSecond: 8 } }
+      });
+    }
+
+    function teardownRealtimeSubscription() {
+      if (!realtimeClient || !realtimeRoomChannel) {
+        subscribedRoomId = null;
+        return;
+      }
+
+      realtimeClient.removeChannel(realtimeRoomChannel);
+      realtimeRoomChannel = null;
+      subscribedRoomId = null;
+    }
+
+    function ensureRealtimeSubscription(roomId) {
+      initRealtimeClient();
+      if (!realtimeClient || !roomId) {
+        teardownRealtimeSubscription();
+        return;
+      }
+
+      if (subscribedRoomId === roomId && realtimeRoomChannel) {
+        return;
+      }
+
+      teardownRealtimeSubscription();
+      const normalizedRoomId = roomId.toUpperCase();
+      const channelName = `dog-room-${normalizedRoomId}`;
+      realtimeRoomChannel = realtimeClient
+        .channel(channelName)
+        .on('postgres_changes', {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'dog_room_states',
+          filter: `room_id=eq.${normalizedRoomId}`
+        }, (payload) => {
+          handleRealtimeRoomUpdate(payload).catch((error) => {
+            console.error('Realtime room update failed', error);
+          });
+        })
+        .subscribe(async (status) => {
+          if (status === 'SUBSCRIBED') {
+            subscribedRoomId = normalizedRoomId;
+            markRealtimeHealthy();
+            return;
+          }
+
+          if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            lastRealtimeMessageAt = 0;
+            await loadRoom({ forceAttach: true, source: `realtime-${status.toLowerCase()}` });
+          }
+        });
+    }
+
     async function tryAutoJoinPreferredSeat() {
       if (!snapshot || !preferredSeat) return;
       const currentPlayer = playerIdEl.value.trim();
@@ -763,28 +879,50 @@
       render();
     }
 
-    async function loadRoom() {
+    async function loadRoom(options = {}) {
+      const {
+        forceAttach = false,
+        allowRealtimeSkip = false,
+        silentSuccess = false
+      } = options;
       const roomId = roomIdEl.value.trim().toUpperCase();
       const playerId = playerIdEl.value.trim();
       if (!roomId) {
         setStatus('Skriv inn romkode først.', true);
+        teardownRealtimeSubscription();
         return;
       }
 
       if (isLoadingRoom) {
         refreshRequestedWhileLoading = true;
+        pendingLoadRoomOptions = {
+          forceAttach: Boolean(forceAttach || pendingLoadRoomOptions?.forceAttach),
+          allowRealtimeSkip: Boolean(allowRealtimeSkip || pendingLoadRoomOptions?.allowRealtimeSkip),
+          silentSuccess: Boolean(silentSuccess && pendingLoadRoomOptions?.silentSuccess !== false)
+        };
         return;
       }
 
       isLoadingRoom = true;
+      pendingLoadRoomOptions = null;
       try {
-        const result = await fetchSnapshot(roomId, playerId);
+        const shouldSkipAttach = allowRealtimeSkip && !forceAttach && isRealtimeHealthy();
+        const result = shouldSkipAttach
+          ? { wasStale: false }
+          : await fetchSnapshot(roomId, playerId);
+
+        ensureRealtimeSubscription(roomId);
         render();
         await tryAutoJoinPreferredSeat();
-        if (result.wasStale) {
-          setStatus('Ignorerte utdatert snapshot.');
-        } else {
-          setStatus('Romstatus oppdatert.');
+
+        if (!silentSuccess) {
+          if (shouldSkipAttach) {
+            setStatus('Realtime synk aktiv. Polling bruker ikke attach akkurat nå.');
+          } else if (result.wasStale) {
+            setStatus('Ignorerte utdatert snapshot.');
+          } else {
+            setStatus('Romstatus oppdatert.');
+          }
         }
       } catch (error) {
         setStatus(`Kunne ikke hente rom: ${String(error)}`, true);
@@ -792,7 +930,9 @@
         isLoadingRoom = false;
         if (refreshRequestedWhileLoading) {
           refreshRequestedWhileLoading = false;
-          loadRoom();
+          const nextOptions = pendingLoadRoomOptions || {};
+          pendingLoadRoomOptions = null;
+          loadRoom(nextOptions);
         }
       }
     }
@@ -819,7 +959,7 @@
       }
     }
 
-    document.getElementById('loadRoomBtn').addEventListener('click', loadRoom);
+    document.getElementById('loadRoomBtn').addEventListener('click', () => loadRoom());
     document.getElementById('startMatchBtn').addEventListener('click', startMatch);
     document.getElementById('newRoomBtn').addEventListener('click', () => {
       const target = new URL('/dog/', window.location.origin);
@@ -833,15 +973,21 @@
       setStatus('Romkode kopiert.');
     });
 
-    roomIdEl.addEventListener('change', loadRoom);
+    roomIdEl.addEventListener('change', () => loadRoom());
 
     getQueryDefaults();
     if (!DOG_ENDPOINT) {
       setStatus('Mangler endpoint-konfigurasjon for dette miljøet. Kontakt support/host.', true);
     }
     if (roomIdEl.value) loadRoom();
-    pollTimer = setInterval(() => { if (roomIdEl.value.trim()) loadRoom(); }, 3000);
-    window.addEventListener('beforeunload', () => clearInterval(pollTimer));
+    pollTimer = setInterval(() => {
+      if (!roomIdEl.value.trim()) return;
+      loadRoom({ allowRealtimeSkip: true, silentSuccess: true });
+    }, 3000);
+    window.addEventListener('beforeunload', () => {
+      clearInterval(pollTimer);
+      teardownRealtimeSubscription();
+    });
   </script>
 </body>
 </html>
