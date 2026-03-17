@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dog Live Test Lobby</title>
+  <title>Dog Lobby</title>
   <style>
     :root {
       --bg: #0b0c10;
@@ -139,6 +139,41 @@
       font-weight: 700;
     }
 
+    .pill.warn {
+      background: #3f3215;
+      color: #ffd98e;
+      border-color: #7d5d1f;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .mode-select {
+      display: grid;
+      gap: 8px;
+      margin-top: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    }
+
+    .mode-card {
+      border: 1px solid var(--bd);
+      border-radius: 10px;
+      padding: 10px;
+      background: #13141a;
+      cursor: pointer;
+    }
+
+    .mode-card.active {
+      border-color: #4ecca3;
+      box-shadow: 0 0 0 1px #4ecca3 inset;
+    }
+
+    .mode-card h3 {
+      margin-bottom: 4px;
+      font-size: 1rem;
+    }
+
     .invite-list {
       margin-top: 10px;
       display: grid;
@@ -191,72 +226,73 @@
 <body>
   <main class="shell">
     <section class="card">
-      <h1>Dog live test</h1>
-      <p>Create a room, share links with three friends, and test live. Kept simple without heavy debug UI.</p>
-      <div class="pill" id="invitePill">Invite mode: off</div>
+      <h1>Dog lobby</h1>
+      <p>Lag rom, inviter venner og start spillet når alle er klare.</p>
+      <div class="pill" id="invitePill">Standard mode</div>
     </section>
 
-    <section class="card">
-      <div class="step">Step 1</div>
-      <h2>Basic setup</h2>
+    <section class="card" id="hostSetupSection">
+      <div class="step">Step 1 (host)</div>
+      <h2>Velg oppsett</h2>
       <div class="grid">
         <div>
           <label for="roomId">Room ID</label>
           <input id="roomId" value="DOG001" />
         </div>
         <div>
-          <label for="playerId">Your player ID</label>
+          <label for="playerId">Host player ID</label>
           <input id="playerId" />
         </div>
       </div>
       <div class="buttons">
-        <button id="randomRoomBtn" class="secondary" type="button">New room ID</button>
-        <button id="randomPlayerBtn" class="secondary" type="button">New player ID</button>
+        <button id="randomRoomBtn" class="secondary" type="button">Generer room ID</button>
+        <button id="randomPlayerBtn" class="secondary" type="button">Generer host ID</button>
       </div>
-    </section>
 
-    <section class="card">
-      <div class="step">Step 2 (host)</div>
-      <h2>Create game</h2>
-      <p class="small">Standard live-test setup is 4 players free-for-all.</p>
-      <div class="grid">
-        <div>
-          <label for="gameMode">Game mode</label>
-          <select id="gameMode">
-            <option value="solo">Solo (1v1v1v1)</option>
-            <option value="teams">Teams</option>
-          </select>
-        </div>
+      <div class="mode-select" id="modeCards">
+        <button class="mode-card active" type="button" data-mode="solo">
+          <h3>Alle mot alle</h3>
+          <p>Fast 4 spillere (1v1v1v1).</p>
+        </button>
+        <button class="mode-card" type="button" data-mode="teams">
+          <h3>Lagmodus</h3>
+          <p>Velg antall lag og spillere per lag.</p>
+        </button>
+      </div>
+      <input id="gameMode" type="hidden" value="solo" />
+
+      <div class="grid hidden" id="teamSettings">
         <div>
           <label for="teamCount">Team count</label>
-          <input id="teamCount" type="number" min="1" max="8" value="4" />
+          <input id="teamCount" type="number" min="1" max="8" value="2" />
         </div>
         <div>
           <label for="playersPerTeam">Players per team</label>
-          <input id="playersPerTeam" type="number" min="1" max="4" value="1" />
+          <input id="playersPerTeam" type="number" min="1" max="4" value="2" />
         </div>
       </div>
       <p id="capacityHint" class="status"></p>
       <div class="buttons">
-        <button id="createRoomBtn" type="button">Create room</button>
+        <button id="createRoomBtn" type="button">Generer rom</button>
       </div>
     </section>
 
-    <section class="card">
-      <div class="step">Step 3 (host)</div>
-      <h2>Invite 3 friends</h2>
-      <p class="small">Generate ready-to-share links for your friends. They open the link and click "Join room".</p>
+    <section class="card" id="hostInviteSection">
+      <div class="step">Step 2 (host)</div>
+      <h2>Inviter venner</h2>
+      <p class="small">Etter at rommet er opprettet kan du lage invitasjonslenker og dele dem.</p>
       <div class="buttons">
-        <button id="buildInviteLinksBtn" class="secondary" type="button">Generate 3 invite links</button>
-        <button id="copyAllInviteLinksBtn" class="secondary" type="button">Copy all links</button>
+        <button id="buildInviteLinksBtn" class="secondary" type="button">Generer invite-linker</button>
+        <button id="copyAllInviteLinksBtn" class="secondary" type="button">Kopier alle linker</button>
+        <button id="hostEnterRoomBtn" type="button">Gå inn i rommet (host)</button>
       </div>
       <div class="invite-list" id="inviteList"></div>
     </section>
 
-    <section class="card">
-      <div class="step">Step 4 (everyone)</div>
-      <h2>Join and start</h2>
-      <div class="grid">
+    <section class="card" id="joinSection">
+      <div class="step">Step 3 (alle)</div>
+      <h2>Join og start</h2>
+      <div class="grid" id="seatFields">
         <div>
           <label for="teamNo">Team number</label>
           <input id="teamNo" type="number" min="1" max="8" value="1" />
@@ -268,13 +304,13 @@
       </div>
       <div class="buttons">
         <button id="joinRoomBtn" class="secondary" type="button">Join room</button>
-        <button id="setReadyBtn" class="secondary" type="button">Set ready</button>
-        <button id="startMatchBtn" type="button">Start match (host)</button>
+        <button id="setReadyBtn" class="secondary" type="button">Sett klar</button>
+        <button id="startMatchBtn" type="button">Start spill (host)</button>
       </div>
-      <p id="status" class="status">Idle.</p>
+      <p id="status" class="status">Klar.</p>
 
-      <details>
-        <summary>Show technical response</summary>
+      <details id="technicalDetails">
+        <summary>Vis tekniske detaljer</summary>
         <pre id="output">No response yet.</pre>
       </details>
     </section>
@@ -296,6 +332,11 @@
     const capacityHintEl = document.getElementById('capacityHint');
     const inviteListEl = document.getElementById('inviteList');
     const invitePillEl = document.getElementById('invitePill');
+    const modeCardsEl = document.getElementById('modeCards');
+    const teamSettingsEl = document.getElementById('teamSettings');
+    const hostSetupSectionEl = document.getElementById('hostSetupSection');
+    const hostInviteSectionEl = document.getElementById('hostInviteSection');
+    const technicalDetailsEl = document.getElementById('technicalDetails');
 
     function randomCode(prefix, length) {
       const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -315,11 +356,30 @@
       outputEl.textContent = JSON.stringify(payload, null, 2);
     }
 
+    function renderModeCards() {
+      modeCardsEl.querySelectorAll('.mode-card').forEach((card) => {
+        card.classList.toggle('active', card.dataset.mode === gameModeEl.value);
+      });
+    }
+
+    function syncSeatDefaultsForMode() {
+      if (gameModeEl.value === 'solo') {
+        teamCountEl.value = '4';
+        playersPerTeamEl.value = '1';
+      }
+
+      const hostTeam = 1;
+      const hostSlot = 1;
+      if (!teamNoEl.value) teamNoEl.value = String(hostTeam);
+      if (!slotInTeamEl.value) slotInTeamEl.value = String(hostSlot);
+    }
+
     function renderCapacityHint() {
       const total = Number(teamCountEl.value || 0) * Number(playersPerTeamEl.value || 0);
       const valid = total >= 4 && total <= 8;
-      capacityHintEl.textContent = `Capacity: ${total} players (${valid ? 'valid' : 'must be 4-8'})`;
+      capacityHintEl.textContent = `Kapasitet: ${total} spillere (${valid ? 'gyldig' : 'må være 4-8'})`;
       capacityHintEl.classList.toggle('error', !valid);
+      teamSettingsEl.classList.toggle('hidden', gameModeEl.value !== 'teams');
     }
 
     function readState() {
@@ -351,12 +411,10 @@
       } catch {
         // ignore parse issues
       }
-
     }
 
     async function sendCommand(command, successText) {
-      const cfg = readState();
-      setStatus('Working...');
+      setStatus('Jobber ...');
       saveState();
 
       try {
@@ -372,28 +430,20 @@
         try {
           body = rawBody ? JSON.parse(rawBody) : null;
         } catch {
-          const trimmed = rawBody.trim();
-          const preview = trimmed.slice(0, 180);
           writeOutput({
             ok: false,
             error: 'Endpoint did not return JSON.',
             status: response.status,
-            bodyPreview: preview || '(empty)'
+            bodyPreview: rawBody.trim().slice(0, 180) || '(empty)'
           });
-
-          if (response.status === 404) {
-            setStatus('Endpoint returned 404. Supabase function may not be deployed yet.', true);
-          } else {
-            setStatus('Endpoint response was not JSON. Check endpoint URL and deployment.', true);
-          }
-
+          setStatus('Server svarte med ugyldig data.', true);
           return null;
         }
 
         writeOutput(body);
 
         if (!response.ok || body?.ok === false) {
-          setStatus(`Could not complete action: ${body?.error || response.status}`, true);
+          setStatus(`Kunne ikke fullføre: ${body?.error || response.status}`, true);
           return null;
         }
 
@@ -401,7 +451,7 @@
         return body;
       } catch (error) {
         writeOutput({ ok: false, error: String(error) });
-        setStatus('Network error. Check endpoint and try again.', true);
+        setStatus('Nettverksfeil. Prøv igjen.', true);
         return null;
       }
     }
@@ -416,22 +466,28 @@
     function buildInviteLinks() {
       const cfg = readState();
       if (!cfg.roomId) {
-        setStatus('Set room ID first.', true);
+        setStatus('Sett room ID først.', true);
         return [];
       }
 
       const base = getInviteBaseUrl();
-      const invites = [
-        { friend: 'Friend 1', teamNo: 2, slotInTeam: 1 },
-        { friend: 'Friend 2', teamNo: 3, slotInTeam: 1 },
-        { friend: 'Friend 3', teamNo: 4, slotInTeam: 1 }
-      ].map((seat, index) => {
+      const seats = cfg.gameMode === 'teams'
+        ? [
+            { friend: 'Friend 1', teamNo: 1, slotInTeam: 2 },
+            { friend: 'Friend 2', teamNo: 2, slotInTeam: 1 },
+            { friend: 'Friend 3', teamNo: 2, slotInTeam: 2 }
+          ]
+        : [
+            { friend: 'Friend 1', teamNo: 2, slotInTeam: 1 },
+            { friend: 'Friend 2', teamNo: 3, slotInTeam: 1 },
+            { friend: 'Friend 3', teamNo: 4, slotInTeam: 1 }
+          ];
+
+      return seats.map((seat, index) => {
         const invitePlayerId = `P${index + 2}`;
-        const link = `${base}?room=${encodeURIComponent(cfg.roomId)}&teamNo=${seat.teamNo}&slotInTeam=${seat.slotInTeam}&player=${invitePlayerId}`;
+        const link = `${base}?room=${encodeURIComponent(cfg.roomId)}&mode=${cfg.gameMode}&teamNo=${seat.teamNo}&slotInTeam=${seat.slotInTeam}&player=${invitePlayerId}`;
         return { ...seat, link };
       });
-
-      return invites;
     }
 
     function renderInviteLinks(invites) {
@@ -443,7 +499,7 @@
 
         const meta = document.createElement('div');
         meta.className = 'invite-meta';
-        meta.textContent = `${invite.friend} -> Team ${invite.teamNo}, Slot ${invite.slotInTeam}`;
+        meta.textContent = `${invite.friend} → Team ${invite.teamNo}, Slot ${invite.slotInTeam}`;
 
         const link = document.createElement('div');
         link.className = 'invite-link';
@@ -455,7 +511,7 @@
         copy.textContent = `Copy ${invite.friend} link`;
         copy.addEventListener('click', async () => {
           await navigator.clipboard.writeText(invite.link);
-          setStatus(`${invite.friend} link copied.`);
+          setStatus(`${invite.friend} link kopiert.`);
         });
 
         item.appendChild(meta);
@@ -467,31 +523,50 @@
 
     async function copyAllInvites() {
       const invites = buildInviteLinks();
-      if (invites.length === 0) {
-        return;
-      }
-
+      if (invites.length === 0) return;
       const text = invites.map((invite) => `${invite.friend}: ${invite.link}`).join('\n');
       await navigator.clipboard.writeText(text);
-      setStatus('All invite links copied.');
+      setStatus('Alle inviteringslinker kopiert.');
       renderInviteLinks(invites);
     }
 
     function applyInviteFromQuery() {
       const query = new URLSearchParams(window.location.search);
       const room = query.get('room');
+      const mode = query.get('mode');
       const teamNo = query.get('teamNo');
       const slotInTeam = query.get('slotInTeam');
       const player = query.get('player');
+      const inviteActive = Boolean(room);
 
       if (room) roomIdEl.value = room;
+      if (mode && (mode === 'solo' || mode === 'teams')) gameModeEl.value = mode;
       if (teamNo) teamNoEl.value = teamNo;
       if (slotInTeam) slotInTeamEl.value = slotInTeam;
       if (player && !playerIdEl.value.trim()) playerIdEl.value = player;
 
-      const inviteActive = Boolean(room || teamNo || slotInTeam);
-      invitePillEl.textContent = inviteActive ? 'Invite mode: on' : 'Invite mode: off';
+      if (inviteActive) {
+        invitePillEl.textContent = 'Invite mode: venn';
+        invitePillEl.classList.add('warn');
+        hostSetupSectionEl.classList.add('hidden');
+        hostInviteSectionEl.classList.add('hidden');
+        technicalDetailsEl.classList.add('hidden');
+        setStatus('Invitasjon lastet. Trykk "Join room".', false);
+      } else {
+        invitePillEl.textContent = 'Invite mode: host';
+        invitePillEl.classList.remove('warn');
+      }
     }
+
+    modeCardsEl.querySelectorAll('.mode-card').forEach((card) => {
+      card.addEventListener('click', () => {
+        gameModeEl.value = card.dataset.mode;
+        syncSeatDefaultsForMode();
+        renderModeCards();
+        renderCapacityHint();
+        saveState();
+      });
+    });
 
     document.getElementById('randomRoomBtn').addEventListener('click', () => {
       roomIdEl.value = randomCode('DOG', 4);
@@ -503,10 +578,9 @@
       saveState();
     });
 
-
     document.getElementById('createRoomBtn').addEventListener('click', async () => {
       const cfg = readState();
-      await sendCommand(
+      const body = await sendCommand(
         {
           type: 'create_room',
           roomId: cfg.roomId,
@@ -516,26 +590,45 @@
           playersPerTeam: cfg.playersPerTeam,
           idempotencyKey: `${cfg.playerId}-create-${cfg.roomId}`
         },
-        `Room ${cfg.roomId} created.`
+        `Rom ${cfg.roomId} opprettet. Generer invitasjoner nå.`
       );
+
+      if (body?.ok) {
+        const invites = buildInviteLinks();
+        renderInviteLinks(invites);
+      }
     });
 
     document.getElementById('buildInviteLinksBtn').addEventListener('click', () => {
       const invites = buildInviteLinks();
-      if (invites.length === 0) {
-        return;
-      }
-
+      if (invites.length === 0) return;
       renderInviteLinks(invites);
-      setStatus('Invite links generated.');
+      setStatus('Invitasjonslinker generert.');
     });
 
     document.getElementById('copyAllInviteLinksBtn').addEventListener('click', async () => {
       try {
         await copyAllInvites();
       } catch {
-        setStatus('Could not copy links automatically. Copy from the list instead.', true);
+        setStatus('Kunne ikke kopiere automatisk. Kopier manuelt fra listen.', true);
       }
+    });
+
+    document.getElementById('hostEnterRoomBtn').addEventListener('click', async () => {
+      teamNoEl.value = '1';
+      slotInTeamEl.value = '1';
+      const cfg = readState();
+      await sendCommand(
+        {
+          type: 'join_room',
+          roomId: cfg.roomId,
+          playerId: cfg.playerId,
+          teamNo: 1,
+          slotInTeam: 1,
+          idempotencyKey: `${cfg.playerId}-join-host-${cfg.roomId}`
+        },
+        'Host har joinet rommet. Vent på venner.'
+      );
     });
 
     document.getElementById('joinRoomBtn').addEventListener('click', async () => {
@@ -549,7 +642,7 @@
           slotInTeam: cfg.slotInTeam,
           idempotencyKey: `${cfg.playerId}-join-${cfg.roomId}`
         },
-        'Joined room successfully.'
+        'Joinet rommet.'
       );
     });
 
@@ -563,7 +656,7 @@
           isReady: true,
           idempotencyKey: `${cfg.playerId}-ready-${cfg.roomId}`
         },
-        'You are ready.'
+        'Du er klar.'
       );
     });
 
@@ -576,23 +669,22 @@
           playerId: cfg.playerId,
           idempotencyKey: `${cfg.playerId}-start-${cfg.roomId}`
         },
-        'Match started.'
+        'Spillet er startet.'
       );
     });
 
-    [roomIdEl, playerIdEl, gameModeEl, teamCountEl, playersPerTeamEl, teamNoEl, slotInTeamEl].forEach((input) => {
+    [roomIdEl, playerIdEl, teamCountEl, playersPerTeamEl, teamNoEl, slotInTeamEl].forEach((input) => {
       input.addEventListener('change', () => {
-        saveState();
         renderCapacityHint();
+        saveState();
       });
     });
 
     loadState();
+    if (!playerIdEl.value.trim()) playerIdEl.value = randomCode('P', 3);
 
-    if (!playerIdEl.value.trim()) {
-      playerIdEl.value = randomCode('P', 3);
-    }
-
+    syncSeatDefaultsForMode();
+    renderModeCards();
     applyInviteFromQuery();
     renderCapacityHint();
     saveState();
