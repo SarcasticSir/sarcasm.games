@@ -43,6 +43,7 @@ type RoomState = {
 const states = new Map<string, RoomState>();
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+const ALLOW_IN_MEMORY_FALLBACK = Deno.env.get('DOG_ALLOW_IN_MEMORY_FALLBACK') === '1';
 const ROOM_TABLE = 'dog_room_states';
 
 function jsonResponse(body: unknown, status = 200) {
@@ -87,12 +88,26 @@ function toPublic(state: RoomState) {
   };
 }
 
-async function hasPersistentStore() {
+function hasPersistentStore() {
   return Boolean(SUPABASE_URL && SERVICE_ROLE_KEY);
 }
 
+function canUseInMemoryFallback() {
+  return ALLOW_IN_MEMORY_FALLBACK;
+}
+
+function persistenceConfigError() {
+  return new Error(
+    'Persistence is not configured: set SUPABASE_SERVICE_ROLE_KEY for the dog-room function, or set DOG_ALLOW_IN_MEMORY_FALLBACK=1 for local dev only.'
+  );
+}
+
 async function loadState(roomId: string): Promise<RoomState | null> {
-  if (!(await hasPersistentStore())) {
+  if (!hasPersistentStore()) {
+    if (!canUseInMemoryFallback()) {
+      throw persistenceConfigError();
+    }
+
     return states.get(roomId) ?? null;
   }
 
@@ -107,7 +122,8 @@ async function loadState(roomId: string): Promise<RoomState | null> {
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to load room state (${response.status})`);
+    const details = (await response.text()).slice(0, 220);
+    throw new Error(`Failed to load room state (${response.status}): ${details || 'no details'}`);
   }
 
   const rows = await response.json();
@@ -119,7 +135,11 @@ async function loadState(roomId: string): Promise<RoomState | null> {
 }
 
 async function saveState(state: RoomState) {
-  if (!(await hasPersistentStore())) {
+  if (!hasPersistentStore()) {
+    if (!canUseInMemoryFallback()) {
+      throw persistenceConfigError();
+    }
+
     states.set(state.roomId, state);
     return;
   }
@@ -143,7 +163,8 @@ async function saveState(state: RoomState) {
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to persist room state (${response.status})`);
+    const details = (await response.text()).slice(0, 220);
+    throw new Error(`Failed to persist room state (${response.status}): ${details || 'no details'}`);
   }
 }
 
