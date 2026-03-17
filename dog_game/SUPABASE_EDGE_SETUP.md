@@ -41,6 +41,21 @@ Then put your handler implementation into:
 `dog_game/services/realtime-server/supabase-edge-handler.js` and
 `dog_game/services/realtime-server/supabase-room-service.js`.)
 
+
+## 2.1) Recommended `index.ts` shape (copy/paste)
+
+Use a function file that:
+
+- answers `OPTIONS` before loading game modules,
+- always returns CORS headers,
+- lazy-loads room modules so runtime import issues become visible JSON errors.
+
+This repository includes a ready template at:
+
+- `dog_game/supabase/functions/dog-room/index.ts`
+
+If you are still getting browser CORS failures, compare your deployed function file with this template line-by-line.
+
 ## 3) Set function secrets
 
 Set secrets for the linked Supabase project:
@@ -59,8 +74,18 @@ Notes:
 
 ## 4) Deploy function
 
+Deploy with JWT verification disabled for this endpoint so browser preflight
+(`OPTIONS`) is not rejected before your handler returns CORS headers:
+
 ```bash
-supabase functions deploy dog-room
+supabase functions deploy dog-room --no-verify-jwt
+```
+
+Alternative (persistent config): add this to `supabase/config.toml` before deploy:
+
+```toml
+[functions.dog-room]
+verify_jwt = false
 ```
 
 Expected endpoint:
@@ -70,6 +95,27 @@ https://hmwzdnebhqavatuxmtki.supabase.co/functions/v1/dog-room
 ```
 
 ## 5) Smoke test endpoint quickly
+
+
+Preflight check (must return `HTTP/2 204` or another 2xx):
+
+```bash
+curl -i -X OPTIONS \
+  "https://hmwzdnebhqavatuxmtki.supabase.co/functions/v1/dog-room" \
+  -H "Origin: https://www.sarcasm.games" \
+  -H "Access-Control-Request-Method: POST" \
+  -H "Access-Control-Request-Headers: content-type,apikey,authorization"
+```
+
+Then verify POST also includes CORS headers:
+
+```bash
+curl -i -X POST \
+  "https://hmwzdnebhqavatuxmtki.supabase.co/functions/v1/dog-room" \
+  -H "Origin: https://www.sarcasm.games" \
+  -H "Content-Type: application/json" \
+  -d '{"type":"attach","roomId":"DOG001","playerId":"P1"}'
+```
 
 Create room:
 
@@ -122,8 +168,11 @@ curl -i -X POST \
 
 Check these first:
 
-1. CORS origin list includes exact frontend origin.
-2. Function is deployed to the same Supabase project ref.
-3. Function has service role secret configured.
-4. Endpoint URL in `/dog` is exactly `/functions/v1/dog-room`.
-5. Command payload includes required `type` field.
+1. Endpoint preflight (`OPTIONS`) returns HTTP 2xx (if not, redeploy with `--no-verify-jwt`).
+2. CORS origin list includes exact frontend origin.
+3. Check function logs for startup/import failures:
+   - `supabase functions logs dog-room --project-ref hmwzdnebhqavatuxmtki`
+4. Function is deployed to the same Supabase project ref.
+5. Function has service role secret configured.
+6. Endpoint URL in `/dog` is exactly `/functions/v1/dog-room`.
+7. Command payload includes required `type` field.
