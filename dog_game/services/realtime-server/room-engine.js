@@ -188,9 +188,68 @@ function allHandsEmpty(match) {
   return Object.values(match.handsByPlayerId).every((hand) => hand.length === 0);
 }
 
+function collectAllHandCards(handsByPlayerId) {
+  return Object.values(handsByPlayerId).flatMap((hand) => hand ?? []);
+}
+
+function resolveTurnProgressAfterAction(state) {
+  let nextState = state;
+
+  if (allHandsEmpty(nextState.match)) {
+    nextState = withVersionBump(startNextRound(nextState));
+    return {
+      state: nextState,
+      response: {
+        ok: true,
+        roundAdvanced: true,
+        phase: nextState.match.phase,
+        version: nextState.version
+      }
+    };
+  }
+
+  const turnResolution = advanceToNextPlayableTurn(nextState, nextState.match);
+  if (turnResolution.allBlocked) {
+    nextState = withVersionBump(startNextRound(nextState));
+    return {
+      state: nextState,
+      response: {
+        ok: true,
+        roundAdvanced: true,
+        phase: nextState.match.phase,
+        version: nextState.version
+      }
+    };
+  }
+
+  nextState = withVersionBump({
+    ...nextState,
+    match: {
+      ...nextState.match,
+      turnIndex: turnResolution.turnIndex,
+      blockedPlayerIds: turnResolution.blockedPlayerIds
+    }
+  });
+
+  return {
+    state: nextState,
+    response: {
+      ok: true,
+      nextPlayerId: nextState.match.turnOrder[nextState.match.turnIndex],
+      blockedPlayerIds: nextState.match.blockedPlayerIds,
+      version: nextState.version
+    }
+  };
+}
+
 function startNextRound(state) {
   const nextRoundNumber = state.match.roundNumber + 1;
-  const nextRound = buildRoundState(state, state.match.deckState, nextRoundNumber);
+  const carryOverCards = collectAllHandCards(state.match.handsByPlayerId);
+  const deckStateWithCarryOver = carryOverCards.length
+    ? discardCards(state.match.deckState, carryOverCards)
+    : state.match.deckState;
+
+  const nextRound = buildRoundState(state, deckStateWithCarryOver, nextRoundNumber);
 
   return {
     ...state,
@@ -655,52 +714,48 @@ function handleConfirmMove(state, command) {
     }
   });
 
-  if (allHandsEmpty(nextState.match)) {
-    nextState = withVersionBump(startNextRound(nextState));
-    return {
-      state: nextState,
-      response: {
-        ok: true,
-        confirmed: true,
-        roundAdvanced: true,
-        phase: nextState.match.phase,
-        version: nextState.version
-      }
-    };
+  const turnProgress = resolveTurnProgressAfterAction(nextState);
+
+  return {
+    state: turnProgress.state,
+    response: {
+      ...turnProgress.response,
+      ok: true,
+      confirmed: true
+    }
+  };
+}
+
+function handlePassTurnIfBlocked(state, command) {
+  const { playerId } = command;
+  assertActiveTurn(state, playerId);
+
+  const canAct = hasAnyLegalMoveForPlayer(state, state.match, playerId);
+  if (canAct) {
+    throw new Error('Cannot pass turn while legal moves are available');
   }
 
-  const turnResolution = advanceToNextPlayableTurn(nextState, nextState.match);
-  if (turnResolution.allBlocked) {
-    nextState = withVersionBump(startNextRound(nextState));
-    return {
-      state: nextState,
-      response: {
-        ok: true,
-        confirmed: true,
-        roundAdvanced: true,
-        phase: nextState.match.phase,
-        version: nextState.version
-      }
-    };
-  }
+  const blocked = new Set(state.match.blockedPlayerIds);
+  blocked.add(playerId);
 
-  nextState = withVersionBump({
-    ...nextState,
+  const nextState = withVersionBump({
+    ...state,
     match: {
-      ...nextState.match,
-      turnIndex: turnResolution.turnIndex,
-      blockedPlayerIds: turnResolution.blockedPlayerIds
+      ...state.match,
+      pendingPreview: null,
+      turnIndex: (state.match.turnIndex + 1) % state.match.turnOrder.length,
+      blockedPlayerIds: [...blocked]
     }
   });
 
+  const turnProgress = resolveTurnProgressAfterAction(nextState);
+
   return {
-    state: nextState,
+    state: turnProgress.state,
     response: {
+      ...turnProgress.response,
       ok: true,
-      confirmed: true,
-      nextPlayerId: nextState.match.turnOrder[nextState.match.turnIndex],
-      blockedPlayerIds: nextState.match.blockedPlayerIds,
-      version: nextState.version
+      passed: true
     }
   };
 }
@@ -726,6 +781,8 @@ export function handleRoomCommand(state, command) {
         return handleCancelMovePreview(state, command);
       case 'confirm_move':
         return handleConfirmMove(state, command);
+      case 'pass_turn_if_blocked':
+        return handlePassTurnIfBlocked(state, command);
       default:
         throw new Error(`Unknown command: ${command.type}`);
     }

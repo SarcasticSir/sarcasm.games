@@ -432,8 +432,8 @@
           <button type="button" class="secondary" id="cancelPreviewBtn" ${pendingPreview && localTurn ? '' : 'disabled'}>Cancel preview</button>
         </div>
         <div class="actions" style="margin-top:10px;grid-template-columns:1fr 1fr;">
+          <button type="button" class="ghost" id="passTurnBtn" ${localTurn && !pendingPreview ? '' : 'disabled'}>Pass (blocked)</button>
           <button type="button" class="ghost" id="clearChoiceBtn" ${rank ? '' : 'disabled'}>Clear selection</button>
-          <span></span>
         </div>
       `;
 
@@ -527,6 +527,28 @@
             await loadRoom();
           } catch (error) {
             setStatus(`Kunne ikke avbryte preview: ${String(error)}`, true);
+          }
+        });
+      }
+
+
+      const passTurnBtn = document.getElementById('passTurnBtn');
+      if (passTurnBtn) {
+        passTurnBtn.addEventListener('click', async () => {
+          if (!currentPlayerId) return;
+          try {
+            await call({
+              type: 'pass_turn_if_blocked',
+              roomId: snapshot.roomId,
+              playerId: currentPlayerId,
+              expectedVersion: snapshot.version,
+              idempotencyKey: buildIdempotencyKey('pass-turn')
+            });
+            resetAllSelections();
+            setStatus('Tur passert (ingen lovlige trekk).');
+            await loadRoom();
+          } catch (error) {
+            setStatus(`Kunne ikke passe tur: ${String(error)}`, true);
           }
         });
       }

@@ -16,8 +16,11 @@ const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 const ALLOW_IN_MEMORY_FALLBACK = Deno.env.get('DOG_ALLOW_IN_MEMORY_FALLBACK') === '1';
 const ROOM_TABLE = 'dog_room_states';
 const STORAGE_TIMEOUT_MS = 5000;
+const RATE_LIMIT_WINDOW_MS = Number(Deno.env.get('DOG_RATE_LIMIT_WINDOW_MS') ?? 10000);
+const RATE_LIMIT_MAX_REQUESTS = Number(Deno.env.get('DOG_RATE_LIMIT_MAX_REQUESTS') ?? 80);
 
 const inMemoryStates = new Map<string, unknown>();
+const rateLimitBuckets = new Map<string, { count: number; windowStartMs: number }>();
 
 function hasPersistentStore() {
   return Boolean(SUPABASE_URL && SERVICE_ROLE_KEY);
@@ -32,6 +35,52 @@ function persistenceConfigError() {
 function canonicalRoomId(raw: unknown) {
   return String(raw ?? '').trim().toUpperCase();
 }
+
+function getClientIp(request: Request) {
+  const forwardedFor = request.headers.get('x-forwarded-for');
+  if (forwardedFor) {
+    return forwardedFor.split(',')[0].trim();
+  }
+
+  const connectingIp = request.headers.get('cf-connecting-ip');
+  if (connectingIp) {
+    return connectingIp;
+  }
+
+  return 'unknown';
+}
+
+const rateLimiter = {
+  consume(request: Request) {
+    if (!Number.isFinite(RATE_LIMIT_WINDOW_MS) || RATE_LIMIT_WINDOW_MS <= 0) {
+      return { allowed: true };
+    }
+
+    if (!Number.isFinite(RATE_LIMIT_MAX_REQUESTS) || RATE_LIMIT_MAX_REQUESTS <= 0) {
+      return { allowed: true };
+    }
+
+    const key = getClientIp(request);
+    const now = Date.now();
+    const existing = rateLimitBuckets.get(key);
+
+    if (!existing || now - existing.windowStartMs >= RATE_LIMIT_WINDOW_MS) {
+      rateLimitBuckets.set(key, { count: 1, windowStartMs: now });
+      return { allowed: true };
+    }
+
+    if (existing.count >= RATE_LIMIT_MAX_REQUESTS) {
+      const remainingMs = Math.max(0, RATE_LIMIT_WINDOW_MS - (now - existing.windowStartMs));
+      return {
+        allowed: false,
+        retryAfterSeconds: Math.max(1, Math.ceil(remainingMs / 1000))
+      };
+    }
+
+    existing.count += 1;
+    return { allowed: true };
+  }
+};
 
 async function loadRoomState(roomId: string) {
   if (!hasPersistentStore()) {
@@ -123,5 +172,5 @@ Deno.serve(async (request) => {
     }
   }
 
-  return handleEdgeRoomRequest({ request, roomService });
+  return handleEdgeRoomRequest({ request, roomService, rateLimiter });
 });
