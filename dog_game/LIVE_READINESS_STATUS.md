@@ -1,48 +1,51 @@
 # Dog live readiness status
 
-This status reflects the latest local verification in this repository (`npm test` in `dog_game`).
+This status reflects a fresh repository audit of the Dog stack (`dog/` UI + `dog_game/` backend code and tests).
 
 ## Current status snapshot
 
-### Green (ready)
+### Green (implemented and locally verified)
 
-- Rules engine coverage is passing for core movement, collisions, immunity, Jack swap limits, Joker mirroring, 7-split behavior, must-play/no-legal-move checks, and home-lane exact-entry logic.
-- Deck and round systems are passing for deck size by player count, deterministic shuffle behavior, draw/discard reshuffle, round hand-size cycle, and team card exchange validation.
-- Realtime room engine flow is passing for deterministic join/seat/version checks, match start validation, exchange phase progression, authoritative legal-move preview/cancel/confirm flow, blocked-round advancement, and idempotency behavior.
-- Supabase-facing adapter/handler tests are passing for create/join/ready/start command orchestration, reconnect attach snapshots, and edge handler command routing.
+- Core rules engine is covered by passing tests for movement, collisions, immunity, Jack limits, Joker mirroring, 7-split behavior, must-play/no-legal-move checks, and home-lane exact-entry behavior.
+- Deck and round logic is covered by passing tests for deck size by player count, deterministic shuffle, draw/discard reshuffle, hand-size cycle, and team exchange validation.
+- Authoritative room engine flow is covered by passing tests for join/seat/version checks, match start validation, exchange phase progression, preview/cancel/confirm turn flow, blocked-round advancement, idempotency behavior, winner detection, and public/private view projection.
+- Supabase adapter + HTTP edge handler modules in `services/realtime-server` are covered by tests for command routing and CORS handling.
 
-### Yellow (still needed before a true live test)
+### Yellow (gaps before true live production play)
 
-The code-level tests are healthy, but these items are still required to run a real multiplayer live session with external players:
+1. **Runtime mismatch between deployed function and room engine capabilities**
+   - The browser UI sends gameplay commands such as `request_legal_moves`, `start_move_preview`, `confirm_move`, and `cancel_move_preview`.
+   - The standalone deployed function entrypoint (`supabase/functions/dog-room/index.ts`) currently rejects all of these as unsupported.
+   - Result: a lobby can start, but a full playable match cannot run through this entrypoint unless the function is rewired to use `services/realtime-server/room-engine.js` / `supabase-room-service.js`.
 
-1. **Deploy runtime endpoints**
-   - Deploy `services/realtime-server/supabase-edge-handler.js` as an active Edge Function endpoint.
-   - Confirm command routing from clients to this endpoint in the target environment.
+2. **Realtime transport not wired in client yet (polling fallback only)**
+   - Lobby/game UI currently refreshes by polling every 3 seconds.
+   - There is no Supabase Realtime channel subscription path in the current `dog/lobby` client.
+   - Result: delayed updates and weaker desync resilience compared to intended live behavior.
 
-2. **Wire realtime channel + persistence in Supabase project**
-   - Ensure the target Supabase project has realtime channels enabled for room event fan-out.
-   - Verify service-role and anon key usage is correctly split (server-authoritative commands vs client subscriptions).
-   - Validate writes/reads against `rooms`, `room_members`, `matches`, `match_players`, and `game_events` under real auth identities.
+3. **Identity/auth hardening not implemented at command ingress**
+   - Client-side identity is plain `playerId` text input with no auth token flow in the Dog pages.
+   - The edge deployment note uses `--no-verify-jwt`, and command validation currently only checks payload shape.
+   - Result: room actions are easy to spoof without additional auth and identity verification.
 
-3. **Client integration path**
-   - Implement or finish a playable `/dog` client flow that sends intents (`join_room`, `set_ready`, `exchange_card`, `request_legal_moves`, `start_move_preview`, `cancel_move_preview`, `confirm_move`).
-   - Ensure the client consumes room snapshots/events and renders legal-action UX clearly.
+4. **Rate limiting + anti-abuse controls not present in Dog command path**
+   - No request throttling or abuse protection is implemented in `supabase/functions/dog-room/index.ts` or `services/realtime-server/supabase-edge-handler.js`.
+   - Result: production room endpoints are exposed to spam/flood risks.
 
-4. **Environment and secrets hardening**
-   - Verify production/staging env vars for Supabase URL/keys and any signing secrets used for room access.
-   - Add basic rate limiting and request validation at the command ingress point.
+5. **Environment portability and release safety gaps**
+   - Dog web pages use a hardcoded Supabase function URL.
+   - This blocks clean staging/production switching and increases risk of shipping with wrong endpoint.
 
-5. **End-to-end smoke pass with real users**
-   - 4-player room create/join/start/turn/reconnect smoke test in deployed environment.
-   - Confirm hidden-information boundaries (no opponent hand leakage) in real payloads.
-   - Confirm reconnect mid-round restores consistent public/private snapshots.
+6. **Missing real multi-user smoke evidence in repo**
+   - Automated tests are green, but there is no checked-in evidence of a full 4-player remote smoke run (including reconnect during active turn) against deployed infrastructure.
 
-## Suggested go-live gate for first external test
+## Go-live gate recommendation
 
-Treat the feature as "ready for live pilot" when all of the following are complete:
+Treat Dog as "ready for live pilot" only when all are complete:
 
-- Edge handler deployed and reachable.
-- Supabase realtime + DB persistence verified in target project.
-- Minimal playable client loop connected to intent/event API.
-- One full 4-player smoke test run completed without desync.
-- At least one reconnect scenario validated during active turn flow.
+- Deployed Dog function supports full gameplay command set (not lobby-only subset).
+- Client receives room updates via Realtime subscriptions (polling can remain as fallback only).
+- Auth identity is enforced at command ingress (JWT/session mapping to `playerId`).
+- Basic rate limiting and abuse controls are active.
+- Endpoint/config management is environment-driven (no hardcoded production URL in static pages).
+- One full 4-player staging run (create/join/start/play-to-winner) plus at least one reconnect scenario is validated without desync.
