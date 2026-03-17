@@ -635,6 +635,23 @@
       setStatus('Create the room first. Host is added automatically when the room is created.', true);
     });
 
+    document.getElementById('hostEnterRoomBtn').addEventListener('click', async () => {
+      teamNoEl.value = '1';
+      slotInTeamEl.value = '1';
+      const cfg = readState();
+      await sendCommand(
+        {
+          type: 'join_room',
+          roomId: cfg.roomId,
+          playerId: cfg.playerId,
+          teamNo: 1,
+          slotInTeam: 1,
+          idempotencyKey: `${cfg.playerId}-join-host-${cfg.roomId}`
+        },
+        'Host har joinet rommet. Vent på venner.'
+      );
+    });
+
     document.getElementById('joinRoomBtn').addEventListener('click', async () => {
       const cfg = readState();
       await sendCommand(
