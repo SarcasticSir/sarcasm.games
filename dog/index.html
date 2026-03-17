@@ -280,11 +280,11 @@
     <section class="card" id="hostInviteSection">
       <div class="step">Step 2 (host)</div>
       <h2>Inviter venner</h2>
-      <p class="small">Etter at rommet er opprettet kan du lage invitasjonslenker og dele dem.</p>
+      <p class="small">Etter at rommet er opprettet er host allerede med i rommet. Lag invitasjonslenker og del dem.</p>
       <div class="buttons">
         <button id="buildInviteLinksBtn" class="secondary" type="button">Generer invite-linker</button>
         <button id="copyAllInviteLinksBtn" class="secondary" type="button">Kopier alle linker</button>
-        <button id="hostEnterRoomBtn" type="button">Gå inn i rommet (host)</button>
+        <button id="hostEnterRoomBtn" type="button">Host er i rommet</button>
       </div>
       <div class="invite-list" id="inviteList"></div>
     </section>
@@ -337,6 +337,9 @@
     const hostSetupSectionEl = document.getElementById('hostSetupSection');
     const hostInviteSectionEl = document.getElementById('hostInviteSection');
     const technicalDetailsEl = document.getElementById('technicalDetails');
+    const hostEnterRoomBtnEl = document.getElementById('hostEnterRoomBtn');
+
+    let wasRoomCreatedByHost = false;
 
     function randomCode(prefix, length) {
       const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -594,6 +597,12 @@
       );
 
       if (body?.ok) {
+        wasRoomCreatedByHost = true;
+        teamNoEl.value = '1';
+        slotInTeamEl.value = '1';
+        hostEnterRoomBtnEl.textContent = 'Host already in room';
+        hostEnterRoomBtnEl.classList.add('secondary');
+
         const invites = buildInviteLinks();
         renderInviteLinks(invites);
       }
@@ -612,6 +621,18 @@
       } catch {
         setStatus('Kunne ikke kopiere automatisk. Kopier manuelt fra listen.', true);
       }
+    });
+
+    hostEnterRoomBtnEl.addEventListener('click', async () => {
+      teamNoEl.value = '1';
+      slotInTeamEl.value = '1';
+
+      if (wasRoomCreatedByHost) {
+        setStatus('Host is already in the room. Share invites and wait for friends.');
+        return;
+      }
+
+      setStatus('Create the room first. Host is added automatically when the room is created.', true);
     });
 
     document.getElementById('hostEnterRoomBtn').addEventListener('click', async () => {
