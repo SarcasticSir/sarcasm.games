@@ -6,6 +6,26 @@ This plan closes the remaining gaps so players can complete a full match from ro
 
 A host can create a room, share invites, all players can join/ready/start, play through all turns using legal move UX (including preview/confirm for complex cards), and finish with an authoritative winner event.
 
+
+## Execution priority (logic first, performance later)
+
+From now until first fully playable milestone, all work should prioritize **complete gameplay logic** and authoritative flow correctness before optimization work.
+
+### Priority order
+
+1. Complete and validate all card + movement rules through authoritative APIs and tests.
+2. Ensure full match progression works end-to-end (lobby -> exchange -> turns -> winner).
+3. Close reconnect and hidden-information correctness gaps.
+4. Improve UX clarity for legal actions and confirmation flow.
+5. Defer performance tuning (render perf, payload trimming, micro-optimizations) until after playable exit criteria are met.
+
+### Explicitly deferred until after playable
+
+- animation/frame-rate tuning
+- network payload micro-optimizations
+- caching and query-level optimizations
+- non-blocking visual polish not required for rule clarity
+
 ## Current blocking gaps
 
 1. Lobby UI lacks ready toggling (`set_ready`) despite backend requiring all players ready before `start_match`.
@@ -177,3 +197,8 @@ Declare “playable end-to-end” only when all are true:
 - At least one reconnect during active turn succeeds without desync.
 - Winner is consistent on all clients and post-finish actions are blocked.
 - Hidden information is preserved in all observed payloads.
+
+
+## Post-playable performance phase (only after exit criteria)
+
+Once all playable exit criteria pass in staging, start a dedicated performance phase with measurable budgets (turn latency, render frame time, payload size) and regression checks.
