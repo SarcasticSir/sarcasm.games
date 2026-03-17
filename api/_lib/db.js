@@ -1,4 +1,4 @@
-const { createPool } = require('@vercel/postgres');
+const { Pool } = require('pg');
 const { nowInMs, createQueryMetric } = require('./observability');
 
 const DB_POOL_KEY = Symbol.for('sarcasm.games.db.pool');
@@ -7,6 +7,11 @@ const DB_POOL_LOGGER_KEY = Symbol.for('sarcasm.games.db.poolLoggerAttached');
 const DEFAULT_POOL_MAX = 10;
 const DEFAULT_IDLE_TIMEOUT_MS = 30_000;
 const DEFAULT_CONNECTION_TIMEOUT_MS = 5_000;
+
+function isTruthy(value) {
+  if (typeof value !== 'string') return false;
+  return ['1', 'true', 'yes', 'on'].includes(value.trim().toLowerCase());
+}
 
 function parsePositiveIntEnv(name, fallback, { min = 1, max = Number.MAX_SAFE_INTEGER } = {}) {
   const rawValue = process.env[name];
@@ -24,17 +29,50 @@ function serializeDbError(error) {
   };
 }
 
+function getConnectionString() {
+  const candidates = [
+    process.env.SUPABASE_DB_URL,
+    process.env.DATABASE_URL,
+    process.env.POSTGRES_URL,
+    process.env.POSTGRES_PRISMA_URL
+  ];
+
+  const connectionString = candidates.find((value) => typeof value === 'string' && value.trim().length > 0);
+  if (!connectionString) {
+    throw new Error('Missing Postgres connection string. Set SUPABASE_DB_URL or DATABASE_URL.');
+  }
+
+  return connectionString;
+}
+
+function shouldUseSsl(connectionString) {
+  if (isTruthy(process.env.DB_SSL)) return true;
+  if (process.env.DB_SSL === 'disable') return false;
+
+  try {
+    const parsed = new URL(connectionString);
+    return parsed.hostname.endsWith('.supabase.co') || parsed.searchParams.get('sslmode') === 'require';
+  } catch {
+    return false;
+  }
+}
+
 function getPoolConfig() {
+  const connectionString = getConnectionString();
+  const sslEnabled = shouldUseSsl(connectionString);
+
   return {
+    connectionString,
     max: parsePositiveIntEnv('DB_POOL_MAX', DEFAULT_POOL_MAX, { min: 1, max: 50 }),
     idleTimeoutMillis: parsePositiveIntEnv('DB_POOL_IDLE_TIMEOUT_MS', DEFAULT_IDLE_TIMEOUT_MS, { min: 1_000, max: 300_000 }),
-    connectionTimeoutMillis: parsePositiveIntEnv('DB_POOL_CONNECTION_TIMEOUT_MS', DEFAULT_CONNECTION_TIMEOUT_MS, { min: 100, max: 60_000 })
+    connectionTimeoutMillis: parsePositiveIntEnv('DB_POOL_CONNECTION_TIMEOUT_MS', DEFAULT_CONNECTION_TIMEOUT_MS, { min: 100, max: 60_000 }),
+    ssl: sslEnabled ? { rejectUnauthorized: false } : undefined
   };
 }
 
 function createSharedPool() {
   const poolConfig = getPoolConfig();
-  const pool = createPool(poolConfig);
+  const pool = new Pool(poolConfig);
 
   pool.on('error', (error) => {
     console.error('[db] Unexpected pool error', serializeDbError(error));
@@ -45,7 +83,8 @@ function createSharedPool() {
   console.info('[db] Pool initialized', {
     max: poolConfig.max,
     idleTimeoutMillis: poolConfig.idleTimeoutMillis,
-    connectionTimeoutMillis: poolConfig.connectionTimeoutMillis
+    connectionTimeoutMillis: poolConfig.connectionTimeoutMillis,
+    sslEnabled: Boolean(poolConfig.ssl)
   });
 
   return pool;
