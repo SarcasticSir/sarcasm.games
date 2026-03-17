@@ -245,3 +245,43 @@ test('edge handler includes CORS headers on POST responses', async () => {
   assert.equal(createRes.headers.get('access-control-allow-origin'), 'https://www.sarcasm.games');
   assert.equal(createRes.headers.get('access-control-allow-methods'), 'POST, OPTIONS');
 });
+
+test('edge handler returns 429 when rate limiter denies request', async () => {
+  const service = createSupabaseRoomService({
+    store: createInMemoryStore(),
+    publisher: createPublisherSpy()
+  });
+
+  const req = new Request('http://localhost/room-command', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      origin: 'https://www.sarcasm.games'
+    },
+    body: JSON.stringify({
+      type: 'create_room',
+      roomId: 'DOG-RL-1',
+      playerId: 'P1',
+      gameMode: 'solo',
+      teamCount: 4,
+      playersPerTeam: 1
+    })
+  });
+
+  const res = await handleEdgeRoomRequest({
+    request: req,
+    roomService: service,
+    rateLimiter: {
+      consume: () => ({
+        allowed: false,
+        retryAfterSeconds: 3
+      })
+    }
+  });
+
+  const body = await res.json();
+  assert.equal(res.status, 429);
+  assert.equal(body.ok, false);
+  assert.equal(body.error, 'Too many requests');
+  assert.equal(body.retryAfterSeconds, 3);
+});

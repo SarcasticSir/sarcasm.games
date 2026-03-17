@@ -119,7 +119,19 @@
   </main>
 
   <script>
-    const DOG_ENDPOINT = 'https://hmwzdnebhqavatuxmtki.supabase.co/functions/v1/dog-room';
+    const DEFAULT_DOG_ENDPOINT = 'https://hmwzdnebhqavatuxmtki.supabase.co/functions/v1/dog-room';
+
+    function resolveDogEndpoint() {
+      const params = new URLSearchParams(window.location.search);
+      const fromQuery = params.get('endpoint');
+      const fromGlobal = window.DOG_ENDPOINT;
+      const fromStorage = window.localStorage.getItem('dog.endpoint');
+      const endpoint = fromQuery || fromGlobal || fromStorage || DEFAULT_DOG_ENDPOINT;
+      window.localStorage.setItem('dog.endpoint', endpoint);
+      return endpoint;
+    }
+
+    const DOG_ENDPOINT = resolveDogEndpoint();
     const TRACK_SPACES_BETWEEN_PLAYERS = 16;
 
     let snapshot = null;
@@ -420,8 +432,8 @@
           <button type="button" class="secondary" id="cancelPreviewBtn" ${pendingPreview && localTurn ? '' : 'disabled'}>Cancel preview</button>
         </div>
         <div class="actions" style="margin-top:10px;grid-template-columns:1fr 1fr;">
+          <button type="button" class="ghost" id="passTurnBtn" ${localTurn && !pendingPreview ? '' : 'disabled'}>Pass (blocked)</button>
           <button type="button" class="ghost" id="clearChoiceBtn" ${rank ? '' : 'disabled'}>Clear selection</button>
-          <span></span>
         </div>
       `;
 
@@ -519,6 +531,28 @@
         });
       }
 
+
+      const passTurnBtn = document.getElementById('passTurnBtn');
+      if (passTurnBtn) {
+        passTurnBtn.addEventListener('click', async () => {
+          if (!currentPlayerId) return;
+          try {
+            await call({
+              type: 'pass_turn_if_blocked',
+              roomId: snapshot.roomId,
+              playerId: currentPlayerId,
+              expectedVersion: snapshot.version,
+              idempotencyKey: buildIdempotencyKey('pass-turn')
+            });
+            resetAllSelections();
+            setStatus('Tur passert (ingen lovlige trekk).');
+            await loadRoom();
+          } catch (error) {
+            setStatus(`Kunne ikke passe tur: ${String(error)}`, true);
+          }
+        });
+      }
+
       const clearBtn = document.getElementById('clearChoiceBtn');
       if (clearBtn) {
         clearBtn.addEventListener('click', () => {
@@ -610,6 +644,7 @@
           inviteUrl.searchParams.set('room', snapshot.roomId);
           inviteUrl.searchParams.set('teamNo', String(seat.teamNo));
           inviteUrl.searchParams.set('slotInTeam', String(seat.slotInTeam));
+          inviteUrl.searchParams.set('endpoint', DOG_ENDPOINT);
           const invite = document.createElement('div');
           invite.className = 'invite-item';
           invite.innerHTML = `<div>Sete ${seat.seatNo} (lag ${seat.teamNo}, plass ${seat.slotInTeam})</div><code>${inviteUrl.toString()}</code>`;
@@ -738,7 +773,11 @@
 
     document.getElementById('loadRoomBtn').addEventListener('click', loadRoom);
     document.getElementById('startMatchBtn').addEventListener('click', startMatch);
-    document.getElementById('newRoomBtn').addEventListener('click', () => { window.location.href = '/dog/'; });
+    document.getElementById('newRoomBtn').addEventListener('click', () => {
+      const target = new URL('/dog/', window.location.origin);
+      target.searchParams.set('endpoint', DOG_ENDPOINT);
+      window.location.href = target.toString();
+    });
     document.getElementById('copyRoomCodeBtn').addEventListener('click', async () => {
       const roomId = roomIdEl.value.trim().toUpperCase();
       if (!roomId) return;

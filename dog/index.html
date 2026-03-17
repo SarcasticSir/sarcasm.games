@@ -67,7 +67,19 @@
   </main>
 
   <script>
-    const DOG_ENDPOINT = 'https://hmwzdnebhqavatuxmtki.supabase.co/functions/v1/dog-room';
+    const DEFAULT_DOG_ENDPOINT = 'https://hmwzdnebhqavatuxmtki.supabase.co/functions/v1/dog-room';
+
+    function resolveDogEndpoint() {
+      const params = new URLSearchParams(window.location.search);
+      const fromQuery = params.get('endpoint');
+      const fromGlobal = window.DOG_ENDPOINT;
+      const fromStorage = window.localStorage.getItem('dog.endpoint');
+      const endpoint = fromQuery || fromGlobal || fromStorage || DEFAULT_DOG_ENDPOINT;
+      window.localStorage.setItem('dog.endpoint', endpoint);
+      return endpoint;
+    }
+
+    const DOG_ENDPOINT = resolveDogEndpoint();
 
     const roomIdEl = document.getElementById('roomId');
     const hostPlayerIdEl = document.getElementById('hostPlayerId');
@@ -139,6 +151,7 @@
         target.searchParams.set('room', roomId);
         target.searchParams.set('player', playerId);
         target.searchParams.set('host', '1');
+        target.searchParams.set('endpoint', DOG_ENDPOINT);
         window.location.href = target.toString();
       } catch (error) {
         setStatus(`Kunne ikke opprette rom: ${String(error)}`, true);
@@ -155,7 +168,9 @@
 
     document.getElementById('createRoomBtn').addEventListener('click', createRoom);
     document.getElementById('goLobbyBtn').addEventListener('click', () => {
-      window.location.href = '/dog/lobby/';
+      const target = new URL('/dog/lobby/', window.location.origin);
+      target.searchParams.set('endpoint', DOG_ENDPOINT);
+      window.location.href = target.toString();
     });
 
     gameModeEl.addEventListener('change', syncMode);

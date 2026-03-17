@@ -56,14 +56,30 @@ function preflightResponse(request) {
 /**
  * @param {{
  *  request: Request,
- *  roomService: { processRoomCommand: (command:any)=>Promise<any>, attach: (roomId:string, playerId?:string)=>Promise<any> }
+ *  roomService: { processRoomCommand: (command:any)=>Promise<any>, attach: (roomId:string, playerId?:string)=>Promise<any> },
+ *  rateLimiter?: { consume: (request: Request) => {allowed: boolean, retryAfterSeconds?: number} }
  * }} params
  */
 export async function handleEdgeRoomRequest(params) {
-  const { request, roomService } = params;
+  const { request, roomService, rateLimiter } = params;
 
   if (request.method === 'OPTIONS') {
     return preflightResponse(request);
+  }
+
+  if (rateLimiter) {
+    const decision = rateLimiter.consume(request);
+    if (!decision.allowed) {
+      return jsonResponse(
+        request,
+        {
+          ok: false,
+          error: 'Too many requests',
+          retryAfterSeconds: decision.retryAfterSeconds ?? 1
+        },
+        429
+      );
+    }
   }
 
   try {
