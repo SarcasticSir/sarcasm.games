@@ -1,78 +1,38 @@
-# Live test guide (AGENTS-aligned)
+# Live test guide
 
-This guide follows the project AGENTS direction:
+## Purpose
 
-- realtime coordination via a dedicated realtime layer,
-- Supabase for auth + persistence,
-- optional fast MVP path with Supabase Realtime + Edge Functions / RPC move validation.
+This runbook is for validating that Dog is playable end-to-end in live Supabase infrastructure.
 
-## Recommended test path now
+## Before you start
 
-## Latest repository validation
+- Confirm the deployed `dog-room` function endpoint.
+- Confirm Supabase secrets are set (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `ALLOWED_ORIGINS`).
+- Confirm `dog_room_states` table exists.
 
-- Local `npm test` currently passes all rules/deck/room-engine/adapter test cases.
-- For a practical gap list before external playtests, see `LIVE_READINESS_STATUS.md`.
+## Mandatory smoke test (4 players)
 
-For the fastest live test with 4 players:
+1. Host creates room.
+2. Three players join via invite/room code.
+3. All players ready up.
+4. Host starts match.
+5. Play until winner is reached.
+6. Force one reconnect during active turn.
+7. Validate all clients converge to same winner and version.
 
-1. Use **Supabase Realtime channel** for room presence + state updates.
-2. Keep **server-authoritative move validation** in backend functions (RPC / Edge Function).
-3. Persist room/match events to existing tables (`rooms`, `room_members`, `matches`, `match_players`, `game_events`).
+## Validate while testing
 
-This matches the AGENTS alternative MVP path while preserving authoritative rules.
+- No opponent hand data in public payloads.
+- Command retries do not duplicate actions (idempotency).
+- State version increases monotonically.
+- Reconnect restores both public snapshot and private hand view.
 
-## Minimal live test checklist (4 players)
+## Pass/fail rule
 
-- [ ] Host creates room (mode config + capacity).
-- [ ] 3 friends join by room code.
-- [ ] Seat assignment follows formula `seat_no = (slot_in_team - 1) * team_count + team_no`.
-- [ ] All players set ready.
-- [ ] Host starts match.
-- [ ] For each move:
-  - client sends intent,
-  - backend validates via room engine,
-  - backend publishes resulting room snapshot/event via Supabase Realtime.
-- [ ] Reconnect one client and confirm private/public view consistency.
+Test is pass only if one full game completes without manual state edits or server restarts.
 
-## Event flow shape
+## Operational references
 
-Use intent messages from client -> backend, for example:
-
-- `create_room`
-- `join_room`
-- `set_ready`
-- `exchange_card`
-- `request_legal_moves`
-- `start_move_preview`
-- `cancel_move_preview`
-- `confirm_move`
-
-Publish events to clients through Supabase Realtime, for example:
-
-- `room_snapshot`
-- `phase_changed`
-- `turn_changed`
-- `legal_moves`
-- `move_preview`
-- `card_played`
-
-## Important constraints
-
-- Never trust client legal-move calculations.
-- Never expose opponent hand contents in public payloads.
-- Keep idempotency and version checks in backend command handling.
-- Persist an append-only event stream for replay/debugging.
-
-## Deployment note
-
-This repository now does **not** include a dedicated local WebSocket server script.
-Use your Supabase project + backend function runtime for live test orchestration.
-
-## Backend adapter now included in repo
-
-You can now wire live command handling using:
-
-- `services/realtime-server/supabase-room-service.js` (state store + realtime publisher adapter around `room-engine`)
-- `services/realtime-server/supabase-edge-handler.js` (HTTP/Edge request handler for command payloads)
-
-These modules are transport/runtime friendly for Supabase Edge Functions.
+- Current status: `LIVE_READINESS_STATUS.md`
+- Active execution plan: `DELIVERY_RECOVERY_PLAN.md`
+- Supabase setup: `SUPABASE_EDGE_SETUP.md`
