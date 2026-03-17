@@ -100,3 +100,10 @@ Declare ready only when all are true:
 - Full round can be completed with legal move flow (preview/confirm) and winner broadcast.
 - Reconnect once during active turn is successful.
 - No hidden-information leakage observed in payload inspection.
+
+
+## Delivery policy for this milestone
+
+- Ship complete gameplay logic and authoritative turn flow first.
+- Treat performance work as follow-up after a full playable match is verified.
+- Do not defer rule correctness or reconnect safety in favor of optimization tasks.
