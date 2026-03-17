@@ -4,8 +4,8 @@
 // commands (including deck creation, card dealing, previews and confirms) are
 // handled consistently with local tests.
 
-import { createSupabaseRoomService } from '../../../services/realtime-server/supabase-room-service.js';
-import { handleEdgeRoomRequest } from '../../../services/realtime-server/supabase-edge-handler.js';
+import { createSupabaseRoomService } from './vendor/services/realtime-server/supabase-room-service.js';
+import { handleEdgeRoomRequest } from './vendor/services/realtime-server/supabase-edge-handler.js';
 
 type PersistedStateRow = {
   state: unknown;
