@@ -84,6 +84,7 @@
       <div class="actions">
         <button id="loadRoomBtn" class="secondary" type="button">Hent romstatus</button>
         <button id="copyRoomCodeBtn" class="ghost" type="button">Kopier romkode</button>
+        <button id="copyJoinUrlBtn" class="ghost" type="button">Kopier join-URL</button>
         <button id="newRoomBtn" class="secondary" type="button">Lag nytt rom</button>
       </div>
       <p id="status" class="status">Klar.</p>
@@ -113,8 +114,8 @@
     </section>
 
     <section id="invitesSection" class="card">
-      <h2>Invite-lenker per sete</h2>
-      <p>Host kan kopiere en lenke per ledig plass og sende direkte til venn.</p>
+      <h2>Join-lenker per ledig sete</h2>
+      <p>Del lenke per sete, eller bruk romkode + setevalg under.</p>
       <div id="invites" class="invite-list"></div>
     </section>
   </main>
@@ -722,7 +723,7 @@
 
         seatsEl.appendChild(item);
 
-        if (!player && isHost) {
+        if (!player) {
           const inviteUrl = new URL(window.location.href);
           inviteUrl.search = '';
           inviteUrl.searchParams.set('room', snapshot.roomId);
@@ -745,6 +746,13 @@
         }
       });
 
+      if (!invitesEl.children.length) {
+        const emptyInvite = document.createElement('div');
+        emptyInvite.className = 'invite-item';
+        emptyInvite.textContent = 'Ingen ledige seter akkurat nå.';
+        invitesEl.appendChild(emptyInvite);
+      }
+
       startMatchBtnEl.disabled = !isHost || !allReady || snapshot.status !== 'lobby';
       hostStartActionsEl.classList.toggle('hidden', !isHost);
 
@@ -752,7 +760,7 @@
       lobbyIntroEl.classList.toggle('hidden', hasMatch);
       roomControlsEl.classList.toggle('hidden', hasMatch);
       seatsSectionEl.classList.toggle('hidden', hasMatch);
-      invitesSectionEl.classList.toggle('hidden', hasMatch || !isHost);
+      invitesSectionEl.classList.toggle('hidden', hasMatch);
       gameRoomEl.classList.toggle('hidden', !hasMatch);
 
       if (hasMatch) {
@@ -971,6 +979,23 @@
       if (!roomId) return;
       await navigator.clipboard.writeText(roomId);
       setStatus('Romkode kopiert.');
+    });
+
+    document.getElementById('copyJoinUrlBtn').addEventListener('click', async () => {
+      const roomId = roomIdEl.value.trim().toUpperCase();
+      if (!roomId) {
+        setStatus('Skriv inn romkode først.', true);
+        return;
+      }
+
+      const joinUrl = new URL('/dog/lobby/', window.location.origin);
+      joinUrl.searchParams.set('room', roomId);
+      if (DOG_ENDPOINT && SHOULD_EMBED_ENDPOINT_IN_INVITES) {
+        joinUrl.searchParams.set('endpoint', DOG_ENDPOINT);
+      }
+
+      await navigator.clipboard.writeText(joinUrl.toString());
+      setStatus('Join-URL kopiert.');
     });
 
     roomIdEl.addEventListener('change', () => loadRoom());
