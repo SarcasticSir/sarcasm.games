@@ -6,7 +6,7 @@ import {
   generateLegalMoves,
   TRACK_SPACES_BETWEEN_PLAYERS
 } from '../../packages/game-rules/index.js';
-import { detectWinner } from '../../packages/game-rules/phase2.js';
+import { detectWinner, getControllableOwnersForTurn } from '../../packages/game-rules/phase2.js';
 import {
   applyTeamCardExchange,
   createDeckState,
@@ -172,9 +172,16 @@ function withIdempotency(state, idempotencyKey, executor) {
   };
 }
 
-function hasAnyLegalMoveForPlayer(match, playerId) {
+function hasAnyLegalMoveForPlayer(state, match, playerId) {
   const hand = (match.handsByPlayerId[playerId] ?? []).map((card) => card.rank);
-  return evaluateHandPlayability(match.gameState, playerId, hand).hasAnyLegalMove;
+  const controllableOwners = getControllableOwnersForTurn({
+    gameMode: state.config.gameMode,
+    pieces: match.gameState.pieces,
+    playerId,
+    teamByPlayerId: getTeamByPlayerId(state.players)
+  });
+
+  return evaluateHandPlayability(match.gameState, playerId, hand, controllableOwners).hasAnyLegalMove;
 }
 
 function allHandsEmpty(match) {
@@ -194,7 +201,7 @@ function startNextRound(state) {
   };
 }
 
-function advanceToNextPlayableTurn(match) {
+function advanceToNextPlayableTurn(state, match) {
   const blocked = new Set(match.blockedPlayerIds);
   let turnIndex = match.turnIndex;
 
@@ -206,7 +213,7 @@ function advanceToNextPlayableTurn(match) {
       continue;
     }
 
-    const canAct = hasAnyLegalMoveForPlayer({ ...match, turnIndex }, playerId);
+    const canAct = hasAnyLegalMoveForPlayer(state, { ...match, turnIndex }, playerId);
     if (canAct) {
       return {
         turnIndex,
@@ -491,7 +498,14 @@ function handleRequestLegalMoves(state, command) {
     throw new Error(`Card ${card} not in hand`);
   }
 
-  const moves = generateLegalMoves(state.match.gameState, playerId, card);
+  const controllableOwners = getControllableOwnersForTurn({
+    gameMode: state.config.gameMode,
+    pieces: state.match.gameState.pieces,
+    playerId,
+    teamByPlayerId: getTeamByPlayerId(state.players)
+  });
+
+  const moves = generateLegalMoves(state.match.gameState, playerId, card, controllableOwners);
   return {
     state,
     response: { ok: true, moves, card, version: state.version }
@@ -511,7 +525,14 @@ function handleStartMovePreview(state, command) {
     throw new Error(`Card ${card} not in hand`);
   }
 
-  const legalMoves = generateLegalMoves(state.match.gameState, playerId, card);
+  const controllableOwners = getControllableOwnersForTurn({
+    gameMode: state.config.gameMode,
+    pieces: state.match.gameState.pieces,
+    playerId,
+    teamByPlayerId: getTeamByPlayerId(state.players)
+  });
+
+  const legalMoves = generateLegalMoves(state.match.gameState, playerId, card, controllableOwners);
   const desired = normalizeMove(move);
   const legal = legalMoves.find((candidate) => normalizeMove(candidate) === desired);
   if (!legal) {
@@ -648,7 +669,7 @@ function handleConfirmMove(state, command) {
     };
   }
 
-  const turnResolution = advanceToNextPlayableTurn(nextState.match);
+  const turnResolution = advanceToNextPlayableTurn(nextState, nextState.match);
   if (turnResolution.allBlocked) {
     nextState = withVersionBump(startNextRound(nextState));
     return {
@@ -716,7 +737,14 @@ export function evaluateCurrentTurnPlayability(state) {
 
   const playerId = state.match.turnOrder[state.match.turnIndex];
   const hand = state.match.handsByPlayerId[playerId].map((card) => card.rank);
-  return evaluateHandPlayability(state.match.gameState, playerId, hand);
+  const controllableOwners = getControllableOwnersForTurn({
+    gameMode: state.config.gameMode,
+    pieces: state.match.gameState.pieces,
+    playerId,
+    teamByPlayerId: getTeamByPlayerId(state.players)
+  });
+
+  return evaluateHandPlayability(state.match.gameState, playerId, hand, controllableOwners);
 }
 
 export function getPublicRoomView(state) {
