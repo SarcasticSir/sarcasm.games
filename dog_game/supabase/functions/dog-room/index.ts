@@ -1,7 +1,8 @@
 // Standalone Supabase Edge Function entrypoint for dog-room.
 //
-// This file is intentionally self-contained so it works when copied directly
-// into Supabase Dashboard editor (without local repo files present).
+// NOTE:
+// - Uses Postgres persistence when SUPABASE_SERVICE_ROLE_KEY is available.
+// - Falls back to in-memory Map only as a local/dev fallback.
 //
 // Deploy:
 //   supabase functions deploy dog-room --no-verify-jwt
@@ -40,6 +41,9 @@ type RoomState = {
 };
 
 const states = new Map<string, RoomState>();
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
+const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+const ROOM_TABLE = 'dog_room_states';
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -49,6 +53,10 @@ function jsonResponse(body: unknown, status = 200) {
       ...corsHeaders
     }
   });
+}
+
+function canonicalRoomId(raw: unknown) {
+  return String(raw ?? '').trim().toUpperCase();
 }
 
 function seatFromTeamSlot(teamNo: number, slotInTeam: number, teamCount: number) {
@@ -62,8 +70,10 @@ function sortPlayersBySeat(players: Player[]) {
 function toPublic(state: RoomState) {
   return {
     roomId: state.roomId,
+    hostPlayerId: state.hostPlayerId,
     status: state.status,
     version: state.version,
+    maxPlayers: state.maxPlayers,
     config: state.config,
     players: sortPlayersBySeat(state.players).map((p) => ({
       playerId: p.playerId,
@@ -77,8 +87,68 @@ function toPublic(state: RoomState) {
   };
 }
 
-function createRoom(command: any) {
-  const roomId = String(command.roomId ?? '').trim();
+async function hasPersistentStore() {
+  return Boolean(SUPABASE_URL && SERVICE_ROLE_KEY);
+}
+
+async function loadState(roomId: string): Promise<RoomState | null> {
+  if (!(await hasPersistentStore())) {
+    return states.get(roomId) ?? null;
+  }
+
+  const url = `${SUPABASE_URL}/rest/v1/${ROOM_TABLE}?room_id=eq.${encodeURIComponent(roomId)}&select=state&limit=1`;
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      apikey: SERVICE_ROLE_KEY,
+      authorization: `Bearer ${SERVICE_ROLE_KEY}`,
+      accept: 'application/json'
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to load room state (${response.status})`);
+  }
+
+  const rows = await response.json();
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return null;
+  }
+
+  return rows[0]?.state ?? null;
+}
+
+async function saveState(state: RoomState) {
+  if (!(await hasPersistentStore())) {
+    states.set(state.roomId, state);
+    return;
+  }
+
+  const url = `${SUPABASE_URL}/rest/v1/${ROOM_TABLE}`;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      apikey: SERVICE_ROLE_KEY,
+      authorization: `Bearer ${SERVICE_ROLE_KEY}`,
+      'content-type': 'application/json',
+      prefer: 'resolution=merge-duplicates'
+    },
+    body: JSON.stringify([
+      {
+        room_id: state.roomId,
+        state,
+        updated_at: new Date().toISOString()
+      }
+    ])
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to persist room state (${response.status})`);
+  }
+}
+
+async function createRoom(command: any) {
+  const roomId = canonicalRoomId(command.roomId);
   const hostPlayerId = String(command.playerId ?? '').trim();
 
   if (!roomId) {
@@ -89,7 +159,8 @@ function createRoom(command: any) {
     throw new Error('playerId is required');
   }
 
-  if (states.has(roomId)) {
+  const existing = await loadState(roomId);
+  if (existing) {
     throw new Error(`Room already exists: ${roomId}`);
   }
 
@@ -124,7 +195,7 @@ function createRoom(command: any) {
     match: null
   };
 
-  states.set(roomId, state);
+  await saveState(state);
 
   return {
     ok: true,
@@ -134,13 +205,13 @@ function createRoom(command: any) {
   };
 }
 
-function updateRoom(command: any) {
-  const roomId = String(command.roomId ?? '').trim();
+async function updateRoom(command: any) {
+  const roomId = canonicalRoomId(command.roomId);
   if (!roomId) {
     throw new Error('roomId is required');
   }
 
-  const state = states.get(roomId);
+  const state = await loadState(roomId);
   if (!state) {
     throw new Error(`Unknown room: ${roomId}`);
   }
@@ -152,6 +223,14 @@ function updateRoom(command: any) {
         roomId,
         public: toPublic(state),
         private: { playerId: command.playerId ?? null }
+      };
+    }
+
+    case 'get_room': {
+      return {
+        ok: true,
+        roomId,
+        public: toPublic(state)
       };
     }
 
@@ -203,7 +282,7 @@ function updateRoom(command: any) {
         connected: true
       });
       state.version += 1;
-      states.set(roomId, state);
+      await saveState(state);
 
       return {
         ok: true,
@@ -226,7 +305,7 @@ function updateRoom(command: any) {
 
       player.ready = Boolean(command.isReady);
       state.version += 1;
-      states.set(roomId, state);
+      await saveState(state);
 
       return {
         ok: true,
@@ -250,16 +329,12 @@ function updateRoom(command: any) {
         throw new Error('Room is not full');
       }
 
-      if (state.players.some((p) => p.ready !== true)) {
-        throw new Error('All players must be ready');
-      }
-
       state.status = 'active';
       state.match = {
         phase: state.config.gameMode === 'teams' ? 'exchange' : 'play'
       };
       state.version += 1;
-      states.set(roomId, state);
+      await saveState(state);
 
       return {
         ok: true,
@@ -293,14 +368,14 @@ Deno.serve(async (request) => {
     }
 
     if (payload.type === 'create_room') {
-      return jsonResponse({ ok: true, result: createRoom(payload) }, 200);
+      return jsonResponse({ ok: true, result: await createRoom(payload) }, 200);
     }
 
     if (payload.type === 'attach') {
-      return jsonResponse({ ok: true, result: updateRoom({ ...payload, type: 'attach' }) }, 200);
+      return jsonResponse({ ok: true, result: await updateRoom({ ...payload, type: 'attach' }) }, 200);
     }
 
-    return jsonResponse({ ok: true, result: updateRoom(payload) }, 200);
+    return jsonResponse({ ok: true, result: await updateRoom(payload) }, 200);
   } catch (error) {
     return jsonResponse(
       {
