@@ -452,7 +452,7 @@ export function generateLegalMoves(state, playerId, card, controllableOwnerIds =
 
     if (piece.isInStart) {
       if (canExitStart(card)) {
-        const startSquare = state.startIndexes[playerId];
+        const startSquare = state.startIndexes[piece.ownerId];
         const occupant = pieceAtSquare(state, startSquare, piece.id);
 
         if (!occupant?.isImmune) {
