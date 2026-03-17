@@ -127,8 +127,11 @@
     let preferredSeat = null;
     let pollTimer = null;
     let selectedCardId = null;
+    let selectedExchangeCardId = null;
     let legalMovesForCard = [];
     let selectedMoveIndex = -1;
+    let isLoadingRoom = false;
+    let refreshRequestedWhileLoading = false;
 
     const roomIdEl = document.getElementById('roomId');
     const playerIdEl = document.getElementById('playerId');
@@ -191,9 +194,18 @@
 
     async function call(command) {
       const next = normalize(await request(command));
-      snapshot = next.public;
-      privateView = next.private;
-      return next;
+      const incomingVersion = Number(next.public?.version ?? -1);
+      const currentVersion = Number(snapshot?.version ?? -1);
+
+      if (incomingVersion >= currentVersion) {
+        snapshot = next.public;
+        privateView = next.private;
+      }
+
+      return {
+        ...next,
+        wasStale: incomingVersion < currentVersion
+      };
     }
 
     function seatNo(teamNo, slotInTeam, teamCount) {
@@ -297,6 +309,12 @@
       selectedMoveIndex = -1;
     }
 
+    function resetAllSelections() {
+      selectedCardId = null;
+      selectedExchangeCardId = null;
+      resetMoveSelection();
+    }
+
     function buildActionText(rank) {
       if (!rank) return 'Velg et kort for å se mulige handlinger.';
       if (rank === '7') return '7 split: velg rute over flere brikker, og bekreft hele sekvensen.';
@@ -328,10 +346,58 @@
       myHandEl.querySelectorAll('[data-card-id]').forEach((button) => {
         button.addEventListener('click', () => {
           selectedCardId = button.getAttribute('data-card-id');
+          selectedExchangeCardId = button.getAttribute('data-card-id');
           resetMoveSelection();
           renderPanels();
         });
       });
+
+      if (match.phase === 'exchange') {
+        const exchangeSubmitted = Boolean(privateView?.pendingExchangeSubmitted);
+        const selectedExchangeCard = cards.find((entry) => entry.id === selectedExchangeCardId) || null;
+
+        actionPanelEl.innerHTML = `
+          <h3>Handling</h3>
+          <p class="helper">Exchange-fase: velg ett kort og send til lagkamerat.</p>
+          <p class="helper">${exchangeSubmitted ? 'Kort er sendt. Venter på andre spillere.' : 'Du må sende ett kort for å komme videre.'}</p>
+          <p class="helper">Valgt kort: <strong>${selectedExchangeCard ? `${selectedExchangeCard.rank}${selectedExchangeCard.suit ? ` ${selectedExchangeCard.suit}` : ''}` : '-'}</strong></p>
+          <div class="actions" style="margin-top:10px;grid-template-columns:1fr 1fr;">
+            <button type="button" id="submitExchangeBtn" ${selectedExchangeCard && !exchangeSubmitted ? '' : 'disabled'}>Send exchange card</button>
+            <button type="button" class="ghost" id="clearExchangeChoiceBtn" ${selectedExchangeCard && !exchangeSubmitted ? '' : 'disabled'}>Clear selection</button>
+          </div>
+        `;
+
+        const submitExchangeBtn = document.getElementById('submitExchangeBtn');
+        if (submitExchangeBtn) {
+          submitExchangeBtn.addEventListener('click', async () => {
+            if (!selectedExchangeCard || !currentPlayerId) return;
+            try {
+              await call({
+                type: 'exchange_card',
+                roomId: snapshot.roomId,
+                playerId: currentPlayerId,
+                cardId: selectedExchangeCard.id,
+                expectedVersion: snapshot.version,
+                idempotencyKey: buildIdempotencyKey('exchange-card')
+              });
+              setStatus('Exchange-kort sendt. Venter på resten av laget/spillerne.');
+              await loadRoom();
+            } catch (error) {
+              setStatus(`Kunne ikke sende exchange-kort: ${String(error)}`, true);
+            }
+          });
+        }
+
+        const clearExchangeChoiceBtn = document.getElementById('clearExchangeChoiceBtn');
+        if (clearExchangeChoiceBtn) {
+          clearExchangeChoiceBtn.addEventListener('click', () => {
+            selectedExchangeCardId = null;
+            renderPanels();
+          });
+        }
+
+        return;
+      }
 
       const card = selectedCard();
       const rank = card?.rank || null;
@@ -424,8 +490,7 @@
               expectedVersion: snapshot.version,
               idempotencyKey: buildIdempotencyKey('confirm-move')
             });
-            resetMoveSelection();
-            selectedCardId = null;
+            resetAllSelections();
             setStatus('Trekk bekreftet.');
             await loadRoom();
           } catch (error) {
@@ -576,6 +641,8 @@
         if (snapshot.match?.winner) {
           setStatus(`Spillet er ferdig. Vinner: ${JSON.stringify(snapshot.match.winner)}`);
         }
+      } else {
+        resetAllSelections();
       }
     }
 
@@ -621,13 +688,29 @@
         return;
       }
 
+      if (isLoadingRoom) {
+        refreshRequestedWhileLoading = true;
+        return;
+      }
+
+      isLoadingRoom = true;
       try {
-        await fetchSnapshot(roomId, playerId);
+        const result = await fetchSnapshot(roomId, playerId);
         render();
         await tryAutoJoinPreferredSeat();
-        setStatus('Romstatus oppdatert.');
+        if (result.wasStale) {
+          setStatus('Ignorerte utdatert snapshot.');
+        } else {
+          setStatus('Romstatus oppdatert.');
+        }
       } catch (error) {
         setStatus(`Kunne ikke hente rom: ${String(error)}`, true);
+      } finally {
+        isLoadingRoom = false;
+        if (refreshRequestedWhileLoading) {
+          refreshRequestedWhileLoading = false;
+          loadRoom();
+        }
       }
     }
 
