@@ -41,6 +41,21 @@ Then put your handler implementation into:
 `dog_game/services/realtime-server/supabase-edge-handler.js` and
 `dog_game/services/realtime-server/supabase-room-service.js`.)
 
+
+## 2.1) Recommended `index.ts` shape (copy/paste)
+
+Use a function file that:
+
+- answers `OPTIONS` before loading game modules,
+- always returns CORS headers,
+- lazy-loads room modules so runtime import issues become visible JSON errors.
+
+This repository includes a ready template at:
+
+- `dog_game/supabase/functions/dog-room/index.ts`
+
+If you are still getting browser CORS failures, compare your deployed function file with this template line-by-line.
+
 ## 3) Set function secrets
 
 Set secrets for the linked Supabase project:
@@ -155,7 +170,9 @@ Check these first:
 
 1. Endpoint preflight (`OPTIONS`) returns HTTP 2xx (if not, redeploy with `--no-verify-jwt`).
 2. CORS origin list includes exact frontend origin.
-3. Function is deployed to the same Supabase project ref.
-4. Function has service role secret configured.
-5. Endpoint URL in `/dog` is exactly `/functions/v1/dog-room`.
-6. Command payload includes required `type` field.
+3. Check function logs for startup/import failures:
+   - `supabase functions logs dog-room --project-ref hmwzdnebhqavatuxmtki`
+4. Function is deployed to the same Supabase project ref.
+5. Function has service role secret configured.
+6. Endpoint URL in `/dog` is exactly `/functions/v1/dog-room`.
+7. Command payload includes required `type` field.
