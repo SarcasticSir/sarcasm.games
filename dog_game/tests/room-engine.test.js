@@ -493,6 +493,7 @@ test('team support-play lets completed player use teammate pieces for legal move
 
   const teammateExit = legal.response.moves.find((move) => move.action === 'EXIT_START' && move.pieceId.startsWith('P3-'));
   assert.ok(teammateExit);
+  assert.equal(teammateExit.to, state.match.gameState.startIndexes.P3);
 
   const playability = evaluateCurrentTurnPlayability(state);
   assert.equal(playability.hasAnyLegalMove, true);
