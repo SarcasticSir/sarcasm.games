@@ -352,9 +352,10 @@ function applySegments(state, segments) {
  * @param {import('../shared-types/index.js').GameState} state
  * @param {string} playerId
  */
-export function generateSevenSplitMoves(state, playerId) {
+export function generateSevenSplitMoves(state, playerId, controllableOwnerIds = [playerId]) {
+  const controllable = new Set(controllableOwnerIds);
   const ownMovers = state.pieces.filter(
-    (piece) => piece.ownerId === playerId && piece.isOnBoard && piece.position !== null && !piece.isInHome
+    (piece) => controllable.has(piece.ownerId) && piece.isOnBoard && piece.position !== null && !piece.isInHome
   );
 
   const results = [];
@@ -398,7 +399,7 @@ export function generateSevenSplitMoves(state, playerId) {
     }
 
     const candidatePieces = currentState.pieces.filter(
-      (piece) => piece.ownerId === playerId && piece.isOnBoard && piece.position !== null && !piece.isInHome
+      (piece) => controllable.has(piece.ownerId) && piece.isOnBoard && piece.position !== null && !piece.isInHome
     );
 
     for (const candidate of candidatePieces) {
@@ -427,21 +428,22 @@ export function generateSevenSplitMoves(state, playerId) {
  * @param {import('../shared-types/index.js').CardRank} card
  * @returns {import('../shared-types/index.js').MoveOption[]}
  */
-export function generateLegalMoves(state, playerId, card) {
+export function generateLegalMoves(state, playerId, card, controllableOwnerIds = [playerId]) {
   if (!CARD_RANKS.includes(card)) {
     throw new Error(`Unknown card: ${card}`);
   }
 
   if (card === 'JOKER') {
-    return generateJokerOptions(state, playerId);
+    return generateJokerOptions(state, playerId, controllableOwnerIds);
   }
 
   if (card === 'SEVEN') {
-    return generateSevenSplitMoves(state, playerId);
+    return generateSevenSplitMoves(state, playerId, controllableOwnerIds);
   }
 
   const options = [];
-  const ownPieces = state.pieces.filter((piece) => piece.ownerId === playerId);
+  const controllable = new Set(controllableOwnerIds);
+  const ownPieces = state.pieces.filter((piece) => controllable.has(piece.ownerId));
 
   for (const piece of ownPieces) {
     if (piece.isInHome && !piece.isOnBoard) {
@@ -489,7 +491,7 @@ export function generateLegalMoves(state, playerId, card) {
   }
 
   if (card === 'JACK') {
-    return generateJackSwapOptions(state, playerId);
+    return generateJackSwapOptions(state, playerId, controllableOwnerIds);
   }
 
   return options.sort((a, b) => {
@@ -510,12 +512,12 @@ export function generateLegalMoves(state, playerId, card) {
  * @param {string} playerId
  * @returns {import('../shared-types/index.js').MoveOption[]}
  */
-export function generateJokerOptions(state, playerId) {
+export function generateJokerOptions(state, playerId, controllableOwnerIds = [playerId]) {
   const mirroredCards = CARD_RANKS.filter((rank) => rank !== 'JOKER');
   const uniqueMoves = new Map();
 
   for (const mirroredCard of mirroredCards) {
-    const moves = generateLegalMoves(state, playerId, mirroredCard);
+    const moves = generateLegalMoves(state, playerId, mirroredCard, controllableOwnerIds);
 
     for (const move of moves) {
       const jokerMove = {
@@ -536,13 +538,14 @@ export function generateJokerOptions(state, playerId) {
  * @param {string} playerId
  * @returns {import('../shared-types/index.js').MoveOption[]}
  */
-export function generateJackSwapOptions(state, playerId) {
+export function generateJackSwapOptions(state, playerId, controllableOwnerIds = [playerId]) {
+  const controllable = new Set(controllableOwnerIds);
   const ownOnBoard = state.pieces.filter(
-    (piece) => piece.ownerId === playerId && piece.isOnBoard && piece.position !== null && !piece.isImmune
+    (piece) => controllable.has(piece.ownerId) && piece.isOnBoard && piece.position !== null && !piece.isImmune
   );
 
   const targets = state.pieces.filter(
-    (piece) => piece.ownerId !== playerId && piece.isOnBoard && piece.position !== null && !piece.isImmune
+    (piece) => !controllable.has(piece.ownerId) && piece.isOnBoard && piece.position !== null && !piece.isImmune
   );
 
   const options = [];
@@ -587,12 +590,12 @@ export function buildStartIndexes(playerCount) {
  * @param {string} playerId
  * @param {import('../shared-types/index.js').CardRank[]} hand
  */
-export function evaluateHandPlayability(state, playerId, hand) {
+export function evaluateHandPlayability(state, playerId, hand, controllableOwnerIds = [playerId]) {
   const perCardMoves = {};
   let hasAnyLegalMove = false;
 
   for (const card of hand) {
-    const moves = generateLegalMoves(state, playerId, card);
+    const moves = generateLegalMoves(state, playerId, card, controllableOwnerIds);
     perCardMoves[card] = moves;
 
     if (moves.length > 0) {
