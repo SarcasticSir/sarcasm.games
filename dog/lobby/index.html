@@ -93,7 +93,7 @@
       <h2>Seter</h2>
       <div id="roomMeta"></div>
       <div id="seats" class="seats"></div>
-      <div class="actions">
+      <div id="hostStartActions" class="actions">
         <button id="startMatchBtn" type="button">Start spill (host)</button>
       </div>
     </section>
@@ -120,15 +120,19 @@
   </main>
 
   <script>
-    const DEFAULT_DOG_ENDPOINT = 'https://hmwzdnebhqavatuxmtki.supabase.co/functions/v1/dog-room';
+    const HOST_DEFAULT_ENDPOINTS = Object.freeze({
+      'sarcasm.games': 'https://hmwzdnebhqavatuxmtki.supabase.co/functions/v1/dog-room',
+      'www.sarcasm.games': 'https://hmwzdnebhqavatuxmtki.supabase.co/functions/v1/dog-room'
+    });
 
     function resolveDogEndpoint() {
       const params = new URLSearchParams(window.location.search);
       const fromQuery = params.get('endpoint');
       const fromGlobal = window.DOG_ENDPOINT;
       const fromStorage = window.localStorage.getItem('dog.endpoint');
-      const endpoint = fromQuery || fromGlobal || fromStorage || DEFAULT_DOG_ENDPOINT;
-      window.localStorage.setItem('dog.endpoint', endpoint);
+      const inferred = HOST_DEFAULT_ENDPOINTS[window.location.hostname] || '';
+      const endpoint = fromQuery || fromGlobal || fromStorage || inferred;
+      if (endpoint) window.localStorage.setItem('dog.endpoint', endpoint);
       return endpoint;
     }
 
@@ -153,6 +157,7 @@
     const seatsEl = document.getElementById('seats');
     const invitesEl = document.getElementById('invites');
     const startMatchBtnEl = document.getElementById('startMatchBtn');
+    const hostStartActionsEl = document.getElementById('hostStartActions');
     const gameRoomEl = document.getElementById('gameRoom');
     const lobbyIntroEl = document.getElementById('lobbyIntro');
     const roomControlsEl = document.getElementById('roomControls');
@@ -180,6 +185,7 @@
     }
 
     async function request(command) {
+      if (!DOG_ENDPOINT) throw new Error('Missing endpoint configuration for this environment');
       const res = await fetch(DOG_ENDPOINT, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
@@ -679,13 +685,13 @@
 
         seatsEl.appendChild(item);
 
-        if (!player) {
+        if (!player && isHost) {
           const inviteUrl = new URL(window.location.href);
           inviteUrl.search = '';
           inviteUrl.searchParams.set('room', snapshot.roomId);
           inviteUrl.searchParams.set('teamNo', String(seat.teamNo));
           inviteUrl.searchParams.set('slotInTeam', String(seat.slotInTeam));
-          inviteUrl.searchParams.set('endpoint', DOG_ENDPOINT);
+          if (DOG_ENDPOINT) inviteUrl.searchParams.set('endpoint', DOG_ENDPOINT);
           const invite = document.createElement('div');
           invite.className = 'invite-item';
           invite.innerHTML = `<div>Sete ${seat.seatNo} (lag ${seat.teamNo}, plass ${seat.slotInTeam})</div><code>${inviteUrl.toString()}</code>`;
@@ -703,12 +709,13 @@
       });
 
       startMatchBtnEl.disabled = !isHost || !allReady || snapshot.status !== 'lobby';
+      hostStartActionsEl.classList.toggle('hidden', !isHost);
 
       const hasMatch = snapshot.status !== 'lobby' && snapshot.match;
       lobbyIntroEl.classList.toggle('hidden', hasMatch);
       roomControlsEl.classList.toggle('hidden', hasMatch);
       seatsSectionEl.classList.toggle('hidden', hasMatch);
-      invitesSectionEl.classList.toggle('hidden', hasMatch);
+      invitesSectionEl.classList.toggle('hidden', hasMatch || !isHost);
       gameRoomEl.classList.toggle('hidden', !hasMatch);
 
       if (hasMatch) {
@@ -816,7 +823,7 @@
     document.getElementById('startMatchBtn').addEventListener('click', startMatch);
     document.getElementById('newRoomBtn').addEventListener('click', () => {
       const target = new URL('/dog/', window.location.origin);
-      target.searchParams.set('endpoint', DOG_ENDPOINT);
+      if (DOG_ENDPOINT) target.searchParams.set('endpoint', DOG_ENDPOINT);
       window.location.href = target.toString();
     });
     document.getElementById('copyRoomCodeBtn').addEventListener('click', async () => {
@@ -829,6 +836,9 @@
     roomIdEl.addEventListener('change', loadRoom);
 
     getQueryDefaults();
+    if (!DOG_ENDPOINT) {
+      setStatus('Mangler endpoint-konfigurasjon for dette miljøet. Kontakt support/host.', true);
+    }
     if (roomIdEl.value) loadRoom();
     pollTimer = setInterval(() => { if (roomIdEl.value.trim()) loadRoom(); }, 3000);
     window.addEventListener('beforeunload', () => clearInterval(pollTimer));

@@ -41,11 +41,8 @@
 
       <div class="grid">
         <div>
-          <label for="gameMode">Spillmodus</label>
-          <select id="gameMode">
-            <option value="solo">Alle mot alle (1v1v1v1)</option>
-            <option value="teams">Lagmodus</option>
-          </select>
+          <label>Spillmodell</label>
+          <input value="Teams-only (4 lag à 1 for alle-mot-alle)" disabled />
         </div>
         <div>
           <label for="teamCount">Antall lag</label>
@@ -67,15 +64,19 @@
   </main>
 
   <script>
-    const DEFAULT_DOG_ENDPOINT = 'https://hmwzdnebhqavatuxmtki.supabase.co/functions/v1/dog-room';
+    const HOST_DEFAULT_ENDPOINTS = Object.freeze({
+      'sarcasm.games': 'https://hmwzdnebhqavatuxmtki.supabase.co/functions/v1/dog-room',
+      'www.sarcasm.games': 'https://hmwzdnebhqavatuxmtki.supabase.co/functions/v1/dog-room'
+    });
 
     function resolveDogEndpoint() {
       const params = new URLSearchParams(window.location.search);
       const fromQuery = params.get('endpoint');
       const fromGlobal = window.DOG_ENDPOINT;
       const fromStorage = window.localStorage.getItem('dog.endpoint');
-      const endpoint = fromQuery || fromGlobal || fromStorage || DEFAULT_DOG_ENDPOINT;
-      window.localStorage.setItem('dog.endpoint', endpoint);
+      const inferred = HOST_DEFAULT_ENDPOINTS[window.location.hostname] || '';
+      const endpoint = fromQuery || fromGlobal || fromStorage || inferred;
+      if (endpoint) window.localStorage.setItem('dog.endpoint', endpoint);
       return endpoint;
     }
 
@@ -83,7 +84,6 @@
 
     const roomIdEl = document.getElementById('roomId');
     const hostPlayerIdEl = document.getElementById('hostPlayerId');
-    const gameModeEl = document.getElementById('gameMode');
     const teamCountEl = document.getElementById('teamCount');
     const playersPerTeamEl = document.getElementById('playersPerTeam');
     const statusEl = document.getElementById('status');
@@ -102,15 +102,10 @@
     }
 
     function syncMode() {
-      if (gameModeEl.value === 'solo') {
-        teamCountEl.value = '4';
-        playersPerTeamEl.value = '1';
-        teamCountEl.disabled = true;
-        playersPerTeamEl.disabled = true;
-      } else {
-        teamCountEl.disabled = false;
-        playersPerTeamEl.disabled = false;
-      }
+      teamCountEl.value = '4';
+      playersPerTeamEl.value = '1';
+      teamCountEl.disabled = true;
+      playersPerTeamEl.disabled = true;
       const total = Number(teamCountEl.value) * Number(playersPerTeamEl.value);
       const ok = total >= 4 && total <= 8;
       capacityEl.textContent = `Kapasitet: ${total} spillere ${ok ? '(gyldig)' : '(må være mellom 4 og 8)'}`;
@@ -120,9 +115,14 @@
     async function createRoom() {
       const roomId = roomIdEl.value.trim().toUpperCase();
       const playerId = hostPlayerIdEl.value.trim();
-      const gameMode = gameModeEl.value;
+      const gameMode = 'teams';
       const teamCount = Number(teamCountEl.value);
       const playersPerTeam = Number(playersPerTeamEl.value);
+
+      if (!DOG_ENDPOINT) {
+        setStatus('Mangler endpoint-konfigurasjon for dette miljøet. Kontakt support/host.', true);
+        return;
+      }
 
       if (!roomId || !playerId) {
         setStatus('Fyll inn host-ID og romkode først.', true);
@@ -151,7 +151,7 @@
         target.searchParams.set('room', roomId);
         target.searchParams.set('player', playerId);
         target.searchParams.set('host', '1');
-        target.searchParams.set('endpoint', DOG_ENDPOINT);
+        if (DOG_ENDPOINT) target.searchParams.set('endpoint', DOG_ENDPOINT);
         window.location.href = target.toString();
       } catch (error) {
         setStatus(`Kunne ikke opprette rom: ${String(error)}`, true);
@@ -169,11 +169,10 @@
     document.getElementById('createRoomBtn').addEventListener('click', createRoom);
     document.getElementById('goLobbyBtn').addEventListener('click', () => {
       const target = new URL('/dog/lobby/', window.location.origin);
-      target.searchParams.set('endpoint', DOG_ENDPOINT);
+      if (DOG_ENDPOINT) target.searchParams.set('endpoint', DOG_ENDPOINT);
       window.location.href = target.toString();
     });
 
-    gameModeEl.addEventListener('change', syncMode);
     teamCountEl.addEventListener('change', syncMode);
     playersPerTeamEl.addEventListener('change', syncMode);
 
