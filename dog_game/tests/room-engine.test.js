@@ -429,6 +429,7 @@ test('public/private projections hide opponent hands and keep own hand visible',
   const privateView = getPlayerPrivateView(state, 'P1');
 
   assert.equal(publicView.match.handCountsByPlayerId.P1, 6);
+  assert.ok(Array.isArray(publicView.match.gameState.pieces));
   assert.equal(privateView.private.hand.length, 6);
   assert.equal('handsByPlayerId' in publicView.match, false);
 });

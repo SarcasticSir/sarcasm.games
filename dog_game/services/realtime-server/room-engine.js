@@ -824,6 +824,7 @@ export function getPublicRoomView(state) {
           roundNumber: state.match.roundNumber,
           turnPlayerId: state.match.turnOrder[state.match.turnIndex],
           blockedPlayerIds: [...state.match.blockedPlayerIds],
+          gameState: clone(state.match.gameState),
           handCountsByPlayerId: Object.fromEntries(
             Object.entries(state.match.handsByPlayerId).map(([playerId, hand]) => [playerId, hand.length])
           ),
