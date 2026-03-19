@@ -99,6 +99,6 @@ module.exports = async function handler(req, res) {
       message: error?.message,
       stack: error?.stack
     });
-    res.status(500).json({ error: 'Registration failed' });
+    res.status(500).json({ error: error?.message || 'Registration failed' });
   }
 };
