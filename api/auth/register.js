@@ -32,16 +32,16 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    if (!username || !email || !password) {
-      res.status(400).json({ error: 'username, email and password are required' });
+    if (!email || !password) {
+      res.status(400).json({ error: 'email and password are required' });
       return;
     }
 
-    const trimmedUsername = String(username).trim();
+    const trimmedUsername = typeof username === 'string' ? username.trim() : '';
     const trimmedEmail = String(email).trim();
     const rawPassword = String(password);
 
-    if (trimmedUsername.length < 3 || trimmedUsername.length > 40) {
+    if (trimmedUsername && (trimmedUsername.length < 3 || trimmedUsername.length > 40)) {
       res.status(400).json({ error: 'Username must be 3-40 characters' });
       return;
     }
@@ -56,24 +56,11 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const { getUserByEmail, getUserByUsername, insertUser } = require('../_lib/db');
-    const { setAuthCookies } = require('../_lib/auth');
+    const { setAuthCookies, mapAuthUser } = require('../_lib/auth');
     const { getSupabaseAnonClient, getSupabaseAdminClient } = require('../_lib/supabase');
 
-    const normalizedUsername = trimmedUsername.toLowerCase();
+    const normalizedUsername = trimmedUsername ? trimmedUsername.toLowerCase() : null;
     const normalizedEmail = trimmedEmail.toLowerCase();
-
-    const existingByEmail = await getUserByEmail(normalizedEmail);
-    if (existingByEmail) {
-      res.status(409).json({ error: 'Email is already registered' });
-      return;
-    }
-
-    const existingByUsername = await getUserByUsername(normalizedUsername);
-    if (existingByUsername) {
-      res.status(409).json({ error: 'Username is already taken' });
-      return;
-    }
 
     const countryHeader = req.headers['x-vercel-ip-country'];
     const country = typeof countryHeader === 'string' && countryHeader.trim() ? countryHeader.trim() : 'unknown';
@@ -83,8 +70,12 @@ module.exports = async function handler(req, res) {
       email: normalizedEmail,
       password: rawPassword,
       email_confirm: true,
+      app_metadata: {
+        role: 'user'
+      },
       user_metadata: {
-        username: normalizedUsername
+        ...(normalizedUsername ? { username: normalizedUsername } : {}),
+        country
       }
     });
 
@@ -92,21 +83,6 @@ module.exports = async function handler(req, res) {
       const status = createUserError?.status === 422 ? 409 : 500;
       res.status(status).json({ error: createUserError?.message || 'Failed to create account' });
       return;
-    }
-
-    let profile = null;
-
-    try {
-      profile = await insertUser({
-        authUserId: createdUserData.user.id,
-        username: normalizedUsername,
-        email: normalizedEmail,
-        role: 'user',
-        country
-      });
-    } catch (error) {
-      await adminClient.auth.admin.deleteUser(createdUserData.user.id);
-      throw error;
     }
 
     const supabase = getSupabaseAnonClient();
@@ -117,13 +93,7 @@ module.exports = async function handler(req, res) {
 
     if (signInError || !signInData?.session) {
       res.status(201).json({
-        user: {
-          id: profile.id,
-          username: profile.username,
-          email: profile.email,
-          role: profile.role,
-          country: profile.country
-        }
+        user: mapAuthUser(createdUserData.user)
       });
       return;
     }
@@ -131,13 +101,7 @@ module.exports = async function handler(req, res) {
     setAuthCookies(res, signInData.session);
 
     res.status(201).json({
-      user: {
-        id: profile.id,
-        username: profile.username,
-        email: profile.email,
-        role: profile.role,
-        country: profile.country
-      }
+      user: mapAuthUser(signInData.user || createdUserData.user)
     });
   } catch (error) {
     console.error('[auth/register] Registration failed:', {
