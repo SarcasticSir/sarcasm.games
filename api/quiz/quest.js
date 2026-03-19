@@ -1,6 +1,6 @@
 const crypto = require('crypto');
 const { runQuery } = require('../_lib/db');
-const { parseCookies, verifySessionToken, COOKIE_NAME } = require('../_lib/auth');
+const { getSessionFromCookies } = require('../_lib/auth');
 const { isRateLimited } = require('../_lib/rate-limit');
 const { sendQuizRateLimited } = require('../_lib/quiz-rate-limit-response');
 const { createEndpointMetric } = require('../_lib/observability');
@@ -29,12 +29,9 @@ function parseCategoryList(value) {
     });
 }
 
-async function tryGetSession(req) {
+async function tryGetSession(req, res) {
   try {
-    const cookies = parseCookies(req);
-    const token = cookies[COOKIE_NAME];
-    if (!token) return null;
-    return await verifySessionToken(token);
+    return await getSessionFromCookies(req, res, { allowRefresh: true });
   } catch (error) {
     return null;
   }
@@ -307,7 +304,7 @@ module.exports = async function handler(req, res) {
     const body = parseJsonBody(req.body);
     const action = String(body.action || '').trim().toLowerCase();
     const lang = body.lang === 'no' ? 'no' : 'en';
-    const session = await tryGetSession(req);
+    const session = await tryGetSession(req, res);
     const userId = session && Number.isInteger(Number(session.id)) ? Number(session.id) : null;
     const guestProgress = userId ? { token: null, solvedQuestionIds: [] } : await loadGuestProgress(body);
 

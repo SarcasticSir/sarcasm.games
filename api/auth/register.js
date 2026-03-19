@@ -56,8 +56,9 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const bcrypt = require('bcryptjs');
     const { getUserByEmail, getUserByUsername, insertUser } = require('../_lib/db');
+    const { setAuthCookies } = require('../_lib/auth');
+    const { getSupabaseAnonClient, getSupabaseAdminClient } = require('../_lib/supabase');
 
     const normalizedUsername = trimmedUsername.toLowerCase();
     const normalizedEmail = trimmedEmail.toLowerCase();
@@ -74,25 +75,68 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const passwordHash = await bcrypt.hash(rawPassword, 12);
     const countryHeader = req.headers['x-vercel-ip-country'];
     const country = typeof countryHeader === 'string' && countryHeader.trim() ? countryHeader.trim() : 'unknown';
 
-    const user = await insertUser({
-      username: normalizedUsername,
+    const adminClient = getSupabaseAdminClient();
+    const { data: createdUserData, error: createUserError } = await adminClient.auth.admin.createUser({
       email: normalizedEmail,
-      passwordHash,
-      role: 'user',
-      country
+      password: rawPassword,
+      email_confirm: true,
+      user_metadata: {
+        username: normalizedUsername
+      }
     });
+
+    if (createUserError || !createdUserData?.user?.id) {
+      const status = createUserError?.status === 422 ? 409 : 500;
+      res.status(status).json({ error: createUserError?.message || 'Failed to create account' });
+      return;
+    }
+
+    let profile = null;
+
+    try {
+      profile = await insertUser({
+        authUserId: createdUserData.user.id,
+        username: normalizedUsername,
+        email: normalizedEmail,
+        role: 'user',
+        country
+      });
+    } catch (error) {
+      await adminClient.auth.admin.deleteUser(createdUserData.user.id);
+      throw error;
+    }
+
+    const supabase = getSupabaseAnonClient();
+    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+      email: normalizedEmail,
+      password: rawPassword
+    });
+
+    if (signInError || !signInData?.session) {
+      res.status(201).json({
+        user: {
+          id: profile.id,
+          username: profile.username,
+          email: profile.email,
+          role: profile.role,
+          country: profile.country
+        }
+      });
+      return;
+    }
+
+    setAuthCookies(res, signInData.session);
 
     res.status(201).json({
       user: {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        role: user.role,
-        country: user.country
+        id: profile.id,
+        username: profile.username,
+        email: profile.email,
+        role: profile.role,
+        country: profile.country
       }
     });
   } catch (error) {

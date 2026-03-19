@@ -1,31 +1,9 @@
-const { SignJWT, jwtVerify } = require('jose');
-const { getUserById } = require('./db');
+const { getUserByAuthUserId } = require('./db');
+const { getSupabaseAnonClient } = require('./supabase');
 
-const COOKIE_NAME = 'sg_session';
-const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
-
-function getJwtSecret() {
-  const secret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET;
-  if (!secret) {
-    throw new Error('Missing AUTH_SECRET (or NEXTAUTH_SECRET) environment variable.');
-  }
-  return new TextEncoder().encode(secret);
-}
-
-async function signSessionToken(payload) {
-  const secret = getJwtSecret();
-  return new SignJWT(payload)
-    .setProtectedHeader({ alg: 'HS256' })
-    .setIssuedAt()
-    .setExpirationTime(`${SESSION_TTL_SECONDS}s`)
-    .sign(secret);
-}
-
-async function verifySessionToken(token) {
-  const secret = getJwtSecret();
-  const { payload } = await jwtVerify(token, secret);
-  return payload;
-}
+const ACCESS_COOKIE_NAME = 'sg_sb_access_token';
+const REFRESH_COOKIE_NAME = 'sg_sb_refresh_token';
+const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
 
 function parseCookies(req) {
   const rawCookie = req.headers.cookie || '';
@@ -38,69 +16,91 @@ function parseCookies(req) {
   return cookies;
 }
 
-function setSessionCookie(res, token) {
+function createCookie(name, value, maxAge) {
   const secure = process.env.NODE_ENV === 'production';
-  const cookie = [
-    `${COOKIE_NAME}=${encodeURIComponent(token)}`,
+  return [
+    `${name}=${encodeURIComponent(value)}`,
     'Path=/',
     'HttpOnly',
     'SameSite=Lax',
-    `Max-Age=${SESSION_TTL_SECONDS}`,
+    `Max-Age=${maxAge}`,
     secure ? 'Secure' : null
   ]
     .filter(Boolean)
     .join('; ');
-  res.setHeader('Set-Cookie', cookie);
+}
+
+function setAuthCookies(res, session) {
+  res.setHeader('Set-Cookie', [
+    createCookie(ACCESS_COOKIE_NAME, session.access_token, session.expires_in || COOKIE_MAX_AGE_SECONDS),
+    createCookie(REFRESH_COOKIE_NAME, session.refresh_token, COOKIE_MAX_AGE_SECONDS)
+  ]);
 }
 
 function clearSessionCookie(res) {
-  const secure = process.env.NODE_ENV === 'production';
-  const cookie = [
-    `${COOKIE_NAME}=`,
-    'Path=/',
-    'HttpOnly',
-    'SameSite=Lax',
-    'Max-Age=0',
-    secure ? 'Secure' : null
-  ]
-    .filter(Boolean)
-    .join('; ');
-  res.setHeader('Set-Cookie', cookie);
+  res.setHeader('Set-Cookie', [
+    createCookie(ACCESS_COOKIE_NAME, '', 0),
+    createCookie(REFRESH_COOKIE_NAME, '', 0)
+  ]);
+}
+
+async function getSessionFromCookies(req, res, { allowRefresh = true } = {}) {
+  const cookies = parseCookies(req);
+  const accessToken = cookies[ACCESS_COOKIE_NAME];
+  const refreshToken = cookies[REFRESH_COOKIE_NAME];
+
+  if (!accessToken && !refreshToken) {
+    return null;
+  }
+
+  const supabase = getSupabaseAnonClient();
+  let authUser = null;
+  let activeAccessToken = accessToken || null;
+
+  if (accessToken) {
+    const { data, error } = await supabase.auth.getUser(accessToken);
+    if (!error && data?.user) {
+      authUser = data.user;
+    }
+  }
+
+  if (!authUser && allowRefresh && refreshToken) {
+    const { data, error } = await supabase.auth.refreshSession({ refresh_token: refreshToken });
+    if (!error && data?.session?.access_token && data?.user) {
+      setAuthCookies(res, data.session);
+      authUser = data.user;
+      activeAccessToken = data.session.access_token;
+    }
+  }
+
+  if (!authUser?.id) {
+    return null;
+  }
+
+  const user = await getUserByAuthUserId(authUser.id);
+  if (!user) {
+    return null;
+  }
+
+  return {
+    id: user.id,
+    authUserId: authUser.id,
+    accessToken: activeAccessToken,
+    username: user.username,
+    email: user.email || authUser.email,
+    role: user.role,
+    country: user.country || 'unknown'
+  };
 }
 
 async function requireSession(req, res) {
   try {
-    const cookies = parseCookies(req);
-    const token = cookies[COOKIE_NAME];
-    if (!token) {
-      res.status(401).json({ error: 'Not authenticated' });
-      return null;
-    }
+    const session = await getSessionFromCookies(req, res);
+    if (session) return session;
 
-    const payload = await verifySessionToken(token);
-    const userId = Number(payload.id || payload.sub);
-    if (!Number.isInteger(userId)) {
-      clearSessionCookie(res);
-      res.status(401).json({ error: 'Invalid session' });
-      return null;
-    }
-
-    const user = await getUserById(userId);
-    if (!user) {
-      clearSessionCookie(res);
-      res.status(401).json({ error: 'Invalid session' });
-      return null;
-    }
-
-    return {
-      ...payload,
-      id: user.id,
-      sub: String(user.id),
-      username: user.username,
-      email: user.email,
-      role: user.role,
-      country: user.country || 'unknown'
-    };
+    clearSessionCookie(res);
+    res.status(401).json({ error: 'Not authenticated' });
+    return null;
   } catch (error) {
     clearSessionCookie(res);
     res.status(401).json({ error: 'Invalid session' });
@@ -109,11 +109,11 @@ async function requireSession(req, res) {
 }
 
 module.exports = {
-  COOKIE_NAME,
-  signSessionToken,
-  verifySessionToken,
+  ACCESS_COOKIE_NAME,
+  REFRESH_COOKIE_NAME,
   parseCookies,
-  setSessionCookie,
+  setAuthCookies,
   clearSessionCookie,
+  getSessionFromCookies,
   requireSession
 };

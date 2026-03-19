@@ -32,12 +32,6 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    if (!process.env.AUTH_SECRET && !process.env.NEXTAUTH_SECRET) {
-      console.error('[auth/login] Missing AUTH_SECRET or NEXTAUTH_SECRET environment variable.');
-      res.status(500).json({ error: 'Server auth secret is not configured.' });
-      return;
-    }
-
     if (!username || !password) {
       res.status(400).json({ error: 'username and password are required' });
       return;
@@ -56,41 +50,37 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const bcrypt = require('bcryptjs');
     const { getUserByUsername } = require('../_lib/db');
-    const { setSessionCookie, signSessionToken } = require('../_lib/auth');
+    const { setAuthCookies } = require('../_lib/auth');
+    const { getSupabaseAnonClient } = require('../_lib/supabase');
 
     const normalizedUsername = trimmedUsername.toLowerCase();
-    const user = await getUserByUsername(normalizedUsername);
-    if (!user || !user.password_hash) {
+    const profile = await getUserByUsername(normalizedUsername);
+    if (!profile?.email) {
       res.status(401).json({ error: 'Invalid username or password' });
       return;
     }
 
-    const passwordOk = await bcrypt.compare(rawPassword, user.password_hash);
-    if (!passwordOk) {
-      res.status(401).json({ error: 'Invalid username or password' });
-      return;
-    }
-
-    const token = await signSessionToken({
-      sub: String(user.id),
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      role: user.role,
-      country: user.country || 'unknown'
+    const supabase = getSupabaseAnonClient();
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: profile.email,
+      password: rawPassword
     });
 
-    setSessionCookie(res, token);
+    if (error || !data?.session || !data?.user) {
+      res.status(401).json({ error: 'Invalid username or password' });
+      return;
+    }
+
+    setAuthCookies(res, data.session);
 
     res.status(200).json({
       user: {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        role: user.role,
-        country: user.country || 'unknown'
+        id: profile.id,
+        username: profile.username,
+        email: profile.email,
+        role: profile.role,
+        country: profile.country || 'unknown'
       }
     });
   } catch (error) {
