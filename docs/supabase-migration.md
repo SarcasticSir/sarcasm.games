@@ -1,14 +1,16 @@
-# Supabase migration notes
+# Supabase auth-only notes
 
-This repo already talks directly to Postgres with the `pg` driver, so Vercel can continue to host the API routes while Supabase provides both Postgres and Auth.
+This repo now uses Supabase Auth directly for user handling and no longer expects a `public.users` table.
 
 ## What changed in code
 
-- Database access still uses `pg`, now expecting a Supabase Postgres connection string (`SUPABASE_DB_URL` or `DATABASE_URL`).
-- Authentication now uses Supabase Auth instead of local password hashes + custom JWT signing.
-- Server routes store Supabase access/refresh tokens in HTTP-only cookies.
-- App profile data still lives in the `public.users` table and is linked to Supabase Auth via `users.auth_user_id`.
-- Quiz progress continues to use the internal numeric `users.id`, so existing `user_answers.user_id` references do not need to change.
+- Database access still uses `pg` for quiz data and operational tables.
+- Authentication now uses Supabase Auth as the only source of truth for users.
+- Session objects are derived directly from `auth.users` and user metadata.
+- Quiz progress is stored in `public.user_answers.user_id` as a `uuid` that references `auth.users(id)`.
+- Login now uses `email + password`.
+- Registration uses Supabase Auth sign-up directly and stores optional profile-like values in metadata.
+- Password reset now sends a Supabase reset email instead of updating a local profile row.
 
 ## Required environment variables on Vercel
 
@@ -18,50 +20,15 @@ Set these server-side environment variables:
 - `SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `SUPABASE_DB_URL` (or `DATABASE_URL`)
-- Optional pool tuning:
+- Optional:
+  - `SUPABASE_PASSWORD_RESET_REDIRECT_TO`
+  - `PUBLIC_SITE_URL`
   - `DB_POOL_MAX`
   - `DB_POOL_IDLE_TIMEOUT_MS`
   - `DB_POOL_CONNECTION_TIMEOUT_MS`
 
-You can also expose these client-compatible names if you want consistency with Supabase defaults:
-
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-
 ## Required SQL migration in Supabase
 
-Run this in Supabase SQL editor before deploying:
+If your Supabase project is empty, run `docs/supabase-auth-only-schema.sql`.
 
-```sql
-alter table public.users
-  add column if not exists auth_user_id uuid unique;
-
-alter table public.users
-  drop column if exists password_hash;
-
-create unique index if not exists users_auth_user_id_idx
-  on public.users (auth_user_id);
-
-create unique index if not exists users_username_lower_idx
-  on public.users ((lower(username)));
-
-create unique index if not exists users_email_lower_idx
-  on public.users ((lower(email)));
-```
-
-## Migration strategy for existing users
-
-Existing local users from the old password-hash setup are **not automatically migrated** by this patch.
-
-For each existing account, you should either:
-
-1. create a matching Supabase Auth user and copy the returned `auth.users.id` into `public.users.auth_user_id`, or
-2. ask users to re-register if the old accounts are disposable.
-
-If you want a full one-time migration, use the Supabase Admin API or dashboard to create auth users, then backfill `public.users.auth_user_id`.
-
-## Notes
-
-- Registration now creates the Supabase Auth user first, then inserts the linked app profile row.
-- Login still accepts `username + password` in the UI, but server-side it resolves the username to the stored email before calling Supabase Auth.
-- Self-service password reset now updates the linked Supabase Auth user password instead of touching a local password hash.
+If your project already has legacy app tables, make sure `public.user_answers.user_id` references `auth.users(id)` as `uuid`, then drop `public.users` when no runtime code depends on it anymore.

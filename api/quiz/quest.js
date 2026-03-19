@@ -305,7 +305,7 @@ module.exports = async function handler(req, res) {
     const action = String(body.action || '').trim().toLowerCase();
     const lang = body.lang === 'no' ? 'no' : 'en';
     const session = await tryGetSession(req, res);
-    const userId = session && Number.isInteger(Number(session.id)) ? Number(session.id) : null;
+    const userId = session?.id || null;
     const guestProgress = userId ? { token: null, solvedQuestionIds: [] } : await loadGuestProgress(body);
 
     if (action === 'overview') {
