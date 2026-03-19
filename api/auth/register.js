@@ -57,51 +57,42 @@ module.exports = async function handler(req, res) {
     }
 
     const { setAuthCookies, mapAuthUser } = require('../_lib/auth');
-    const { getSupabaseAnonClient, getSupabaseAdminClient } = require('../_lib/supabase');
+    const { getSupabaseAnonClient } = require('../_lib/supabase');
 
     const normalizedUsername = trimmedUsername ? trimmedUsername.toLowerCase() : null;
     const normalizedEmail = trimmedEmail.toLowerCase();
 
+    const supabase = getSupabaseAnonClient();
     const countryHeader = req.headers['x-vercel-ip-country'];
     const country = typeof countryHeader === 'string' && countryHeader.trim() ? countryHeader.trim() : 'unknown';
-
-    const adminClient = getSupabaseAdminClient();
-    const { data: createdUserData, error: createUserError } = await adminClient.auth.admin.createUser({
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email: normalizedEmail,
       password: rawPassword,
-      email_confirm: true,
-      app_metadata: {
-        role: 'user'
-      },
-      user_metadata: {
-        ...(normalizedUsername ? { username: normalizedUsername } : {}),
-        country
+      options: {
+        data: {
+          ...(normalizedUsername ? { username: normalizedUsername } : {}),
+          country
+        }
       }
     });
 
-    if (createUserError || !createdUserData?.user?.id) {
-      const status = createUserError?.status === 422 ? 409 : 500;
-      res.status(status).json({ error: createUserError?.message || 'Failed to create account' });
+    if (signUpError || !signUpData?.user?.id) {
+      const status = signUpError?.status === 422 ? 409 : 500;
+      res.status(status).json({ error: signUpError?.message || 'Failed to create account' });
       return;
     }
 
-    const supabase = getSupabaseAnonClient();
-    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-      email: normalizedEmail,
-      password: rawPassword
-    });
-
-    if (signInError || !signInData?.session) {
+    if (!signUpData?.session) {
       res.status(201).json({
-        user: mapAuthUser(createdUserData.user)
+        user: mapAuthUser(signUpData.user)
       });
       return;
     }
 
-    setAuthCookies(res, signInData.session);
+    setAuthCookies(res, signUpData.session);
 
     res.status(201).json({
-      user: mapAuthUser(signInData.user || createdUserData.user)
+      user: mapAuthUser(signUpData.user)
     });
   } catch (error) {
     console.error('[auth/register] Registration failed:', {

@@ -9,7 +9,7 @@ This repo now uses Supabase Auth directly for user handling and no longer expect
 - Session objects are derived directly from `auth.users` and user metadata.
 - Quiz progress is stored in `public.user_answers.user_id` as a `uuid` that references `auth.users(id)`.
 - Login now uses `email + password`.
-- Registration creates a Supabase Auth user and stores optional profile-like values in metadata.
+- Registration uses Supabase Auth sign-up directly and stores optional profile-like values in metadata.
 - Password reset now sends a Supabase reset email instead of updating a local profile row.
 
 ## Required environment variables on Vercel
