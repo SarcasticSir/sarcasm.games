@@ -1,5 +1,5 @@
 const { runQuery } = require('../_lib/db');
-const { parseCookies, verifySessionToken, COOKIE_NAME } = require('../_lib/auth');
+const { getSessionFromCookies } = require('../_lib/auth');
 const { evaluateAnswer } = require('../../lib/server/quiz-answer-evaluator');
 const { isRateLimited } = require('../_lib/rate-limit');
 const { sendQuizRateLimited } = require('../_lib/quiz-rate-limit-response');
@@ -96,15 +96,7 @@ module.exports = async function handler(req, res) {
       retryAvailable: body.retryAvailable !== false
     });
 
-    let session = null;
-    try {
-      const cookies = parseCookies(req);
-      if (cookies[COOKIE_NAME]) {
-        session = await verifySessionToken(cookies[COOKIE_NAME]);
-      }
-    } catch (error) {
-      session = null;
-    }
+    const session = await getSessionFromCookies(req, res, { allowRefresh: true });
 
     if (session && session.id && (evaluation.status === 'correct' || evaluation.status === 'wrong')) {
       await persistProgress(session.id, questionId, evaluation.status === 'correct');

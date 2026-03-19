@@ -124,74 +124,89 @@ async function runQuery(text, params = []) {
   }
 }
 
+function mapUserRow(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    auth_user_id: row.auth_user_id,
+    username: row.username,
+    email: row.email,
+    role: row.role,
+    country: row.country,
+    created_at: row.created_at,
+    updated_at: row.updated_at
+  };
+}
+
 async function getUserByEmail(email) {
   const result = await runQuery(
-    `SELECT id, username, email, password_hash, role, country, created_at, updated_at
+    `SELECT id, auth_user_id, username, email, role, country, created_at, updated_at
      FROM users
      WHERE LOWER(email) = LOWER($1)
      LIMIT 1`,
     [email]
   );
-  return result.rows[0] || null;
+  return mapUserRow(result.rows[0]);
 }
 
 async function getUserByUsername(username) {
   const result = await runQuery(
-    `SELECT id, username, email, password_hash, role, country, created_at, updated_at
+    `SELECT id, auth_user_id, username, email, role, country, created_at, updated_at
      FROM users
      WHERE LOWER(username) = LOWER($1)
      LIMIT 1`,
     [username]
   );
-  return result.rows[0] || null;
+  return mapUserRow(result.rows[0]);
 }
 
 async function getUserById(id) {
   const result = await runQuery(
-    `SELECT id, username, email, password_hash, role, country, created_at, updated_at
+    `SELECT id, auth_user_id, username, email, role, country, created_at, updated_at
      FROM users
      WHERE id = $1
      LIMIT 1`,
     [id]
   );
-  return result.rows[0] || null;
+  return mapUserRow(result.rows[0]);
 }
 
-async function insertUser({ username, email, passwordHash, role = 'user', country }) {
+async function getUserByAuthUserId(authUserId) {
   const result = await runQuery(
-    `INSERT INTO users (username, email, password_hash, role, country)
-     VALUES ($1, $2, $3, $4, $5)
-     RETURNING id, username, email, role, country, created_at, updated_at`,
-    [username, email, passwordHash, role, country]
+    `SELECT id, auth_user_id, username, email, role, country, created_at, updated_at
+     FROM users
+     WHERE auth_user_id = $1
+     LIMIT 1`,
+    [authUserId]
   );
-  return result.rows[0];
+  return mapUserRow(result.rows[0]);
 }
 
-async function updatePasswordByUserId(userId, passwordHash) {
-  await runQuery(
-    `UPDATE users
-     SET password_hash = $1
-     WHERE id = $2`,
-    [passwordHash, userId]
+async function insertUser({ authUserId, username, email, role = 'user', country }) {
+  const result = await runQuery(
+    `INSERT INTO users (auth_user_id, username, email, role, country)
+     VALUES ($1, $2, $3, $4, $5)
+     RETURNING id, auth_user_id, username, email, role, country, created_at, updated_at`,
+    [authUserId, username, email, role, country]
   );
+  return mapUserRow(result.rows[0]);
 }
 
 async function getUsersForAdminList() {
   const result = await runQuery(
-    `SELECT id, username, email, role, country, created_at, updated_at
+    `SELECT id, auth_user_id, username, email, role, country, created_at, updated_at
      FROM users
      ORDER BY created_at DESC`
   );
-  return result.rows;
+  return result.rows.map((row) => mapUserRow(row));
 }
-
 
 module.exports = {
   runQuery,
   getUserByEmail,
   getUserByUsername,
   getUserById,
+  getUserByAuthUserId,
   insertUser,
-  updatePasswordByUserId,
   getUsersForAdminList
 };

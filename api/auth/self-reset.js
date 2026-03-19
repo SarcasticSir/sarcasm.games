@@ -83,8 +83,8 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const bcrypt = require('bcryptjs');
-    const { getUserByUsername, updatePasswordByUserId } = require('../_lib/db');
+    const { getUserByUsername } = require('../_lib/db');
+    const { getSupabaseAdminClient } = require('../_lib/supabase');
 
     const normalizedUsername = trimmedUsername.toLowerCase();
     const normalizedEmail = trimmedEmail.toLowerCase();
@@ -100,8 +100,21 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const passwordHash = await bcrypt.hash(rawPassword, 12);
-    await updatePasswordByUserId(user.id, passwordHash);
+    if (!user.auth_user_id) {
+      res.status(500).json({ error: 'User is missing linked Supabase auth account' });
+      return;
+    }
+
+    const adminClient = getSupabaseAdminClient();
+    const { error } = await adminClient.auth.admin.updateUserById(user.auth_user_id, {
+      password: rawPassword
+    });
+
+    if (error) {
+      console.error('[auth/self-reset] Supabase reset failed:', error.message);
+      res.status(500).json({ error: 'Self reset failed' });
+      return;
+    }
 
     res.status(200).json({ ok: true });
   } catch (error) {
