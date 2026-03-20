@@ -37,15 +37,15 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const { username, password, honeypot } = parseRequestBody(req.body);
+    const { email, password, honeypot } = parseRequestBody(req.body);
 
     if (honeypot && String(honeypot).trim()) {
       res.status(400).json({ error: 'Request rejected' });
       return;
     }
 
-    if (!username || !password) {
-      res.status(400).json({ error: 'username and password are required' });
+    if (!email || !password) {
+      res.status(400).json({ error: 'email and password are required' });
       return;
     }
 
@@ -70,7 +70,7 @@ module.exports = async function handler(req, res) {
 
     const supabase = getSupabaseAnonClient();
     const { data, error } = await supabase.auth.signInWithPassword({
-      email: profile.email,
+      email: normalizedEmail,
       password: rawPassword
     });
 
