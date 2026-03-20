@@ -20,7 +20,7 @@ This repo now uses Supabase Auth for passwords and sessions, and `public.profile
 
 ## What changed in code
 
-- Session objects now merge Supabase Auth users with the matching `public.profiles` row.
+- Session objects now merge Supabase Auth users with the matching `public.profiles` row, and bootstrap a profile row automatically if an older auth user is missing one.
 - Registration creates the Supabase Auth account first, then inserts a `public.profiles` row with default role `user`.
 - Login resolves the supplied username through `public.profiles`, then signs in through Supabase Auth with the matching email.
 - Admin-only checks use `profiles.role`.
@@ -37,7 +37,7 @@ Set these server-side environment variables:
 - `SUPABASE_DB_URL` (or `DATABASE_URL`)
 - Optional:
   - `SUPABASE_PASSWORD_RESET_REDIRECT_TO` (recommended: `https://sarcasm.games/reset-password/`)
-  - `SUPABASE_EMAIL_CONFIRM_REDIRECT_TO` (recommended: `https://sarcasm.games/`)
+  - `SUPABASE_EMAIL_CONFIRM_REDIRECT_TO` (recommended: `https://sarcasm.games/api/auth/confirm`)
   - `PUBLIC_SITE_URL`
   - `DB_POOL_MAX`
   - `DB_POOL_IDLE_TIMEOUT_MS`

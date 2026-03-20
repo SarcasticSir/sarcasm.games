@@ -29,6 +29,17 @@ function getCountryFromRequest(req) {
   return normalizeCountry(firstMatch || 'unknown');
 }
 
+function getEmailConfirmRedirectTo() {
+  if (process.env.SUPABASE_EMAIL_CONFIRM_REDIRECT_TO) {
+    return process.env.SUPABASE_EMAIL_CONFIRM_REDIRECT_TO;
+  }
+
+  const siteUrl = process.env.PUBLIC_SITE_URL;
+  if (!siteUrl) return undefined;
+
+  return `${siteUrl.replace(/\/$/, '')}/api/auth/confirm`;
+}
+
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' });
@@ -90,14 +101,19 @@ module.exports = async function handler(req, res) {
     }
 
     const supabase = getSupabaseAnonClient();
-    const emailRedirectTo = process.env.SUPABASE_EMAIL_CONFIRM_REDIRECT_TO || process.env.PUBLIC_SITE_URL || undefined;
+    const emailRedirectTo = getEmailConfirmRedirectTo();
     const country = getCountryFromRequest(req);
+    const signUpOptions = {
+      data: {
+        username: displayUsername,
+        country
+      },
+      ...(emailRedirectTo ? { emailRedirectTo } : {})
+    };
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email: normalizedEmail,
       password: rawPassword,
-      options: emailRedirectTo
-        ? { emailRedirectTo }
-        : undefined
+      options: signUpOptions
     });
 
     if (signUpError || !signUpData?.user?.id) {

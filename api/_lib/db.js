@@ -7,6 +7,7 @@ const DB_POOL_LOGGER_KEY = Symbol.for('sarcasm.games.db.poolLoggerAttached');
 const DEFAULT_POOL_MAX = 10;
 const DEFAULT_IDLE_TIMEOUT_MS = 30_000;
 const DEFAULT_CONNECTION_TIMEOUT_MS = 5_000;
+const USERNAME_MAX_LENGTH = 40;
 
 function isTruthy(value) {
   if (typeof value !== 'string') return false;
@@ -108,6 +109,10 @@ function getPool() {
   return pool;
 }
 
+function readString(value) {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
 function normalizeEmail(value) {
   if (typeof value !== 'string') return null;
   const normalized = value.trim().toLowerCase();
@@ -125,6 +130,17 @@ function normalizeCountry(value) {
   const normalized = value.trim().toUpperCase();
   if (!normalized) return 'unknown';
   return normalized.slice(0, 8);
+}
+
+function sanitizeUsernameCandidate(value) {
+  if (typeof value !== 'string') return null;
+  const sanitized = value
+    .trim()
+    .replace(/\s+/g, '_')
+    .replace(/[^A-Za-z0-9_-]/g, '')
+    .slice(0, USERNAME_MAX_LENGTH);
+
+  return sanitized || null;
 }
 
 async function runQuery(text, params = []) {
@@ -228,6 +244,90 @@ async function insertProfile({ authUserId, username, email, role = 'user', count
   return result.rows[0] || null;
 }
 
+async function isUsernameAvailable(username, authUserId) {
+  const normalizedUsername = normalizeUsername(username);
+  if (!normalizedUsername) return false;
+
+  const result = await runQuery(
+    `SELECT auth_user_id
+     FROM public.profiles
+     WHERE username_normalized = $1
+     LIMIT 1`,
+    [normalizedUsername]
+  );
+
+  if (!result.rows[0]) return true;
+  return result.rows[0].auth_user_id === authUserId;
+}
+
+async function resolveAvailableUsername(preferredUsername, authUserId) {
+  const fallbackSuffix = String(authUserId || 'user').replace(/-/g, '').slice(0, 6) || 'user';
+  const fallbackBase = `user_${fallbackSuffix}`;
+  const baseCandidates = [preferredUsername, fallbackBase]
+    .map(sanitizeUsernameCandidate)
+    .filter(Boolean);
+
+  const seen = new Set();
+  for (const baseCandidate of baseCandidates) {
+    const normalizedBaseCandidate = normalizeUsername(baseCandidate);
+    if (!normalizedBaseCandidate || seen.has(normalizedBaseCandidate)) continue;
+    seen.add(normalizedBaseCandidate);
+
+    if (await isUsernameAvailable(baseCandidate, authUserId)) {
+      return baseCandidate;
+    }
+
+    const trimmedBase = baseCandidate.slice(0, Math.max(1, USERNAME_MAX_LENGTH - fallbackSuffix.length - 1));
+    const suffixedCandidate = `${trimmedBase}_${fallbackSuffix}`;
+    if (await isUsernameAvailable(suffixedCandidate, authUserId)) {
+      return suffixedCandidate;
+    }
+  }
+
+  return fallbackBase.slice(0, USERNAME_MAX_LENGTH);
+}
+
+async function upsertProfileFromAuthUser(authUser) {
+  const authUserId = readString(authUser?.id);
+  const normalizedEmail = normalizeEmail(authUser?.email);
+  if (!authUserId || !normalizedEmail) return null;
+
+  const metadata = authUser?.user_metadata && typeof authUser.user_metadata === 'object'
+    ? authUser.user_metadata
+    : {};
+  const requestedUsername = sanitizeUsernameCandidate(
+    readString(metadata.username) || normalizedEmail.split('@')[0] || `user_${authUserId.slice(0, 6)}`
+  );
+  const username = await resolveAvailableUsername(requestedUsername, authUserId);
+  const country = normalizeCountry(readString(metadata.country) || 'unknown');
+
+  const result = await runQuery(
+    `INSERT INTO public.profiles (
+       auth_user_id,
+       username,
+       username_normalized,
+       email,
+       email_normalized,
+       role,
+       country
+     )
+     VALUES ($1, $2, $3, $4, $5, 'user', $6)
+     ON CONFLICT (auth_user_id)
+     DO UPDATE SET
+       email = EXCLUDED.email,
+       email_normalized = EXCLUDED.email_normalized,
+       country = CASE
+         WHEN public.profiles.country = 'unknown' THEN EXCLUDED.country
+         ELSE public.profiles.country
+       END,
+       updated_at = now()
+     RETURNING auth_user_id, username, username_normalized, email, email_normalized, role, country, created_at, updated_at`,
+    [authUserId, username, normalizeUsername(username), normalizedEmail, normalizedEmail, country]
+  );
+
+  return result.rows[0] || null;
+}
+
 async function listProfiles() {
   const result = await runQuery(
     `SELECT auth_user_id, username, email, role, country, created_at
@@ -247,5 +347,6 @@ module.exports = {
   getProfileByIdentifier,
   findConflictingProfile,
   insertProfile,
+  upsertProfileFromAuthUser,
   listProfiles
 };

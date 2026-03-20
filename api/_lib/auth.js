@@ -1,5 +1,5 @@
 const { getSupabaseAnonClient } = require('./supabase');
-const { getProfileByAuthUserId } = require('./db');
+const { getProfileByAuthUserId, upsertProfileFromAuthUser } = require('./db');
 
 const ACCESS_COOKIE_NAME = 'sg_sb_access_token';
 const REFRESH_COOKIE_NAME = 'sg_sb_refresh_token';
@@ -130,6 +130,9 @@ async function getSessionFromCookies(req, res, { allowRefresh = true } = {}) {
   let profile = null;
   try {
     profile = await getProfileByAuthUserId(authUser.id);
+    if (!profile) {
+      profile = await upsertProfileFromAuthUser(authUser);
+    }
   } catch (error) {
     console.warn('[auth] Failed to load profile for session:', error?.message);
   }

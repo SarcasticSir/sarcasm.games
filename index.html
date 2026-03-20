@@ -219,6 +219,8 @@
         statusConfirmationResent: 'Confirmation email sent again. Check spam if needed.',
         statusAlreadyConfirmed: 'Your email is already confirmed. You can log in now.',
         statusResendFailed: 'Could not resend confirmation email.',
+        statusAuthConfirming: 'Finishing email confirmation…',
+        statusAuthConfirmFailed: 'Could not complete email confirmation automatically. Please try logging in again.',
         statusResetHelp: 'Need help with password reset? Contact admin at xxxx@gmail.com',
         statusLoggedOut: 'Logged out.',
         captchaPool: [
@@ -269,6 +271,8 @@
         statusConfirmationResent: 'Bekreftelsesmail er sendt på nytt. Sjekk spam om nødvendig.',
         statusAlreadyConfirmed: 'E-posten er allerede bekreftet. Du kan logge inn nå.',
         statusResendFailed: 'Kunne ikke sende bekreftelsesmail på nytt.',
+        statusAuthConfirming: 'Fullfører e-postbekreftelse…',
+        statusAuthConfirmFailed: 'Kunne ikke fullføre e-postbekreftelsen automatisk. Prøv å logge inn igjen.',
         statusResetHelp: 'Trenger du hjelp med passordreset? Kontakt admin på xxxx@gmail.com',
         statusLoggedOut: 'Logget ut.',
         captchaPool: [
@@ -312,6 +316,47 @@
     function setStatus(message, isError = false) {
       statusBox.style.color = isError ? 'var(--danger)' : 'var(--muted)';
       statusBox.textContent = message;
+    }
+
+    function getAuthRedirectUrl() {
+      const searchParams = new URLSearchParams(window.location.search);
+      const hashParams = new URLSearchParams(window.location.hash.startsWith('#')
+        ? window.location.hash.slice(1)
+        : window.location.hash);
+
+      if (searchParams.get('code')) {
+        return `/api/auth/confirm?${searchParams.toString()}`;
+      }
+
+      if (searchParams.get('token_hash') && searchParams.get('type')) {
+        return `/api/auth/confirm?${searchParams.toString()}`;
+      }
+
+      if (hashParams.get('access_token') && hashParams.get('refresh_token')) {
+        const confirmParams = new URLSearchParams();
+        confirmParams.set('access_token', hashParams.get('access_token'));
+        confirmParams.set('refresh_token', hashParams.get('refresh_token'));
+        if (hashParams.get('type')) confirmParams.set('type', hashParams.get('type'));
+        return `/api/auth/confirm?${confirmParams.toString()}`;
+      }
+
+      return null;
+    }
+
+    function handleAuthRedirect() {
+      const authError = new URLSearchParams(window.location.search).get('auth_error');
+      if (authError) {
+        setStatus(t().statusAuthConfirmFailed, true);
+        window.history.replaceState({}, document.title, '/');
+        return false;
+      }
+
+      const redirectUrl = getAuthRedirectUrl();
+      if (!redirectUrl) return false;
+
+      setStatus(t().statusAuthConfirming);
+      window.location.replace(redirectUrl);
+      return true;
     }
 
     function renderGames() {
@@ -670,6 +715,10 @@
     async function init() {
       setThemeFromStorage();
       initQuizLanguage();
+
+      if (handleAuthRedirect()) {
+        return;
+      }
 
       await applyUserState(null);
       const user = await fetchSession();
