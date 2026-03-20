@@ -716,11 +716,11 @@
     }
 
     async function logout() {
-      await fetch('/api/auth/logout', {
+      await fetch('/api/auth/session', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ honeypot: '' })
+        body: JSON.stringify({ action: 'logout', honeypot: '' })
       });
       await applyUserState(null);
       setStatus(t().statusLoggedOut);
@@ -732,11 +732,11 @@
       const confirmed = window.confirm(t().statusDeleteAccountConfirm);
       if (!confirmed) return;
 
-      const response = await fetch('/api/auth/delete-account', {
+      const response = await fetch('/api/auth/session', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ honeypot: '' })
+        body: JSON.stringify({ action: 'delete-account', honeypot: '' })
       });
 
       if (!response.ok) {

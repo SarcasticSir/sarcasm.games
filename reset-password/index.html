@@ -78,11 +78,12 @@
         throw new Error('Missing session after password reset.');
       }
 
-      const response = await fetch('/api/auth/sync-session', {
+      const response = await fetch('/api/auth/session', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          action: 'sync',
           accessToken: session.access_token,
           refreshToken: session.refresh_token
         })
