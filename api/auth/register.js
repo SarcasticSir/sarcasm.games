@@ -59,8 +59,8 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    if (!username || !email || !password) {
-      res.status(400).json({ error: 'username, email and password are required' });
+    if (!email || !password) {
+      res.status(400).json({ error: 'email and password are required' });
       return;
     }
 
