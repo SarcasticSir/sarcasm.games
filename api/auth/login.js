@@ -1,4 +1,7 @@
 const { isRateLimited } = require('../_lib/rate-limit');
+const { getProfileByIdentifier, normalizeUsername } = require('../_lib/db');
+const { setAuthCookies, mapAuthUser } = require('../_lib/auth');
+const { getSupabaseAnonClient } = require('../_lib/supabase');
 
 function parseRequestBody(body) {
   if (!body) return {};
@@ -11,6 +14,15 @@ function parseRequestBody(body) {
   }
   if (typeof body === 'object') return body;
   return {};
+}
+
+function isEmailConfirmationError(error) {
+  const message = String(error?.message || '').toLowerCase();
+  const code = String(error?.code || '').toLowerCase();
+  return message.includes('email not confirmed')
+    || message.includes('not confirmed')
+    || message.includes('email confirmation')
+    || code === 'email_not_confirmed';
 }
 
 module.exports = async function handler(req, res) {
@@ -37,10 +49,10 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const trimmedUsername = String(username).trim();
+    const normalizedIdentifier = normalizeUsername(String(username));
     const rawPassword = String(password);
 
-    if (trimmedUsername.length < 3 || trimmedUsername.length > 40) {
+    if (!normalizedIdentifier || normalizedIdentifier.length < 3 || normalizedIdentifier.length > 254) {
       res.status(400).json({ error: 'Invalid username length' });
       return;
     }
@@ -50,12 +62,7 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const { getUserByUsername } = require('../_lib/db');
-    const { setAuthCookies } = require('../_lib/auth');
-    const { getSupabaseAnonClient } = require('../_lib/supabase');
-
-    const normalizedUsername = trimmedUsername.toLowerCase();
-    const profile = await getUserByUsername(normalizedUsername);
+    const profile = await getProfileByIdentifier(normalizedIdentifier);
     if (!profile?.email) {
       res.status(401).json({ error: 'Invalid username or password' });
       return;
@@ -67,21 +74,36 @@ module.exports = async function handler(req, res) {
       password: rawPassword
     });
 
-    if (error || !data?.session || !data?.user) {
+    if (error) {
+      if (isEmailConfirmationError(error)) {
+        res.status(403).json({
+          error: 'You must confirm your email before logging in. Check spam if you did not receive the email, or resend it.',
+          requiresEmailConfirmation: true
+        });
+        return;
+      }
+
       res.status(401).json({ error: 'Invalid username or password' });
+      return;
+    }
+
+    if (!data?.session || !data?.user) {
+      res.status(401).json({ error: 'Invalid username or password' });
+      return;
+    }
+
+    if (!data.user.email_confirmed_at) {
+      res.status(403).json({
+        error: 'You must confirm your email before logging in. Check spam if you did not receive the email, or resend it.',
+        requiresEmailConfirmation: true
+      });
       return;
     }
 
     setAuthCookies(res, data.session);
 
     res.status(200).json({
-      user: {
-        id: profile.id,
-        username: profile.username,
-        email: profile.email,
-        role: profile.role,
-        country: profile.country || 'unknown'
-      }
+      user: mapAuthUser(data.user, { profile })
     });
   } catch (error) {
     console.error('[auth/login] Login failed:', {

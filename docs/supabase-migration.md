@@ -1,14 +1,31 @@
-# Supabase migration notes
+# Supabase auth + profiles notes
 
-This repo already talks directly to Postgres with the `pg` driver, so Vercel can continue to host the API routes while Supabase provides both Postgres and Auth.
+This repo now uses Supabase Auth for passwords and sessions, and `public.profiles` for app-specific user data.
+
+## Recommended model
+
+- `auth.users` stores email, password, confirmation state, and recovery links.
+- `public.profiles` stores:
+  - `auth_user_id`
+  - `username`
+  - `username_normalized`
+  - `email`
+  - `email_normalized`
+  - `role`
+  - `country`
+- `public.user_answers.user_id` references `auth.users(id)` as `uuid`.
+- Login uses `username + password`.
+- Email is used for confirmation and password reset.
+- Country is captured from the incoming edge IP header during registration and stored in `public.profiles.country`.
 
 ## What changed in code
 
-- Database access still uses `pg`, now expecting a Supabase Postgres connection string (`SUPABASE_DB_URL` or `DATABASE_URL`).
-- Authentication now uses Supabase Auth instead of local password hashes + custom JWT signing.
-- Server routes store Supabase access/refresh tokens in HTTP-only cookies.
-- App profile data still lives in the `public.users` table and is linked to Supabase Auth via `users.auth_user_id`.
-- Quiz progress continues to use the internal numeric `users.id`, so existing `user_answers.user_id` references do not need to change.
+- Session objects now merge Supabase Auth users with the matching `public.profiles` row, and bootstrap a profile row automatically if an older auth user is missing one.
+- Registration creates the Supabase Auth account first, then inserts a `public.profiles` row with default role `user`.
+- Login resolves the supplied username through `public.profiles`, then signs in through Supabase Auth with the matching email.
+- Admin-only checks use `profiles.role`.
+- Password reset still uses Supabase recovery emails and `/reset-password/`.
+- The front page now supports resending confirmation emails when a user has not confirmed yet.
 
 ## Required environment variables on Vercel
 
@@ -18,50 +35,24 @@ Set these server-side environment variables:
 - `SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `SUPABASE_DB_URL` (or `DATABASE_URL`)
-- Optional pool tuning:
+- Optional:
+  - `SUPABASE_PASSWORD_RESET_REDIRECT_TO` (recommended: `https://sarcasm.games/reset-password/`)
+  - `SUPABASE_EMAIL_CONFIRM_REDIRECT_TO` (recommended: `https://sarcasm.games/api/auth/confirm`)
+  - `PUBLIC_SITE_URL`
   - `DB_POOL_MAX`
   - `DB_POOL_IDLE_TIMEOUT_MS`
   - `DB_POOL_CONNECTION_TIMEOUT_MS`
 
-You can also expose these client-compatible names if you want consistency with Supabase defaults:
-
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-
 ## Required SQL migration in Supabase
 
-Run this in Supabase SQL editor before deploying:
+If your project is empty, run `docs/supabase-auth-only-schema.sql`.
 
-```sql
-alter table public.users
-  add column if not exists auth_user_id uuid unique;
+## Recommended Supabase Auth settings
 
-alter table public.users
-  drop column if exists password_hash;
+In the Supabase dashboard, enable these:
 
-create unique index if not exists users_auth_user_id_idx
-  on public.users (auth_user_id);
+1. **Confirm email**
+2. **Secure email change** if you plan to support changing emails later
+3. **OTP / email link expiry = 3600 seconds** if you want confirmation links to expire after 60 minutes
 
-create unique index if not exists users_username_lower_idx
-  on public.users ((lower(username)));
-
-create unique index if not exists users_email_lower_idx
-  on public.users ((lower(email)));
-```
-
-## Migration strategy for existing users
-
-Existing local users from the old password-hash setup are **not automatically migrated** by this patch.
-
-For each existing account, you should either:
-
-1. create a matching Supabase Auth user and copy the returned `auth.users.id` into `public.users.auth_user_id`, or
-2. ask users to re-register if the old accounts are disposable.
-
-If you want a full one-time migration, use the Supabase Admin API or dashboard to create auth users, then backfill `public.users.auth_user_id`.
-
-## Notes
-
-- Registration now creates the Supabase Auth user first, then inserts the linked app profile row.
-- Login still accepts `username + password` in the UI, but server-side it resolves the username to the stored email before calling Supabase Auth.
-- Self-service password reset now updates the linked Supabase Auth user password instead of touching a local password hash.
+If you previously experimented with old auth triggers, remove legacy `on_auth_user_created` / `handle_new_user` hooks before using this setup.

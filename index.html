@@ -111,7 +111,10 @@
             <label for="loginWebsite" id="loginWebsiteLabel">Website</label>
             <input id="loginWebsite" type="text" autocomplete="off" tabindex="-1" />
           </div>
-          <div class="btn-row"><button class="btn-primary" id="loginBtn">Login</button></div>
+          <div class="btn-row">
+            <button class="btn-primary" id="loginBtn">Login</button>
+            <button class="btn-neutral hidden" id="resendConfirmationBtn" type="button">Resend confirmation email</button>
+          </div>
         </section>
 
         <section id="registerTab" class="tab-content hidden">
@@ -136,16 +139,8 @@
 
         <section id="resetTab" class="tab-content hidden">
           <div class="form-group">
-            <label for="resetUsername" id="resetUsernameLabel">Username</label>
-            <input id="resetUsername" type="text" />
-          </div>
-          <div class="form-group">
             <label for="resetEmail" id="resetEmailLabel">Email</label>
             <input id="resetEmail" type="email" />
-          </div>
-          <div class="form-group">
-            <label for="resetNewPassword" id="resetPasswordLabel">New password</label>
-            <input id="resetNewPassword" type="password" autocomplete="new-password" />
           </div>
           <div class="form-group hidden">
             <label for="resetWebsite" id="resetWebsiteLabel">Website</label>
@@ -185,7 +180,7 @@
     const I18N = {
       en: {
         welcomeGuest: 'Logged in as: Guest',
-        welcomeUser: (username) => `Logged in as: ${username}`,
+        welcomeUser: (username, role) => `Logged in as: ${username}${role === 'admin' ? ', Admin' : ''}`,
         languageLabel: 'Language',
         activeLanguageName: 'English',
         themeButton: '🌓 Theme',
@@ -200,13 +195,13 @@
         tabRegister: 'Create account',
         tabReset: 'Forgot password?',
         usernameLabel: 'Username',
+        usernameLoginLabel: 'Username',
         passwordLabel: 'Password',
         websiteLabel: 'Website',
         emailLabel: 'Email',
-        newPasswordLabel: 'New password',
         securityQuestionLabel: 'Security question',
         createAccountButton: 'Create account',
-        updatePasswordButton: 'Update password',
+        updatePasswordButton: 'Send reset email',
         newQuestionButton: 'New question',
         infoButton: 'Info',
         extraModules: 'Extra modules',
@@ -216,10 +211,17 @@
         statusMissingLoginFields: 'Please enter both username and password.',
         statusLoginFailed: 'Login failed.',
         statusRegistrationFailed: 'Registration failed.',
-        statusRegistrationOk: 'Account created. Log in with username and password.',
-        statusPasswordResetFailed: 'Could not update password.',
-        statusPasswordResetOk: 'Password updated. You can now log in.',
-        statusResetHelp: 'Forgot your password? Contact admin at xxxx@gmail.com',
+        statusRegistrationOk: 'Account created. Confirm your email before logging in. Check spam if you do not receive the email.',
+        statusPasswordResetFailed: 'Could not send reset email.',
+        statusPasswordResetOk: 'Password reset email sent.',
+        resendConfirmationButton: 'Resend confirmation email',
+        statusConfirmationRequired: 'You must confirm your email before logging in. Check spam if you did not receive the email.',
+        statusConfirmationResent: 'Confirmation email sent again. Check spam if needed.',
+        statusAlreadyConfirmed: 'Your email is already confirmed. You can log in now.',
+        statusResendFailed: 'Could not resend confirmation email.',
+        statusAuthConfirming: 'Finishing email confirmation…',
+        statusAuthConfirmFailed: 'Could not complete email confirmation automatically. Please try logging in again.',
+        statusResetHelp: 'Need help with password reset? Contact admin at xxxx@gmail.com',
         statusLoggedOut: 'Logged out.',
         captchaPool: [
           { id: 'site_first_word', question: 'What is the first word in this website name?' },
@@ -230,7 +232,7 @@
       },
       no: {
         welcomeGuest: 'Logget inn som: Gjest',
-        welcomeUser: (username) => `Logget inn som: ${username}`,
+        welcomeUser: (username, role) => `Logget inn som: ${username}${role === 'admin' ? ', Admin' : ''}`,
         languageLabel: 'Språk',
         activeLanguageName: 'Norsk',
         themeButton: '🌓 Tema',
@@ -245,13 +247,13 @@
         tabRegister: 'Opprett konto',
         tabReset: 'Glemt passord?',
         usernameLabel: 'Brukernavn',
+        usernameLoginLabel: 'Brukernavn',
         passwordLabel: 'Passord',
         websiteLabel: 'Nettside',
         emailLabel: 'E-post',
-        newPasswordLabel: 'Nytt passord',
         securityQuestionLabel: 'Sikkerhetsspørsmål',
         createAccountButton: 'Opprett konto',
-        updatePasswordButton: 'Oppdater passord',
+        updatePasswordButton: 'Send e-post for reset',
         newQuestionButton: 'Nytt spørsmål',
         infoButton: 'Info',
         extraModules: 'Ekstra moduler',
@@ -261,10 +263,17 @@
         statusMissingLoginFields: 'Fyll inn både brukernavn og passord.',
         statusLoginFailed: 'Innlogging feilet.',
         statusRegistrationFailed: 'Registrering feilet.',
-        statusRegistrationOk: 'Konto opprettet. Logg inn med brukernavn og passord.',
-        statusPasswordResetFailed: 'Kunne ikke oppdatere passord.',
-        statusPasswordResetOk: 'Passord oppdatert. Du kan nå logge inn.',
-        statusResetHelp: 'Glemt passord? Kontakt admin på xxxx@gmail.com',
+        statusRegistrationOk: 'Konto opprettet. Bekreft e-posten før du logger inn. Sjekk spam hvis du ikke får e-posten.',
+        statusPasswordResetFailed: 'Kunne ikke sende e-post for passordreset.',
+        statusPasswordResetOk: 'E-post for passordreset er sendt.',
+        resendConfirmationButton: 'Send bekreftelse på nytt',
+        statusConfirmationRequired: 'Du må bekrefte e-posten før du kan logge inn. Sjekk spam hvis du ikke finner e-posten.',
+        statusConfirmationResent: 'Bekreftelsesmail er sendt på nytt. Sjekk spam om nødvendig.',
+        statusAlreadyConfirmed: 'E-posten er allerede bekreftet. Du kan logge inn nå.',
+        statusResendFailed: 'Kunne ikke sende bekreftelsesmail på nytt.',
+        statusAuthConfirming: 'Fullfører e-postbekreftelse…',
+        statusAuthConfirmFailed: 'Kunne ikke fullføre e-postbekreftelsen automatisk. Prøv å logge inn igjen.',
+        statusResetHelp: 'Trenger du hjelp med passordreset? Kontakt admin på xxxx@gmail.com',
         statusLoggedOut: 'Logget ut.',
         captchaPool: [
           { id: 'site_first_word', question: 'Hva er første ord i nettsidens navn?' },
@@ -281,6 +290,7 @@
     let failedResetAttempts = 0;
     let currentUser = null;
     let currentLanguage = 'en';
+    let pendingConfirmationUsername = '';
 
     const statusBox = document.getElementById('statusBox');
     const authShell = document.getElementById('authShell');
@@ -292,6 +302,7 @@
     const featureModulesGrid = document.getElementById('featureModulesGrid');
     const captchaQuestion = document.getElementById('captchaQuestion');
     const resetInfoBtn = document.getElementById('resetInfoBtn');
+    const resendConfirmationBtn = document.getElementById('resendConfirmationBtn');
     const logoutBtn = document.getElementById('logoutBtn');
     const toggleLoginBtn = document.getElementById('toggleLoginBtn');
     const languageSelect = document.getElementById('languageSelect');
@@ -305,6 +316,47 @@
     function setStatus(message, isError = false) {
       statusBox.style.color = isError ? 'var(--danger)' : 'var(--muted)';
       statusBox.textContent = message;
+    }
+
+    function getAuthRedirectUrl() {
+      const searchParams = new URLSearchParams(window.location.search);
+      const hashParams = new URLSearchParams(window.location.hash.startsWith('#')
+        ? window.location.hash.slice(1)
+        : window.location.hash);
+
+      if (searchParams.get('code')) {
+        return `/api/auth/confirm?${searchParams.toString()}`;
+      }
+
+      if (searchParams.get('token_hash') && searchParams.get('type')) {
+        return `/api/auth/confirm?${searchParams.toString()}`;
+      }
+
+      if (hashParams.get('access_token') && hashParams.get('refresh_token')) {
+        const confirmParams = new URLSearchParams();
+        confirmParams.set('access_token', hashParams.get('access_token'));
+        confirmParams.set('refresh_token', hashParams.get('refresh_token'));
+        if (hashParams.get('type')) confirmParams.set('type', hashParams.get('type'));
+        return `/api/auth/confirm?${confirmParams.toString()}`;
+      }
+
+      return null;
+    }
+
+    function handleAuthRedirect() {
+      const authError = new URLSearchParams(window.location.search).get('auth_error');
+      if (authError) {
+        setStatus(t().statusAuthConfirmFailed, true);
+        window.history.replaceState({}, document.title, '/');
+        return false;
+      }
+
+      const redirectUrl = getAuthRedirectUrl();
+      if (!redirectUrl) return false;
+
+      setStatus(t().statusAuthConfirming);
+      window.location.replace(redirectUrl);
+      return true;
     }
 
     function renderGames() {
@@ -396,21 +448,20 @@
       document.getElementById('loginTabBtn').textContent = texts.tabLogin;
       document.getElementById('registerTabBtn').textContent = texts.tabRegister;
       document.getElementById('resetTabBtn').textContent = texts.tabReset;
-      document.getElementById('loginUsernameLabel').textContent = texts.usernameLabel;
+      document.getElementById('loginUsernameLabel').textContent = texts.usernameLoginLabel;
       document.getElementById('loginPasswordLabel').textContent = texts.passwordLabel;
       document.getElementById('loginWebsiteLabel').textContent = texts.websiteLabel;
       document.getElementById('registerUserLabel').textContent = texts.usernameLabel;
       document.getElementById('registerEmailLabel').textContent = texts.emailLabel;
       document.getElementById('registerPasswordLabel').textContent = texts.passwordLabel;
       document.getElementById('registerWebsiteLabel').textContent = texts.websiteLabel;
-      document.getElementById('resetUsernameLabel').textContent = texts.usernameLabel;
       document.getElementById('resetEmailLabel').textContent = texts.emailLabel;
-      document.getElementById('resetPasswordLabel').textContent = texts.newPasswordLabel;
       document.getElementById('resetWebsiteLabel').textContent = texts.websiteLabel;
       document.getElementById('resetBtn').textContent = texts.updatePasswordButton;
       document.getElementById('newCaptchaBtn').textContent = texts.newQuestionButton;
       document.getElementById('resetInfoBtn').textContent = texts.infoButton;
       document.getElementById('loginBtn').textContent = texts.loginButton;
+      document.getElementById('resendConfirmationBtn').textContent = texts.resendConfirmationButton;
       document.getElementById('registerBtn').textContent = texts.createAccountButton;
       document.getElementById('logoutBtn').textContent = texts.logoutButton;
       if (authShell.classList.contains('hidden')) {
@@ -419,7 +470,7 @@
         toggleLoginBtn.textContent = texts.hideLoginButton;
       }
       if (currentUser) {
-        welcomeText.textContent = texts.welcomeUser(currentUser.username);
+        welcomeText.textContent = texts.welcomeUser(currentUser.username, currentUser.role);
       } else {
         welcomeText.textContent = texts.welcomeGuest;
       }
@@ -505,7 +556,7 @@
       memberList.innerHTML = '';
       for (const member of data.users || []) {
         const li = document.createElement('li');
-        li.textContent = `${member.username} (${member.email}) - ${t().countryLabel}: ${member.country || t().unknownCountry}`;
+        li.textContent = `${member.username}${member.role === 'admin' ? ' (admin)' : ''} (${member.email}) - ${t().countryLabel}: ${member.country || t().unknownCountry}`;
         memberList.appendChild(li);
       }
       memberListSection.classList.remove('hidden');
@@ -514,7 +565,7 @@
     async function applyUserState(user) {
       currentUser = user;
       if (user) {
-        welcomeText.textContent = t().welcomeUser(user.username);
+        welcomeText.textContent = t().welcomeUser(user.username, user.role);
         closeLoginPanel();
         logoutBtn.classList.remove('hidden');
         toggleLoginBtn.classList.add('hidden');
@@ -548,17 +599,25 @@
 
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
+        if (data.requiresEmailConfirmation) {
+          pendingConfirmationUsername = username;
+          resendConfirmationBtn.classList.remove('hidden');
+          setStatus(data.error || t().statusConfirmationRequired, true);
+          return;
+        }
         setStatus(data.error || t().statusLoginFailed, true);
         return;
       }
 
       const data = await response.json();
+      pendingConfirmationUsername = '';
+      resendConfirmationBtn.classList.add('hidden');
       await applyUserState(data.user);
       setStatus('');
     }
 
     async function registerUser() {
-      const username = document.getElementById('registerUser').value.trim().toLowerCase();
+      const username = document.getElementById('registerUser').value.trim();
       const email = document.getElementById('registerEmail').value.trim().toLowerCase();
       const password = document.getElementById('registerPassword').value;
       const honeypot = document.getElementById('registerWebsite').value;
@@ -575,6 +634,8 @@
         return;
       }
 
+      pendingConfirmationUsername = username.toLowerCase();
+      resendConfirmationBtn.classList.remove('hidden');
       setStatus(t().statusRegistrationOk);
       switchTab('login');
       document.getElementById('loginUsername').value = username;
@@ -585,9 +646,7 @@
       if (!currentCaptcha) generateCaptchaQuestion();
 
       const payload = {
-        username: document.getElementById('resetUsername').value.trim().toLowerCase(),
         email: document.getElementById('resetEmail').value.trim().toLowerCase(),
-        newPassword: document.getElementById('resetNewPassword').value,
         honeypot: document.getElementById('resetWebsite').value,
         captchaId: currentCaptcha.id,
         captchaAnswer: document.getElementById('resetCaptchaAnswer').value.trim()
@@ -614,6 +673,30 @@
       switchTab('login');
     }
 
+    async function resendConfirmationEmail() {
+      const username = pendingConfirmationUsername || document.getElementById('loginUsername').value.trim().toLowerCase();
+      if (!username) {
+        setStatus(t().statusConfirmationRequired, true);
+        return;
+      }
+
+      const response = await fetch('/api/auth/resend-confirmation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, honeypot: '' })
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setStatus(data.error || t().statusResendFailed, true);
+        return;
+      }
+
+      pendingConfirmationUsername = username;
+      resendConfirmationBtn.classList.remove('hidden');
+      setStatus(data.alreadyConfirmed ? t().statusAlreadyConfirmed : t().statusConfirmationResent);
+    }
+
     function showResetHelpInfo() {
       setStatus(t().statusResetHelp);
     }
@@ -633,6 +716,10 @@
       setThemeFromStorage();
       initQuizLanguage();
 
+      if (handleAuthRedirect()) {
+        return;
+      }
+
       await applyUserState(null);
       const user = await fetchSession();
       if (user) await applyUserState(user);
@@ -643,6 +730,7 @@
       document.getElementById('resetBtn').addEventListener('click', selfResetPassword);
       document.getElementById('newCaptchaBtn').addEventListener('click', generateCaptchaQuestion);
       document.getElementById('resetInfoBtn').addEventListener('click', showResetHelpInfo);
+      document.getElementById('resendConfirmationBtn').addEventListener('click', resendConfirmationEmail);
       document.getElementById('logoutBtn').addEventListener('click', logout);
       document.getElementById('themeToggle').addEventListener('click', toggleTheme);
       document.getElementById('toggleLoginBtn').addEventListener('click', toggleLoginPanel);
