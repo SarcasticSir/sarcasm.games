@@ -100,8 +100,8 @@
 
         <section id="loginTab" class="tab-content">
           <div class="form-group">
-            <label for="loginUsername" id="loginUsernameLabel">Username</label>
-            <input id="loginUsername" type="text" autocomplete="username" />
+            <label for="loginEmail" id="loginEmailLabel">Email</label>
+            <input id="loginEmail" type="email" autocomplete="email" />
           </div>
           <div class="form-group">
             <label for="loginPassword" id="loginPasswordLabel">Password</label>
@@ -208,7 +208,7 @@
         adminModules: 'Admin modules',
         unknownCountry: 'unknown',
         countryLabel: 'country',
-        statusMissingLoginFields: 'Please enter both username and password.',
+        statusMissingLoginFields: 'Please enter both email and password.',
         statusLoginFailed: 'Login failed.',
         statusRegistrationFailed: 'Registration failed.',
         statusRegistrationOk: 'Account created. Confirm your email before logging in. Check spam if you do not receive the email.',
@@ -260,7 +260,7 @@
         adminModules: 'Admin-moduler',
         unknownCountry: 'ukjent',
         countryLabel: 'land',
-        statusMissingLoginFields: 'Fyll inn både brukernavn og passord.',
+        statusMissingLoginFields: 'Fyll inn både e-post og passord.',
         statusLoginFailed: 'Innlogging feilet.',
         statusRegistrationFailed: 'Registrering feilet.',
         statusRegistrationOk: 'Konto opprettet. Bekreft e-posten før du logger inn. Sjekk spam hvis du ikke får e-posten.',
@@ -581,11 +581,11 @@
     }
 
     async function login() {
-      const username = document.getElementById('loginUsername').value.trim().toLowerCase();
+      const email = document.getElementById('loginEmail').value.trim().toLowerCase();
       const password = document.getElementById('loginPassword').value;
       const honeypot = document.getElementById('loginWebsite').value;
 
-      if (!username || !password) {
+      if (!email || !password) {
         setStatus(t().statusMissingLoginFields, true);
         return;
       }
@@ -594,7 +594,7 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ username, password, honeypot })
+        body: JSON.stringify({ email, password, honeypot })
       });
 
       if (!response.ok) {
@@ -638,7 +638,7 @@
       resendConfirmationBtn.classList.remove('hidden');
       setStatus(t().statusRegistrationOk);
       switchTab('login');
-      document.getElementById('loginUsername').value = username;
+      document.getElementById('loginEmail').value = email;
       document.getElementById('loginPassword').value = '';
     }
 
@@ -748,7 +748,7 @@
           login();
         }
       };
-      document.getElementById('loginUsername').addEventListener('keydown', submitOnEnter);
+      document.getElementById('loginEmail').addEventListener('keydown', submitOnEnter);
       document.getElementById('loginPassword').addEventListener('keydown', submitOnEnter);
     }
 
