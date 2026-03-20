@@ -69,6 +69,31 @@
       });
     }
 
+    async function syncServerSession(supabase) {
+      const { data, error } = await supabase.auth.getSession();
+      if (error) throw error;
+
+      const session = data?.session;
+      if (!session?.access_token || !session?.refresh_token) {
+        throw new Error('Missing session after password reset.');
+      }
+
+      const response = await fetch('/api/auth/sync-session', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          accessToken: session.access_token,
+          refreshToken: session.refresh_token
+        })
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload.error || 'Could not sync session after password reset.');
+      }
+    }
+
     async function establishRecoverySession(supabase) {
       const searchParams = new URLSearchParams(window.location.search);
       const hashParams = new URLSearchParams(window.location.hash.startsWith('#')
@@ -145,9 +170,11 @@
         const { error } = await supabase.auth.updateUser({ password });
         if (error) throw error;
 
+        await syncServerSession(supabase);
+
         passwordEl.value = '';
         confirmPasswordEl.value = '';
-        setStatus('Password updated. You can now log in with the new password.', 'success');
+        setStatus('Password updated. You are now signed in with the new password.', 'success');
       } catch (error) {
         console.error('[reset-password] update failed:', error);
         setStatus(error.message || 'Could not save the new password.', 'error');

@@ -129,9 +129,9 @@ async function getSessionFromCookies(req, res, { allowRefresh = true } = {}) {
 
   let profile = null;
   try {
-    profile = await getProfileByAuthUserId(authUser.id);
+    profile = await upsertProfileFromAuthUser(authUser);
     if (!profile) {
-      profile = await upsertProfileFromAuthUser(authUser);
+      profile = await getProfileByAuthUserId(authUser.id);
     }
   } catch (error) {
     console.warn('[auth] Failed to load profile for session:', error?.message);

@@ -1,5 +1,5 @@
 const { isRateLimited } = require('../_lib/rate-limit');
-const { getProfileByIdentifier, normalizeUsername } = require('../_lib/db');
+const { getProfileByIdentifier, normalizeUsername, upsertProfileFromAuthUser } = require('../_lib/db');
 const { setAuthCookies, mapAuthUser } = require('../_lib/auth');
 const { getSupabaseAnonClient } = require('../_lib/supabase');
 
@@ -100,10 +100,12 @@ module.exports = async function handler(req, res) {
       return;
     }
 
+    const syncedProfile = await upsertProfileFromAuthUser(data.user) || profile;
+
     setAuthCookies(res, data.session);
 
     res.status(200).json({
-      user: mapAuthUser(data.user, { profile })
+      user: mapAuthUser(data.user, { profile: syncedProfile })
     });
   } catch (error) {
     console.error('[auth/login] Login failed:', {
