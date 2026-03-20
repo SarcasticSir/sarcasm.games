@@ -34,6 +34,8 @@ async function handleGetSession(req, res) {
     return;
   }
 
+  const { getSessionFromCookies, clearSessionCookie } = require('../_lib/auth');
+
   let session = null;
   try {
     session = await getSessionFromCookies(req, res, { allowRefresh: true });
@@ -41,32 +43,10 @@ async function handleGetSession(req, res) {
     clearSessionCookie(res);
   }
 
-  res.status(200).json({ user: serializeSession(session) });
-}
-
-async function handleLogout(req, res, body) {
-  if (await isRateLimited(req, 'auth:logout')) {
-    res.status(429).json({ error: 'Too many requests. Please wait a minute.' });
+  if (!session) {
+    res.status(200).json({ user: null });
     return;
   }
-
-  if (body.honeypot && String(body.honeypot).trim()) {
-    res.status(400).json({ error: 'Request rejected' });
-    return;
-  }
-
-  clearSessionCookie(res);
-  res.status(200).json({ ok: true });
-}
-
-async function handleDeleteAccount(req, res, body) {
-  if (await isRateLimited(req, 'auth:delete-account')) {
-    res.status(429).json({ error: 'Too many requests. Please wait a minute.' });
-    return;
-  }
-
-  const session = await requireSession(req, res);
-  if (!session) return;
 
   if (body.honeypot && String(body.honeypot).trim()) {
     res.status(400).json({ error: 'Request rejected' });

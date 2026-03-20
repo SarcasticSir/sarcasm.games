@@ -24,7 +24,7 @@ This repo now uses Supabase Auth for passwords and sessions, and `public.profile
 - Registration creates the Supabase Auth account first, then inserts a `public.profiles` row with default role `user`.
 - Login resolves the supplied username through `public.profiles`, then signs in through Supabase Auth with the matching email.
 - Admin-only checks use `profiles.role`.
-- Password reset still uses Supabase recovery emails and `/reset-password/`, and the reset page syncs the resulting session back to the server through `/api/auth/session` so cookies/profile stay aligned.
+- Password reset still uses Supabase recovery emails and `/reset-password/`, and the reset page syncs the resulting session back to the server through `/api/auth/sync-session` so cookies/profile stay aligned.
 - The front page now supports resending confirmation emails when a user has not confirmed yet.
 
 ## Required environment variables on Vercel
