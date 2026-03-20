@@ -11,6 +11,7 @@ This repo now uses Supabase Auth directly for user handling and no longer expect
 - Login now uses `email + password`.
 - Registration uses Supabase Auth sign-up directly and stores optional profile-like values in metadata.
 - Password reset now sends a Supabase reset email instead of updating a local profile row.
+- The reset email should redirect users to `/reset-password/`, which completes the recovery flow in the browser.
 
 ## Required environment variables on Vercel
 
