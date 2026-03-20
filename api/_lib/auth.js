@@ -1,5 +1,5 @@
-const { getUserByAuthUserId } = require('./db');
 const { getSupabaseAnonClient } = require('./supabase');
+const { getProfileByAuthUserId } = require('./db');
 
 const ACCESS_COOKIE_NAME = 'sg_sb_access_token';
 const REFRESH_COOKIE_NAME = 'sg_sb_refresh_token';
@@ -44,6 +44,56 @@ function clearSessionCookie(res) {
   ]);
 }
 
+function readString(value) {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function getMetadataString(source, key) {
+  if (!source || typeof source !== 'object') return null;
+  return readString(source[key]);
+}
+
+function deriveUsername(authUser, profile) {
+  const profileUsername = readString(profile?.username);
+  if (profileUsername) return profileUsername;
+
+  const explicitUsername = getMetadataString(authUser?.user_metadata, 'username');
+  if (explicitUsername) return explicitUsername;
+
+  const email = readString(authUser?.email);
+  if (!email) return 'user';
+
+  const localPart = email.split('@')[0];
+  return localPart || 'user';
+}
+
+function mapAuthUser(authUser, { accessToken = null, includeAccessToken = false, profile = null } = {}) {
+  if (!authUser?.id) return null;
+
+  const email = readString(profile?.email) || readString(authUser.email);
+  const role = readString(profile?.role)
+    || getMetadataString(authUser.app_metadata, 'role')
+    || 'user';
+  const country = readString(profile?.country)
+    || getMetadataString(authUser.user_metadata, 'country')
+    || 'unknown';
+
+  const mapped = {
+    id: authUser.id,
+    authUserId: authUser.id,
+    username: deriveUsername(authUser, profile),
+    email,
+    role,
+    country
+  };
+
+  if (includeAccessToken) {
+    mapped.accessToken = accessToken;
+  }
+
+  return mapped;
+}
+
 async function getSessionFromCookies(req, res, { allowRefresh = true } = {}) {
   const cookies = parseCookies(req);
   const accessToken = cookies[ACCESS_COOKIE_NAME];
@@ -73,24 +123,22 @@ async function getSessionFromCookies(req, res, { allowRefresh = true } = {}) {
     }
   }
 
-  if (!authUser?.id) {
+  if (!authUser) {
     return null;
   }
 
-  const user = await getUserByAuthUserId(authUser.id);
-  if (!user) {
-    return null;
+  let profile = null;
+  try {
+    profile = await getProfileByAuthUserId(authUser.id);
+  } catch (error) {
+    console.warn('[auth] Failed to load profile for session:', error?.message);
   }
 
-  return {
-    id: user.id,
-    authUserId: authUser.id,
+  return mapAuthUser(authUser, {
     accessToken: activeAccessToken,
-    username: user.username,
-    email: user.email || authUser.email,
-    role: user.role,
-    country: user.country || 'unknown'
-  };
+    includeAccessToken: true,
+    profile
+  });
 }
 
 async function requireSession(req, res) {
@@ -115,5 +163,6 @@ module.exports = {
   setAuthCookies,
   clearSessionCookie,
   getSessionFromCookies,
-  requireSession
+  requireSession,
+  mapAuthUser
 };

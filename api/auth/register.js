@@ -1,4 +1,9 @@
 const { isRateLimited } = require('../_lib/rate-limit');
+const { findConflictingProfile, insertProfile, normalizeCountry, normalizeEmail, normalizeUsername } = require('../_lib/db');
+const { mapAuthUser } = require('../_lib/auth');
+const { getSupabaseAnonClient, getSupabaseAdminClient } = require('../_lib/supabase');
+
+const USERNAME_PATTERN = /^[a-zA-Z0-9_-]+$/;
 
 function parseRequestBody(body) {
   if (!body) return {};
@@ -11,6 +16,17 @@ function parseRequestBody(body) {
   }
   if (typeof body === 'object') return body;
   return {};
+}
+
+function getCountryFromRequest(req) {
+  const candidates = [
+    req.headers['x-vercel-ip-country'],
+    req.headers['cf-ipcountry'],
+    req.headers['x-country-code']
+  ];
+
+  const firstMatch = candidates.find((value) => typeof value === 'string' && value.trim());
+  return normalizeCountry(firstMatch || 'unknown');
 }
 
 module.exports = async function handler(req, res) {
@@ -37,16 +53,22 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const trimmedUsername = String(username).trim();
-    const trimmedEmail = String(email).trim();
+    const displayUsername = String(username).trim();
+    const normalizedUsername = normalizeUsername(displayUsername);
+    const normalizedEmail = normalizeEmail(String(email));
     const rawPassword = String(password);
 
-    if (trimmedUsername.length < 3 || trimmedUsername.length > 40) {
+    if (!normalizedUsername || displayUsername.length < 3 || displayUsername.length > 40) {
       res.status(400).json({ error: 'Username must be 3-40 characters' });
       return;
     }
 
-    if (trimmedEmail.length < 5 || trimmedEmail.length > 254) {
+    if (!USERNAME_PATTERN.test(displayUsername)) {
+      res.status(400).json({ error: 'Username may only contain letters, numbers, underscore and hyphen' });
+      return;
+    }
+
+    if (!normalizedEmail || normalizedEmail.length < 5 || normalizedEmail.length > 254) {
       res.status(400).json({ error: 'Invalid email length' });
       return;
     }
@@ -56,94 +78,64 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const { getUserByEmail, getUserByUsername, insertUser } = require('../_lib/db');
-    const { setAuthCookies } = require('../_lib/auth');
-    const { getSupabaseAnonClient, getSupabaseAdminClient } = require('../_lib/supabase');
-
-    const normalizedUsername = trimmedUsername.toLowerCase();
-    const normalizedEmail = trimmedEmail.toLowerCase();
-
-    const existingByEmail = await getUserByEmail(normalizedEmail);
-    if (existingByEmail) {
-      res.status(409).json({ error: 'Email is already registered' });
+    const conflict = await findConflictingProfile({ username: normalizedUsername, email: normalizedEmail });
+    if (conflict?.username_normalized === normalizedUsername) {
+      res.status(409).json({ error: 'Username is already in use' });
       return;
     }
 
-    const existingByUsername = await getUserByUsername(normalizedUsername);
-    if (existingByUsername) {
-      res.status(409).json({ error: 'Username is already taken' });
+    if (conflict?.email_normalized === normalizedEmail) {
+      res.status(409).json({ error: 'Email is already in use' });
       return;
     }
 
-    const countryHeader = req.headers['x-vercel-ip-country'];
-    const country = typeof countryHeader === 'string' && countryHeader.trim() ? countryHeader.trim() : 'unknown';
-
-    const adminClient = getSupabaseAdminClient();
-    const { data: createdUserData, error: createUserError } = await adminClient.auth.admin.createUser({
+    const supabase = getSupabaseAnonClient();
+    const emailRedirectTo = process.env.SUPABASE_EMAIL_CONFIRM_REDIRECT_TO || process.env.PUBLIC_SITE_URL || undefined;
+    const country = getCountryFromRequest(req);
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email: normalizedEmail,
       password: rawPassword,
-      email_confirm: true,
-      user_metadata: {
-        username: normalizedUsername
-      }
+      options: emailRedirectTo
+        ? { emailRedirectTo }
+        : undefined
     });
 
-    if (createUserError || !createdUserData?.user?.id) {
-      const status = createUserError?.status === 422 ? 409 : 500;
-      res.status(status).json({ error: createUserError?.message || 'Failed to create account' });
+    if (signUpError || !signUpData?.user?.id) {
+      const status = signUpError?.status === 422 ? 409 : 500;
+      res.status(status).json({ error: signUpError?.message || 'Failed to create account' });
       return;
     }
 
     let profile = null;
 
     try {
-      profile = await insertUser({
-        authUserId: createdUserData.user.id,
-        username: normalizedUsername,
+      profile = await insertProfile({
+        authUserId: signUpData.user.id,
+        username: displayUsername,
         email: normalizedEmail,
         role: 'user',
         country
       });
-    } catch (error) {
-      await adminClient.auth.admin.deleteUser(createdUserData.user.id);
-      throw error;
+    } catch (profileError) {
+      try {
+        const adminClient = getSupabaseAdminClient();
+        await adminClient.auth.admin.deleteUser(signUpData.user.id);
+      } catch (rollbackError) {
+        console.error('[auth/register] Failed to rollback auth user after profile insert error:', rollbackError?.message);
+      }
+      throw profileError;
     }
-
-    const supabase = getSupabaseAnonClient();
-    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-      email: normalizedEmail,
-      password: rawPassword
-    });
-
-    if (signInError || !signInData?.session) {
-      res.status(201).json({
-        user: {
-          id: profile.id,
-          username: profile.username,
-          email: profile.email,
-          role: profile.role,
-          country: profile.country
-        }
-      });
-      return;
-    }
-
-    setAuthCookies(res, signInData.session);
 
     res.status(201).json({
-      user: {
-        id: profile.id,
-        username: profile.username,
-        email: profile.email,
-        role: profile.role,
-        country: profile.country
-      }
+      user: mapAuthUser(signUpData.user, { profile }),
+      requiresEmailConfirmation: !signUpData.session,
+      message: 'Account created. Confirm your email before logging in.'
     });
   } catch (error) {
     console.error('[auth/register] Registration failed:', {
       message: error?.message,
       stack: error?.stack
     });
-    res.status(500).json({ error: 'Registration failed' });
+    res.status(500).json({ error: error?.message || 'Registration failed' });
   }
 };

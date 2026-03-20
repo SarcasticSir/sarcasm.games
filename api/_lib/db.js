@@ -108,6 +108,25 @@ function getPool() {
   return pool;
 }
 
+function normalizeEmail(value) {
+  if (typeof value !== 'string') return null;
+  const normalized = value.trim().toLowerCase();
+  return normalized || null;
+}
+
+function normalizeUsername(value) {
+  if (typeof value !== 'string') return null;
+  const normalized = value.trim().toLowerCase();
+  return normalized || null;
+}
+
+function normalizeCountry(value) {
+  if (typeof value !== 'string') return 'unknown';
+  const normalized = value.trim().toUpperCase();
+  if (!normalized) return 'unknown';
+  return normalized.slice(0, 8);
+}
+
 async function runQuery(text, params = []) {
   const pool = getPool();
   const startedAtMs = nowInMs();
@@ -124,89 +143,109 @@ async function runQuery(text, params = []) {
   }
 }
 
-function mapUserRow(row) {
-  if (!row) return null;
-  return {
-    id: row.id,
-    auth_user_id: row.auth_user_id,
-    username: row.username,
-    email: row.email,
-    role: row.role,
-    country: row.country,
-    created_at: row.created_at,
-    updated_at: row.updated_at
-  };
-}
+async function getProfileByAuthUserId(authUserId) {
+  if (!authUserId) return null;
 
-async function getUserByEmail(email) {
   const result = await runQuery(
-    `SELECT id, auth_user_id, username, email, role, country, created_at, updated_at
-     FROM users
-     WHERE LOWER(email) = LOWER($1)
-     LIMIT 1`,
-    [email]
-  );
-  return mapUserRow(result.rows[0]);
-}
-
-async function getUserByUsername(username) {
-  const result = await runQuery(
-    `SELECT id, auth_user_id, username, email, role, country, created_at, updated_at
-     FROM users
-     WHERE LOWER(username) = LOWER($1)
-     LIMIT 1`,
-    [username]
-  );
-  return mapUserRow(result.rows[0]);
-}
-
-async function getUserById(id) {
-  const result = await runQuery(
-    `SELECT id, auth_user_id, username, email, role, country, created_at, updated_at
-     FROM users
-     WHERE id = $1
-     LIMIT 1`,
-    [id]
-  );
-  return mapUserRow(result.rows[0]);
-}
-
-async function getUserByAuthUserId(authUserId) {
-  const result = await runQuery(
-    `SELECT id, auth_user_id, username, email, role, country, created_at, updated_at
-     FROM users
+    `SELECT auth_user_id, username, username_normalized, email, email_normalized, role, country, created_at, updated_at
+     FROM public.profiles
      WHERE auth_user_id = $1
      LIMIT 1`,
     [authUserId]
   );
-  return mapUserRow(result.rows[0]);
+
+  return result.rows[0] || null;
 }
 
-async function insertUser({ authUserId, username, email, role = 'user', country }) {
+async function getProfileByIdentifier(identifier) {
+  const normalizedIdentifier = normalizeUsername(identifier);
+  if (!normalizedIdentifier) return null;
+
   const result = await runQuery(
-    `INSERT INTO users (auth_user_id, username, email, role, country)
-     VALUES ($1, $2, $3, $4, $5)
-     RETURNING id, auth_user_id, username, email, role, country, created_at, updated_at`,
-    [authUserId, username, email, role, country]
+    `SELECT auth_user_id, username, username_normalized, email, email_normalized, role, country, created_at, updated_at
+     FROM public.profiles
+     WHERE username_normalized = $1 OR email_normalized = $1
+     LIMIT 1`,
+    [normalizedIdentifier]
   );
-  return mapUserRow(result.rows[0]);
+
+  return result.rows[0] || null;
 }
 
-async function getUsersForAdminList() {
+async function findConflictingProfile({ username, email }) {
+  const normalizedUsername = normalizeUsername(username);
+  const normalizedEmail = normalizeEmail(email);
+
+  if (!normalizedUsername && !normalizedEmail) return null;
+
+  const clauses = [];
+  const params = [];
+
+  if (normalizedUsername) {
+    params.push(normalizedUsername);
+    clauses.push(`username_normalized = $${params.length}`);
+  }
+
+  if (normalizedEmail) {
+    params.push(normalizedEmail);
+    clauses.push(`email_normalized = $${params.length}`);
+  }
+
   const result = await runQuery(
-    `SELECT id, auth_user_id, username, email, role, country, created_at, updated_at
-     FROM users
-     ORDER BY created_at DESC`
+    `SELECT auth_user_id, username, username_normalized, email, email_normalized, role, country
+     FROM public.profiles
+     WHERE ${clauses.join(' OR ')}
+     LIMIT 1`,
+    params
   );
-  return result.rows.map((row) => mapUserRow(row));
+
+  return result.rows[0] || null;
+}
+
+async function insertProfile({ authUserId, username, email, role = 'user', country = 'unknown' }) {
+  const normalizedUsername = normalizeUsername(username);
+  const normalizedEmail = normalizeEmail(email);
+
+  if (!authUserId || !normalizedUsername || !normalizedEmail) {
+    throw new Error('Missing required profile fields');
+  }
+
+  const result = await runQuery(
+    `INSERT INTO public.profiles (
+       auth_user_id,
+       username,
+       username_normalized,
+       email,
+       email_normalized,
+       role,
+       country
+     )
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
+     RETURNING auth_user_id, username, username_normalized, email, email_normalized, role, country, created_at, updated_at`,
+    [authUserId, String(username).trim(), normalizedUsername, normalizedEmail, normalizedEmail, role, normalizeCountry(country)]
+  );
+
+  return result.rows[0] || null;
+}
+
+async function listProfiles() {
+  const result = await runQuery(
+    `SELECT auth_user_id, username, email, role, country, created_at
+     FROM public.profiles
+     ORDER BY created_at ASC, username_normalized ASC`
+  );
+
+  return result.rows;
 }
 
 module.exports = {
   runQuery,
-  getUserByEmail,
-  getUserByUsername,
-  getUserById,
-  getUserByAuthUserId,
-  insertUser,
-  getUsersForAdminList
+  normalizeEmail,
+  normalizeUsername,
+  normalizeCountry,
+  getProfileByAuthUserId,
+  getProfileByIdentifier,
+  findConflictingProfile,
+  insertProfile,
+  listProfiles
 };

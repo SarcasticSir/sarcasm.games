@@ -1,5 +1,19 @@
 const { requireSession } = require('../_lib/auth');
-const { getUsersForAdminList } = require('../_lib/db');
+const { listProfiles } = require('../_lib/db');
+
+function readString(value) {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function mapMember(profile) {
+  return {
+    id: profile.auth_user_id,
+    username: readString(profile.username) || 'user',
+    email: readString(profile.email),
+    role: readString(profile.role) || 'user',
+    country: readString(profile.country) || 'unknown'
+  };
+}
 
 module.exports = async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -16,9 +30,10 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const users = await getUsersForAdminList();
-    res.status(200).json({ users });
+    const users = await listProfiles();
+    res.status(200).json({ users: users.map(mapMember) });
   } catch (error) {
+    console.error('[admin/users] Failed to load members:', error?.message);
     res.status(500).json({ error: 'Failed to load users' });
   }
 };
