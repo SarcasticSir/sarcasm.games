@@ -25,23 +25,23 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const { username, password, honeypot } = parseRequestBody(req.body);
+    const { email, password, honeypot } = parseRequestBody(req.body);
 
     if (honeypot && String(honeypot).trim()) {
       res.status(400).json({ error: 'Request rejected' });
       return;
     }
 
-    if (!username || !password) {
-      res.status(400).json({ error: 'username and password are required' });
+    if (!email || !password) {
+      res.status(400).json({ error: 'email and password are required' });
       return;
     }
 
-    const trimmedUsername = String(username).trim();
+    const trimmedEmail = String(email).trim();
     const rawPassword = String(password);
 
-    if (trimmedUsername.length < 3 || trimmedUsername.length > 40) {
-      res.status(400).json({ error: 'Invalid username length' });
+    if (trimmedEmail.length < 5 || trimmedEmail.length > 254) {
+      res.status(400).json({ error: 'Invalid email length' });
       return;
     }
 
@@ -50,38 +50,25 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const { getUserByUsername } = require('../_lib/db');
-    const { setAuthCookies } = require('../_lib/auth');
+    const { setAuthCookies, mapAuthUser } = require('../_lib/auth');
     const { getSupabaseAnonClient } = require('../_lib/supabase');
-
-    const normalizedUsername = trimmedUsername.toLowerCase();
-    const profile = await getUserByUsername(normalizedUsername);
-    if (!profile?.email) {
-      res.status(401).json({ error: 'Invalid username or password' });
-      return;
-    }
+    const normalizedEmail = trimmedEmail.toLowerCase();
 
     const supabase = getSupabaseAnonClient();
     const { data, error } = await supabase.auth.signInWithPassword({
-      email: profile.email,
+      email: normalizedEmail,
       password: rawPassword
     });
 
     if (error || !data?.session || !data?.user) {
-      res.status(401).json({ error: 'Invalid username or password' });
+      res.status(401).json({ error: 'Invalid email or password' });
       return;
     }
 
     setAuthCookies(res, data.session);
 
     res.status(200).json({
-      user: {
-        id: profile.id,
-        username: profile.username,
-        email: profile.email,
-        role: profile.role,
-        country: profile.country || 'unknown'
-      }
+      user: mapAuthUser(data.user)
     });
   } catch (error) {
     console.error('[auth/login] Login failed:', {

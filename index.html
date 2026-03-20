@@ -100,8 +100,8 @@
 
         <section id="loginTab" class="tab-content">
           <div class="form-group">
-            <label for="loginUsername" id="loginUsernameLabel">Username</label>
-            <input id="loginUsername" type="text" autocomplete="username" />
+            <label for="loginEmail" id="loginEmailLabel">Email</label>
+            <input id="loginEmail" type="email" autocomplete="email" />
           </div>
           <div class="form-group">
             <label for="loginPassword" id="loginPasswordLabel">Password</label>
@@ -136,16 +136,8 @@
 
         <section id="resetTab" class="tab-content hidden">
           <div class="form-group">
-            <label for="resetUsername" id="resetUsernameLabel">Username</label>
-            <input id="resetUsername" type="text" />
-          </div>
-          <div class="form-group">
             <label for="resetEmail" id="resetEmailLabel">Email</label>
             <input id="resetEmail" type="email" />
-          </div>
-          <div class="form-group">
-            <label for="resetNewPassword" id="resetPasswordLabel">New password</label>
-            <input id="resetNewPassword" type="password" autocomplete="new-password" />
           </div>
           <div class="form-group hidden">
             <label for="resetWebsite" id="resetWebsiteLabel">Website</label>
@@ -200,26 +192,26 @@
         tabRegister: 'Create account',
         tabReset: 'Forgot password?',
         usernameLabel: 'Username',
+        emailLoginLabel: 'Email',
         passwordLabel: 'Password',
         websiteLabel: 'Website',
         emailLabel: 'Email',
-        newPasswordLabel: 'New password',
         securityQuestionLabel: 'Security question',
         createAccountButton: 'Create account',
-        updatePasswordButton: 'Update password',
+        updatePasswordButton: 'Send reset email',
         newQuestionButton: 'New question',
         infoButton: 'Info',
         extraModules: 'Extra modules',
         adminModules: 'Admin modules',
         unknownCountry: 'unknown',
         countryLabel: 'country',
-        statusMissingLoginFields: 'Please enter both username and password.',
+        statusMissingLoginFields: 'Please enter both email and password.',
         statusLoginFailed: 'Login failed.',
         statusRegistrationFailed: 'Registration failed.',
-        statusRegistrationOk: 'Account created. Log in with username and password.',
-        statusPasswordResetFailed: 'Could not update password.',
-        statusPasswordResetOk: 'Password updated. You can now log in.',
-        statusResetHelp: 'Forgot your password? Contact admin at xxxx@gmail.com',
+        statusRegistrationOk: 'Account created. If email confirmation is enabled, confirm your email before logging in.',
+        statusPasswordResetFailed: 'Could not send reset email.',
+        statusPasswordResetOk: 'Password reset email sent.',
+        statusResetHelp: 'Need help with password reset? Contact admin at xxxx@gmail.com',
         statusLoggedOut: 'Logged out.',
         captchaPool: [
           { id: 'site_first_word', question: 'What is the first word in this website name?' },
@@ -245,26 +237,26 @@
         tabRegister: 'Opprett konto',
         tabReset: 'Glemt passord?',
         usernameLabel: 'Brukernavn',
+        emailLoginLabel: 'E-post',
         passwordLabel: 'Passord',
         websiteLabel: 'Nettside',
         emailLabel: 'E-post',
-        newPasswordLabel: 'Nytt passord',
         securityQuestionLabel: 'Sikkerhetsspørsmål',
         createAccountButton: 'Opprett konto',
-        updatePasswordButton: 'Oppdater passord',
+        updatePasswordButton: 'Send e-post for reset',
         newQuestionButton: 'Nytt spørsmål',
         infoButton: 'Info',
         extraModules: 'Ekstra moduler',
         adminModules: 'Admin-moduler',
         unknownCountry: 'ukjent',
         countryLabel: 'land',
-        statusMissingLoginFields: 'Fyll inn både brukernavn og passord.',
+        statusMissingLoginFields: 'Fyll inn både e-post og passord.',
         statusLoginFailed: 'Innlogging feilet.',
         statusRegistrationFailed: 'Registrering feilet.',
-        statusRegistrationOk: 'Konto opprettet. Logg inn med brukernavn og passord.',
-        statusPasswordResetFailed: 'Kunne ikke oppdatere passord.',
-        statusPasswordResetOk: 'Passord oppdatert. Du kan nå logge inn.',
-        statusResetHelp: 'Glemt passord? Kontakt admin på xxxx@gmail.com',
+        statusRegistrationOk: 'Konto opprettet. Hvis e-postbekreftelse er aktivert, bekreft e-posten før du logger inn.',
+        statusPasswordResetFailed: 'Kunne ikke sende e-post for passordreset.',
+        statusPasswordResetOk: 'E-post for passordreset er sendt.',
+        statusResetHelp: 'Trenger du hjelp med passordreset? Kontakt admin på xxxx@gmail.com',
         statusLoggedOut: 'Logget ut.',
         captchaPool: [
           { id: 'site_first_word', question: 'Hva er første ord i nettsidens navn?' },
@@ -396,16 +388,14 @@
       document.getElementById('loginTabBtn').textContent = texts.tabLogin;
       document.getElementById('registerTabBtn').textContent = texts.tabRegister;
       document.getElementById('resetTabBtn').textContent = texts.tabReset;
-      document.getElementById('loginUsernameLabel').textContent = texts.usernameLabel;
+      document.getElementById('loginEmailLabel').textContent = texts.emailLoginLabel;
       document.getElementById('loginPasswordLabel').textContent = texts.passwordLabel;
       document.getElementById('loginWebsiteLabel').textContent = texts.websiteLabel;
       document.getElementById('registerUserLabel').textContent = texts.usernameLabel;
       document.getElementById('registerEmailLabel').textContent = texts.emailLabel;
       document.getElementById('registerPasswordLabel').textContent = texts.passwordLabel;
       document.getElementById('registerWebsiteLabel').textContent = texts.websiteLabel;
-      document.getElementById('resetUsernameLabel').textContent = texts.usernameLabel;
       document.getElementById('resetEmailLabel').textContent = texts.emailLabel;
-      document.getElementById('resetPasswordLabel').textContent = texts.newPasswordLabel;
       document.getElementById('resetWebsiteLabel').textContent = texts.websiteLabel;
       document.getElementById('resetBtn').textContent = texts.updatePasswordButton;
       document.getElementById('newCaptchaBtn').textContent = texts.newQuestionButton;
@@ -530,11 +520,11 @@
     }
 
     async function login() {
-      const username = document.getElementById('loginUsername').value.trim().toLowerCase();
+      const email = document.getElementById('loginEmail').value.trim().toLowerCase();
       const password = document.getElementById('loginPassword').value;
       const honeypot = document.getElementById('loginWebsite').value;
 
-      if (!username || !password) {
+      if (!email || !password) {
         setStatus(t().statusMissingLoginFields, true);
         return;
       }
@@ -543,7 +533,7 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ username, password, honeypot })
+        body: JSON.stringify({ email, password, honeypot })
       });
 
       if (!response.ok) {
@@ -577,7 +567,7 @@
 
       setStatus(t().statusRegistrationOk);
       switchTab('login');
-      document.getElementById('loginUsername').value = username;
+      document.getElementById('loginEmail').value = email;
       document.getElementById('loginPassword').value = '';
     }
 
@@ -585,9 +575,7 @@
       if (!currentCaptcha) generateCaptchaQuestion();
 
       const payload = {
-        username: document.getElementById('resetUsername').value.trim().toLowerCase(),
         email: document.getElementById('resetEmail').value.trim().toLowerCase(),
-        newPassword: document.getElementById('resetNewPassword').value,
         honeypot: document.getElementById('resetWebsite').value,
         captchaId: currentCaptcha.id,
         captchaAnswer: document.getElementById('resetCaptchaAnswer').value.trim()
@@ -660,7 +648,7 @@
           login();
         }
       };
-      document.getElementById('loginUsername').addEventListener('keydown', submitOnEnter);
+      document.getElementById('loginEmail').addEventListener('keydown', submitOnEnter);
       document.getElementById('loginPassword').addEventListener('keydown', submitOnEnter);
     }
 
