@@ -11,9 +11,19 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  const { requireSession } = require('../_lib/auth');
-  const session = await requireSession(req, res);
-  if (!session) return;
+  const { getSessionFromCookies, clearSessionCookie } = require('../_lib/auth');
+
+  let session = null;
+  try {
+    session = await getSessionFromCookies(req, res, { allowRefresh: true });
+  } catch (error) {
+    clearSessionCookie(res);
+  }
+
+  if (!session) {
+    res.status(200).json({ user: null });
+    return;
+  }
 
   res.status(200).json({
     user: {
