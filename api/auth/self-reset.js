@@ -40,35 +40,23 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const { username, email, newPassword, honeypot, captchaId, captchaAnswer } = parseRequestBody(req.body);
+    const { email, honeypot, captchaId, captchaAnswer } = parseRequestBody(req.body);
 
     if (honeypot && String(honeypot).trim()) {
       res.status(400).json({ error: 'Request rejected' });
       return;
     }
 
-    if (!username || !email || !newPassword || !captchaId || !captchaAnswer) {
-      res.status(400).json({ error: 'username, email, newPassword and captcha are required' });
+    if (!email || !captchaId || !captchaAnswer) {
+      res.status(400).json({ error: 'email and captcha are required' });
       return;
     }
 
-    const trimmedUsername = String(username).trim();
     const trimmedEmail = String(email).trim();
-    const rawPassword = String(newPassword);
     const normalizedCaptchaAnswer = String(captchaAnswer).trim().toLowerCase();
-
-    if (trimmedUsername.length < 3 || trimmedUsername.length > 40) {
-      res.status(400).json({ error: 'Invalid username length' });
-      return;
-    }
 
     if (trimmedEmail.length < 5 || trimmedEmail.length > 254) {
       res.status(400).json({ error: 'Invalid email length' });
-      return;
-    }
-
-    if (rawPassword.length < 8 || rawPassword.length > 128) {
-      res.status(400).json({ error: 'Password must be 8-128 characters' });
       return;
     }
 
@@ -83,32 +71,14 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const { getUserByUsername } = require('../_lib/db');
-    const { getSupabaseAdminClient } = require('../_lib/supabase');
-
-    const normalizedUsername = trimmedUsername.toLowerCase();
+    const { getSupabaseAnonClient } = require('../_lib/supabase');
     const normalizedEmail = trimmedEmail.toLowerCase();
 
-    const user = await getUserByUsername(normalizedUsername);
-    if (!user || String(user.email).toLowerCase() !== normalizedEmail) {
-      res.status(400).json({ error: 'Invalid reset information' });
-      return;
-    }
-
-    if (user.role === 'admin') {
-      res.status(403).json({ error: 'Admin password reset is blocked in self-service flow' });
-      return;
-    }
-
-    if (!user.auth_user_id) {
-      res.status(500).json({ error: 'User is missing linked Supabase auth account' });
-      return;
-    }
-
-    const adminClient = getSupabaseAdminClient();
-    const { error } = await adminClient.auth.admin.updateUserById(user.auth_user_id, {
-      password: rawPassword
-    });
+    const redirectTo = process.env.SUPABASE_PASSWORD_RESET_REDIRECT_TO || process.env.PUBLIC_SITE_URL;
+    const supabase = getSupabaseAnonClient();
+    const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, redirectTo
+      ? { redirectTo }
+      : undefined);
 
     if (error) {
       console.error('[auth/self-reset] Supabase reset failed:', error.message);
