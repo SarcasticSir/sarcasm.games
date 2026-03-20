@@ -318,9 +318,27 @@
     const languageSelect = document.getElementById('languageSelect');
     const activeLanguageLabel = document.getElementById('activeLanguageLabel');
     const gameGrid = document.getElementById('gameGrid');
+    let listenersBound = false;
 
     function t() {
       return I18N[currentLanguage] || I18N.en;
+    }
+
+    function safeStorageGet(key) {
+      try {
+        return window.localStorage.getItem(key);
+      } catch (error) {
+        console.warn('[index] Failed to read localStorage:', error);
+        return null;
+      }
+    }
+
+    function safeStorageSet(key, value) {
+      try {
+        window.localStorage.setItem(key, value);
+      } catch (error) {
+        console.warn('[index] Failed to write localStorage:', error);
+      }
     }
 
     function setStatus(message, isError = false) {
@@ -420,12 +438,12 @@
     }
 
     function setThemeFromStorage() {
-      if (localStorage.getItem('theme') === 'light') document.body.classList.add('light-mode');
+      if (safeStorageGet('theme') === 'light') document.body.classList.add('light-mode');
     }
 
     function toggleTheme() {
       const isLight = document.body.classList.toggle('light-mode');
-      localStorage.setItem('theme', isLight ? 'light' : 'dark');
+      safeStorageSet('theme', isLight ? 'light' : 'dark');
     }
 
     function inferDefaultLanguage() {
@@ -437,7 +455,7 @@
     }
 
     function getStoredQuizLanguage() {
-      const stored = localStorage.getItem(QUIZ_LANGUAGE_KEY);
+      const stored = safeStorageGet(QUIZ_LANGUAGE_KEY);
       return stored === 'en' || stored === 'no' ? stored : null;
     }
 
@@ -493,7 +511,7 @@
     }
 
     function saveQuizLanguage(language) {
-      localStorage.setItem(QUIZ_LANGUAGE_KEY, language);
+      safeStorageSet(QUIZ_LANGUAGE_KEY, language);
       currentLanguage = language;
       applyTranslations();
     }
@@ -543,10 +561,15 @@
     }
 
     async function fetchSession() {
-      const response = await fetch('/api/auth/session', { credentials: 'include' });
-      if (!response.ok) return null;
-      const data = await response.json();
-      return data.user || null;
+      try {
+        const response = await fetch('/api/auth/session', { credentials: 'include' });
+        if (!response.ok) return null;
+        const data = await response.json();
+        return data.user || null;
+      } catch (error) {
+        console.error('[index] Failed to fetch session:', error);
+        return null;
+      }
     }
 
     async function renderMemberList(user) {
@@ -603,31 +626,36 @@
         return;
       }
 
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ email, password, honeypot })
-      });
+      try {
+        const response = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ username, password, honeypot })
+        });
 
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        if (data.requiresEmailConfirmation) {
-          pendingConfirmationUsername = username;
-          resendConfirmationBtn.classList.remove('hidden');
-          setStatus(data.error || t().statusConfirmationRequired, true);
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          if (data.requiresEmailConfirmation) {
+            pendingConfirmationUsername = username;
+            resendConfirmationBtn.classList.remove('hidden');
+            setStatus(data.error || t().statusConfirmationRequired, true);
+            return;
+          }
+          setStatus(data.error || t().statusLoginFailed, true);
           return;
         }
-        setStatus(data.error || t().statusLoginFailed, true);
-        return;
-      }
 
-      const data = await response.json();
-      pendingConfirmationUsername = '';
-      resendConfirmationBtn.classList.add('hidden');
-      const sessionUser = await fetchSession();
-      await applyUserState(sessionUser || data.user);
-      setStatus('');
+        const data = await response.json();
+        pendingConfirmationUsername = '';
+        resendConfirmationBtn.classList.add('hidden');
+        const sessionUser = await fetchSession();
+        await applyUserState(sessionUser || data.user);
+        setStatus('');
+      } catch (error) {
+        console.error('[index] Login request failed:', error);
+        setStatus(t().statusLoginFailed, true);
+      }
     }
 
     async function registerUser() {
@@ -636,24 +664,29 @@
       const password = document.getElementById('registerPassword').value;
       const honeypot = document.getElementById('registerWebsite').value;
 
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, email, password, honeypot })
-      });
+      try {
+        const response = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, email, password, honeypot })
+        });
 
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        setStatus(data.error || t().statusRegistrationFailed, true);
-        return;
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          setStatus(data.error || t().statusRegistrationFailed, true);
+          return;
+        }
+
+        pendingConfirmationUsername = username.toLowerCase();
+        resendConfirmationBtn.classList.remove('hidden');
+        setStatus(t().statusRegistrationOk);
+        switchTab('login');
+        document.getElementById('loginUsername').value = username;
+        document.getElementById('loginPassword').value = '';
+      } catch (error) {
+        console.error('[index] Registration request failed:', error);
+        setStatus(t().statusRegistrationFailed, true);
       }
-
-      pendingConfirmationUsername = username.toLowerCase();
-      resendConfirmationBtn.classList.remove('hidden');
-      setStatus(t().statusRegistrationOk);
-      switchTab('login');
-      document.getElementById('loginEmail').value = email;
-      document.getElementById('loginPassword').value = '';
     }
 
     async function selfResetPassword() {
@@ -666,25 +699,59 @@
         captchaAnswer: document.getElementById('resetCaptchaAnswer').value.trim()
       };
 
-      const response = await fetch('/api/auth/self-reset', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
+      try {
+        const response = await fetch('/api/auth/self-reset', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
 
-      if (!response.ok) {
-        failedResetAttempts += 1;
-        if (failedResetAttempts >= 3) resetInfoBtn.classList.remove('hidden');
-        const data = await response.json().catch(() => ({}));
-        setStatus(data.error || t().statusPasswordResetFailed, true);
-        generateCaptchaQuestion();
+        if (!response.ok) {
+          failedResetAttempts += 1;
+          if (failedResetAttempts >= 3) resetInfoBtn.classList.remove('hidden');
+          const data = await response.json().catch(() => ({}));
+          setStatus(data.error || t().statusPasswordResetFailed, true);
+          generateCaptchaQuestion();
+          return;
+        }
+
+        failedResetAttempts = 0;
+        resetInfoBtn.classList.add('hidden');
+        setStatus(t().statusPasswordResetOk);
+        switchTab('login');
+      } catch (error) {
+        console.error('[index] Password reset request failed:', error);
+        setStatus(t().statusPasswordResetFailed, true);
+      }
+    }
+
+    async function resendConfirmationEmail() {
+      const username = pendingConfirmationUsername || document.getElementById('loginUsername').value.trim().toLowerCase();
+      if (!username) {
+        setStatus(t().statusConfirmationRequired, true);
         return;
       }
 
-      failedResetAttempts = 0;
-      resetInfoBtn.classList.add('hidden');
-      setStatus(t().statusPasswordResetOk);
-      switchTab('login');
+      try {
+        const response = await fetch('/api/auth/resend-confirmation', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, honeypot: '' })
+        });
+
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          setStatus(data.error || t().statusResendFailed, true);
+          return;
+        }
+
+        pendingConfirmationUsername = username;
+        resendConfirmationBtn.classList.remove('hidden');
+        setStatus(data.alreadyConfirmed ? t().statusAlreadyConfirmed : t().statusConfirmationResent);
+      } catch (error) {
+        console.error('[index] Resend confirmation request failed:', error);
+        setStatus(t().statusResendFailed, true);
+      }
     }
 
     async function resendConfirmationEmail() {
@@ -716,14 +783,47 @@
     }
 
     async function logout() {
-      await fetch('/api/auth/session', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'logout', honeypot: '' })
-      });
-      await applyUserState(null);
-      setStatus(t().statusLoggedOut);
+      try {
+        await fetch('/api/auth/logout', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ honeypot: '' })
+        });
+        await applyUserState(null);
+        setStatus(t().statusLoggedOut);
+      } catch (error) {
+        console.error('[index] Logout request failed:', error);
+        setStatus(t().statusLoginFailed, true);
+      }
+    }
+
+    async function deleteAccount() {
+      if (!currentUser) return;
+
+      const confirmed = window.confirm(t().statusDeleteAccountConfirm);
+      if (!confirmed) return;
+
+      try {
+        const response = await fetch('/api/auth/delete-account', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ honeypot: '' })
+        });
+
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          setStatus(data.error || t().statusDeleteAccountFailed, true);
+          return;
+        }
+
+        await applyUserState(null);
+        setStatus(t().statusDeleteAccountOk);
+      } catch (error) {
+        console.error('[index] Delete account request failed:', error);
+        setStatus(t().statusDeleteAccountFailed, true);
+      }
     }
 
     async function deleteAccount() {
@@ -751,6 +851,7 @@
 
     async function init() {
       setThemeFromStorage();
+      bindUiEventListeners();
       initQuizLanguage();
 
       if (handleAuthRedirect()) {
@@ -760,6 +861,11 @@
       await applyUserState(null);
       const user = await fetchSession();
       if (user) await applyUserState(user);
+    }
+
+    function bindUiEventListeners() {
+      if (listenersBound) return;
+      listenersBound = true;
 
       document.querySelectorAll('.tab-btn').forEach((btn) => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
       document.getElementById('loginBtn').addEventListener('click', login);
@@ -790,7 +896,10 @@
       document.getElementById('loginPassword').addEventListener('keydown', submitOnEnter);
     }
 
-    init();
+    init().catch((error) => {
+      console.error('[index] Failed to initialize page:', error);
+      setStatus('The page could not finish loading. Try refreshing.', true);
+    });
   </script>
 
 
