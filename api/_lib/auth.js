@@ -1,4 +1,5 @@
 const { getSupabaseAnonClient } = require('./supabase');
+const { getProfileByAuthUserId } = require('./db');
 
 const ACCESS_COOKIE_NAME = 'sg_sb_access_token';
 const REFRESH_COOKIE_NAME = 'sg_sb_refresh_token';
@@ -52,7 +53,10 @@ function getMetadataString(source, key) {
   return readString(source[key]);
 }
 
-function deriveUsername(authUser) {
+function deriveUsername(authUser, profile) {
+  const profileUsername = readString(profile?.username);
+  if (profileUsername) return profileUsername;
+
   const explicitUsername = getMetadataString(authUser?.user_metadata, 'username');
   if (explicitUsername) return explicitUsername;
 
@@ -63,17 +67,21 @@ function deriveUsername(authUser) {
   return localPart || 'user';
 }
 
-function mapAuthUser(authUser, { accessToken = null, includeAccessToken = false } = {}) {
+function mapAuthUser(authUser, { accessToken = null, includeAccessToken = false, profile = null } = {}) {
   if (!authUser?.id) return null;
 
-  const email = readString(authUser.email);
-  const role = getMetadataString(authUser.app_metadata, 'role') || 'user';
-  const country = getMetadataString(authUser.user_metadata, 'country') || 'unknown';
+  const email = readString(profile?.email) || readString(authUser.email);
+  const role = readString(profile?.role)
+    || getMetadataString(authUser.app_metadata, 'role')
+    || 'user';
+  const country = readString(profile?.country)
+    || getMetadataString(authUser.user_metadata, 'country')
+    || 'unknown';
 
   const mapped = {
     id: authUser.id,
     authUserId: authUser.id,
-    username: deriveUsername(authUser),
+    username: deriveUsername(authUser, profile),
     email,
     role,
     country
@@ -115,7 +123,22 @@ async function getSessionFromCookies(req, res, { allowRefresh = true } = {}) {
     }
   }
 
-  return mapAuthUser(authUser, { accessToken: activeAccessToken, includeAccessToken: true });
+  if (!authUser) {
+    return null;
+  }
+
+  let profile = null;
+  try {
+    profile = await getProfileByAuthUserId(authUser.id);
+  } catch (error) {
+    console.warn('[auth] Failed to load profile for session:', error?.message);
+  }
+
+  return mapAuthUser(authUser, {
+    accessToken: activeAccessToken,
+    includeAccessToken: true,
+    profile
+  });
 }
 
 async function requireSession(req, res) {

@@ -1,21 +1,17 @@
 const { requireSession } = require('../_lib/auth');
-const { getSupabaseAdminClient } = require('../_lib/supabase');
+const { listProfiles } = require('../_lib/db');
 
 function readString(value) {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
-function mapMember(user) {
-  const email = readString(user?.email);
-  const username = readString(user?.user_metadata?.username)
-    || (email ? email.split('@')[0] : null)
-    || 'user';
-
+function mapMember(profile) {
   return {
-    id: user.id,
-    username,
-    email,
-    country: readString(user?.user_metadata?.country) || 'unknown'
+    id: profile.auth_user_id,
+    username: readString(profile.username) || 'user',
+    email: readString(profile.email),
+    role: readString(profile.role) || 'user',
+    country: readString(profile.country) || 'unknown'
   };
 }
 
@@ -34,19 +30,10 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const adminClient = getSupabaseAdminClient();
-    const { data, error } = await adminClient.auth.admin.listUsers({
-      page: 1,
-      perPage: 1000
-    });
-
-    if (error) {
-      throw error;
-    }
-
-    const users = Array.isArray(data?.users) ? data.users.map(mapMember) : [];
-    res.status(200).json({ users });
+    const users = await listProfiles();
+    res.status(200).json({ users: users.map(mapMember) });
   } catch (error) {
+    console.error('[admin/users] Failed to load members:', error?.message);
     res.status(500).json({ error: 'Failed to load users' });
   }
 };

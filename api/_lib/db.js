@@ -108,6 +108,25 @@ function getPool() {
   return pool;
 }
 
+function normalizeEmail(value) {
+  if (typeof value !== 'string') return null;
+  const normalized = value.trim().toLowerCase();
+  return normalized || null;
+}
+
+function normalizeUsername(value) {
+  if (typeof value !== 'string') return null;
+  const normalized = value.trim().toLowerCase();
+  return normalized || null;
+}
+
+function normalizeCountry(value) {
+  if (typeof value !== 'string') return 'unknown';
+  const normalized = value.trim().toUpperCase();
+  if (!normalized) return 'unknown';
+  return normalized.slice(0, 8);
+}
+
 async function runQuery(text, params = []) {
   const pool = getPool();
   const startedAtMs = nowInMs();
@@ -124,6 +143,109 @@ async function runQuery(text, params = []) {
   }
 }
 
+async function getProfileByAuthUserId(authUserId) {
+  if (!authUserId) return null;
+
+  const result = await runQuery(
+    `SELECT auth_user_id, username, username_normalized, email, email_normalized, role, country, created_at, updated_at
+     FROM public.profiles
+     WHERE auth_user_id = $1
+     LIMIT 1`,
+    [authUserId]
+  );
+
+  return result.rows[0] || null;
+}
+
+async function getProfileByIdentifier(identifier) {
+  const normalizedIdentifier = normalizeUsername(identifier);
+  if (!normalizedIdentifier) return null;
+
+  const result = await runQuery(
+    `SELECT auth_user_id, username, username_normalized, email, email_normalized, role, country, created_at, updated_at
+     FROM public.profiles
+     WHERE username_normalized = $1 OR email_normalized = $1
+     LIMIT 1`,
+    [normalizedIdentifier]
+  );
+
+  return result.rows[0] || null;
+}
+
+async function findConflictingProfile({ username, email }) {
+  const normalizedUsername = normalizeUsername(username);
+  const normalizedEmail = normalizeEmail(email);
+
+  if (!normalizedUsername && !normalizedEmail) return null;
+
+  const clauses = [];
+  const params = [];
+
+  if (normalizedUsername) {
+    params.push(normalizedUsername);
+    clauses.push(`username_normalized = $${params.length}`);
+  }
+
+  if (normalizedEmail) {
+    params.push(normalizedEmail);
+    clauses.push(`email_normalized = $${params.length}`);
+  }
+
+  const result = await runQuery(
+    `SELECT auth_user_id, username, username_normalized, email, email_normalized, role, country
+     FROM public.profiles
+     WHERE ${clauses.join(' OR ')}
+     LIMIT 1`,
+    params
+  );
+
+  return result.rows[0] || null;
+}
+
+async function insertProfile({ authUserId, username, email, role = 'user', country = 'unknown' }) {
+  const normalizedUsername = normalizeUsername(username);
+  const normalizedEmail = normalizeEmail(email);
+
+  if (!authUserId || !normalizedUsername || !normalizedEmail) {
+    throw new Error('Missing required profile fields');
+  }
+
+  const result = await runQuery(
+    `INSERT INTO public.profiles (
+       auth_user_id,
+       username,
+       username_normalized,
+       email,
+       email_normalized,
+       role,
+       country
+     )
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
+     RETURNING auth_user_id, username, username_normalized, email, email_normalized, role, country, created_at, updated_at`,
+    [authUserId, String(username).trim(), normalizedUsername, normalizedEmail, normalizedEmail, role, normalizeCountry(country)]
+  );
+
+  return result.rows[0] || null;
+}
+
+async function listProfiles() {
+  const result = await runQuery(
+    `SELECT auth_user_id, username, email, role, country, created_at
+     FROM public.profiles
+     ORDER BY created_at ASC, username_normalized ASC`
+  );
+
+  return result.rows;
+}
+
 module.exports = {
-  runQuery
+  runQuery,
+  normalizeEmail,
+  normalizeUsername,
+  normalizeCountry,
+  getProfileByAuthUserId,
+  getProfileByIdentifier,
+  findConflictingProfile,
+  insertProfile,
+  listProfiles
 };
