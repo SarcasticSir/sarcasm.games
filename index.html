@@ -66,6 +66,7 @@
         </div>
         <button class="btn-neutral" id="themeToggle">🌓 Theme</button>
         <button class="btn-neutral" id="toggleLoginBtn">Login</button>
+        <button class="btn-danger hidden" id="deleteAccountBtn">Delete me</button>
         <button class="btn-danger hidden" id="logoutBtn">Logout</button>
       </div>
     </div>
@@ -187,6 +188,7 @@
         loginButton: 'Login',
         hideLoginButton: 'Hide login',
         logoutButton: 'Logout',
+        deleteAccountButton: 'Delete me',
         pageSubtitle: 'Where do you want to go?',
         memberListTitle: 'Member list (admin only)',
         authTitle: 'Optional login',
@@ -223,6 +225,9 @@
         statusAuthConfirmFailed: 'Could not complete email confirmation automatically. Please try logging in again.',
         statusResetHelp: 'Need help with password reset? Contact admin at xxxx@gmail.com',
         statusLoggedOut: 'Logged out.',
+        statusDeleteAccountConfirm: 'This will permanently delete your account. Continue?',
+        statusDeleteAccountFailed: 'Could not delete account.',
+        statusDeleteAccountOk: 'Your account has been deleted.',
         captchaPool: [
           { id: 'site_first_word', question: 'What is the first word in this website name?' },
           { id: 'bil_reverse', question: 'Type the word BIL backwards' },
@@ -239,6 +244,7 @@
         loginButton: 'Logg inn',
         hideLoginButton: 'Skjul innlogging',
         logoutButton: 'Logg ut',
+        deleteAccountButton: 'Slett meg',
         pageSubtitle: 'Hvor vil du gå?',
         memberListTitle: 'Medlemsliste (kun admin)',
         authTitle: 'Valgfri innlogging',
@@ -275,6 +281,9 @@
         statusAuthConfirmFailed: 'Kunne ikke fullføre e-postbekreftelsen automatisk. Prøv å logge inn igjen.',
         statusResetHelp: 'Trenger du hjelp med passordreset? Kontakt admin på xxxx@gmail.com',
         statusLoggedOut: 'Logget ut.',
+        statusDeleteAccountConfirm: 'Dette vil slette kontoen permanent. Vil du fortsette?',
+        statusDeleteAccountFailed: 'Kunne ikke slette kontoen.',
+        statusDeleteAccountOk: 'Kontoen din er slettet.',
         captchaPool: [
           { id: 'site_first_word', question: 'Hva er første ord i nettsidens navn?' },
           { id: 'bil_reverse', question: 'Skriv ordet BIL baklengs' },
@@ -303,6 +312,7 @@
     const captchaQuestion = document.getElementById('captchaQuestion');
     const resetInfoBtn = document.getElementById('resetInfoBtn');
     const resendConfirmationBtn = document.getElementById('resendConfirmationBtn');
+    const deleteAccountBtn = document.getElementById('deleteAccountBtn');
     const logoutBtn = document.getElementById('logoutBtn');
     const toggleLoginBtn = document.getElementById('toggleLoginBtn');
     const languageSelect = document.getElementById('languageSelect');
@@ -463,6 +473,7 @@
       document.getElementById('loginBtn').textContent = texts.loginButton;
       document.getElementById('resendConfirmationBtn').textContent = texts.resendConfirmationButton;
       document.getElementById('registerBtn').textContent = texts.createAccountButton;
+      document.getElementById('deleteAccountBtn').textContent = texts.deleteAccountButton;
       document.getElementById('logoutBtn').textContent = texts.logoutButton;
       if (authShell.classList.contains('hidden')) {
         toggleLoginBtn.textContent = texts.loginButton;
@@ -567,11 +578,13 @@
       if (user) {
         welcomeText.textContent = t().welcomeUser(user.username, user.role);
         closeLoginPanel();
+        deleteAccountBtn.classList.remove('hidden');
         logoutBtn.classList.remove('hidden');
         toggleLoginBtn.classList.add('hidden');
       } else {
         welcomeText.textContent = t().welcomeGuest;
         closeLoginPanel();
+        deleteAccountBtn.classList.add('hidden');
         logoutBtn.classList.add('hidden');
         toggleLoginBtn.classList.remove('hidden');
         toggleLoginBtn.textContent = t().loginButton;
@@ -612,7 +625,8 @@
       const data = await response.json();
       pendingConfirmationUsername = '';
       resendConfirmationBtn.classList.add('hidden');
-      await applyUserState(data.user);
+      const sessionUser = await fetchSession();
+      await applyUserState(sessionUser || data.user);
       setStatus('');
     }
 
@@ -712,6 +726,29 @@
       setStatus(t().statusLoggedOut);
     }
 
+    async function deleteAccount() {
+      if (!currentUser) return;
+
+      const confirmed = window.confirm(t().statusDeleteAccountConfirm);
+      if (!confirmed) return;
+
+      const response = await fetch('/api/auth/delete-account', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ honeypot: '' })
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        setStatus(data.error || t().statusDeleteAccountFailed, true);
+        return;
+      }
+
+      await applyUserState(null);
+      setStatus(t().statusDeleteAccountOk);
+    }
+
     async function init() {
       setThemeFromStorage();
       initQuizLanguage();
@@ -731,6 +768,7 @@
       document.getElementById('newCaptchaBtn').addEventListener('click', generateCaptchaQuestion);
       document.getElementById('resetInfoBtn').addEventListener('click', showResetHelpInfo);
       document.getElementById('resendConfirmationBtn').addEventListener('click', resendConfirmationEmail);
+      document.getElementById('deleteAccountBtn').addEventListener('click', deleteAccount);
       document.getElementById('logoutBtn').addEventListener('click', logout);
       document.getElementById('themeToggle').addEventListener('click', toggleTheme);
       document.getElementById('toggleLoginBtn').addEventListener('click', toggleLoginPanel);
