@@ -48,7 +48,6 @@
     .season-grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
     .module-group{border:1px dashed var(--bd);border-radius:10px;padding:10px}
     .module-group h4{margin:0 0 8px}
-
   </style>
 </head>
 <body>
@@ -64,10 +63,10 @@
           </select>
           <span class="language-badge" id="activeLanguageLabel">English</span>
         </div>
-        <button class="btn-neutral" id="themeToggle">🌓 Theme</button>
-        <button class="btn-neutral" id="toggleLoginBtn">Login</button>
-        <button class="btn-danger hidden" id="deleteAccountBtn">Delete me</button>
-        <button class="btn-danger hidden" id="logoutBtn">Logout</button>
+        <button class="btn-neutral" id="themeToggle" type="button">🌓 Theme</button>
+        <button class="btn-neutral" id="toggleLoginBtn" type="button">Login</button>
+        <button class="btn-danger hidden" id="deleteAccountBtn" type="button">Delete me</button>
+        <button class="btn-danger hidden" id="logoutBtn" type="button">Logout</button>
       </div>
     </div>
 
@@ -94,15 +93,15 @@
         <p class="auth-subtitle" id="authSubtitle">Log in for personal or admin-only features.</p>
 
         <div class="auth-tabs">
-          <button class="tab-btn active" data-tab="login" id="loginTabBtn">Login</button>
-          <button class="tab-btn" data-tab="register" id="registerTabBtn">Create account</button>
-          <button class="tab-btn" data-tab="reset" id="resetTabBtn">Forgot password?</button>
+          <button class="tab-btn active" data-tab="login" id="loginTabBtn" type="button">Login</button>
+          <button class="tab-btn" data-tab="register" id="registerTabBtn" type="button">Create account</button>
+          <button class="tab-btn" data-tab="reset" id="resetTabBtn" type="button">Forgot password?</button>
         </div>
 
         <section id="loginTab" class="tab-content">
           <div class="form-group">
-            <label for="loginEmail" id="loginEmailLabel">Email</label>
-            <input id="loginEmail" type="email" autocomplete="email" />
+            <label for="loginUsername" id="loginUsernameLabel">Username</label>
+            <input id="loginUsername" type="text" autocomplete="username" />
           </div>
           <div class="form-group">
             <label for="loginPassword" id="loginPasswordLabel">Password</label>
@@ -113,7 +112,7 @@
             <input id="loginWebsite" type="text" autocomplete="off" tabindex="-1" />
           </div>
           <div class="btn-row">
-            <button class="btn-primary" id="loginBtn">Login</button>
+            <button class="btn-primary" id="loginBtn" type="button">Login</button>
             <button class="btn-neutral hidden" id="resendConfirmationBtn" type="button">Resend confirmation email</button>
           </div>
         </section>
@@ -135,13 +134,15 @@
             <label for="registerWebsite" id="registerWebsiteLabel">Website</label>
             <input id="registerWebsite" type="text" autocomplete="off" tabindex="-1" />
           </div>
-          <div class="btn-row"><button class="btn-primary" id="registerBtn">Create account</button></div>
+          <div class="btn-row">
+            <button class="btn-primary" id="registerBtn" type="button">Create account</button>
+          </div>
         </section>
 
         <section id="resetTab" class="tab-content hidden">
           <div class="form-group">
             <label for="resetEmail" id="resetEmailLabel">Email</label>
-            <input id="resetEmail" type="email" />
+            <input id="resetEmail" type="email" autocomplete="email" />
           </div>
           <div class="form-group hidden">
             <label for="resetWebsite" id="resetWebsiteLabel">Website</label>
@@ -152,7 +153,7 @@
             <input id="resetCaptchaAnswer" type="text" />
           </div>
           <div class="btn-row">
-            <button class="btn-primary" id="resetBtn">Update password</button>
+            <button class="btn-primary" id="resetBtn" type="button">Update password</button>
             <button class="btn-neutral" id="newCaptchaBtn" type="button">New question</button>
             <button class="btn-neutral hidden" id="resetInfoBtn" type="button">Info</button>
           </div>
@@ -161,11 +162,11 @@
         <div id="statusBox" class="status-box"></div>
       </div>
     </div>
-
   </div>
 
   <script>
     const QUIZ_LANGUAGE_KEY = 'quizLanguage';
+
     const GAMES = [
       { href: '/tiermaker/', title: 'Tier-maker', tooltip: { en: 'Make your own tier list.', no: 'Lag din egen tier-liste.' } },
       { href: '/monstercatch/', title: 'Monster catcher', tooltip: { en: 'A local game.', no: 'Et lokalt spill.' } },
@@ -183,7 +184,6 @@
         welcomeGuest: 'Logged in as: Guest',
         welcomeUser: (username, role) => `Logged in as: ${username}${role === 'admin' ? ', Admin' : ''}`,
         languageLabel: 'Language',
-        activeLanguageName: 'English',
         themeButton: '🌓 Theme',
         loginButton: 'Login',
         hideLoginButton: 'Hide login',
@@ -197,7 +197,6 @@
         tabRegister: 'Create account',
         tabReset: 'Forgot password?',
         usernameLabel: 'Username',
-        usernameLoginLabel: 'Username',
         passwordLabel: 'Password',
         websiteLabel: 'Website',
         emailLabel: 'Email',
@@ -210,7 +209,7 @@
         adminModules: 'Admin modules',
         unknownCountry: 'unknown',
         countryLabel: 'country',
-        statusMissingLoginFields: 'Please enter both email and password.',
+        statusMissingLoginFields: 'Please enter both username and password.',
         statusLoginFailed: 'Login failed.',
         statusRegistrationFailed: 'Registration failed.',
         statusRegistrationOk: 'Account created. Confirm your email before logging in. Check spam if you do not receive the email.',
@@ -239,7 +238,6 @@
         welcomeGuest: 'Logget inn som: Gjest',
         welcomeUser: (username, role) => `Logget inn som: ${username}${role === 'admin' ? ', Admin' : ''}`,
         languageLabel: 'Språk',
-        activeLanguageName: 'Norsk',
         themeButton: '🌓 Tema',
         loginButton: 'Logg inn',
         hideLoginButton: 'Skjul innlogging',
@@ -253,7 +251,6 @@
         tabRegister: 'Opprett konto',
         tabReset: 'Glemt passord?',
         usernameLabel: 'Brukernavn',
-        usernameLoginLabel: 'Brukernavn',
         passwordLabel: 'Passord',
         websiteLabel: 'Nettside',
         emailLabel: 'E-post',
@@ -266,7 +263,7 @@
         adminModules: 'Admin-moduler',
         unknownCountry: 'ukjent',
         countryLabel: 'land',
-        statusMissingLoginFields: 'Fyll inn både e-post og passord.',
+        statusMissingLoginFields: 'Fyll inn både brukernavn og passord.',
         statusLoginFailed: 'Innlogging feilet.',
         statusRegistrationFailed: 'Registrering feilet.',
         statusRegistrationOk: 'Konto opprettet. Bekreft e-posten før du logger inn. Sjekk spam hvis du ikke får e-posten.',
@@ -300,6 +297,7 @@
     let currentUser = null;
     let currentLanguage = 'en';
     let pendingConfirmationUsername = '';
+    let listenersBound = false;
 
     const statusBox = document.getElementById('statusBox');
     const authShell = document.getElementById('authShell');
@@ -318,7 +316,6 @@
     const languageSelect = document.getElementById('languageSelect');
     const activeLanguageLabel = document.getElementById('activeLanguageLabel');
     const gameGrid = document.getElementById('gameGrid');
-    let listenersBound = false;
 
     function t() {
       return I18N[currentLanguage] || I18N.en;
@@ -348,9 +345,9 @@
 
     function getAuthRedirectUrl() {
       const searchParams = new URLSearchParams(window.location.search);
-      const hashParams = new URLSearchParams(window.location.hash.startsWith('#')
-        ? window.location.hash.slice(1)
-        : window.location.hash);
+      const hashParams = new URLSearchParams(
+        window.location.hash.startsWith('#') ? window.location.hash.slice(1) : window.location.hash
+      );
 
       if (searchParams.get('code')) {
         return `/api/auth/confirm?${searchParams.toString()}`;
@@ -389,6 +386,7 @@
 
     function renderGames() {
       gameGrid.innerHTML = '';
+
       for (const game of GAMES) {
         const anchor = document.createElement('a');
         anchor.href = game.href;
@@ -397,15 +395,16 @@
         const tooltip = document.createElement('span');
         tooltip.className = 'tooltip-text';
         tooltip.textContent = game.tooltip[currentLanguage] || game.tooltip.en;
+
         anchor.appendChild(document.createTextNode(' '));
         anchor.appendChild(tooltip);
-
         gameGrid.appendChild(anchor);
       }
     }
 
     function toggleLoginPanel() {
       if (currentUser) return;
+
       const isHidden = authShell.classList.contains('hidden');
       if (isHidden) {
         authShell.classList.remove('hidden');
@@ -430,15 +429,28 @@
     }
 
     function switchTab(tabName) {
-      document.querySelectorAll('.tab-btn').forEach((btn) => btn.classList.toggle('active', btn.dataset.tab === tabName));
-      document.querySelectorAll('.tab-content').forEach((section) => section.classList.add('hidden'));
-      document.getElementById(`${tabName}Tab`).classList.remove('hidden');
-      if (tabName === 'reset' && !currentCaptcha) generateCaptchaQuestion();
+      document.querySelectorAll('.tab-btn').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.tab === tabName);
+      });
+
+      document.querySelectorAll('.tab-content').forEach((section) => {
+        section.classList.add('hidden');
+      });
+
+      const tab = document.getElementById(`${tabName}Tab`);
+      if (tab) tab.classList.remove('hidden');
+
+      if (tabName === 'reset' && !currentCaptcha) {
+        generateCaptchaQuestion();
+      }
+
       setStatus('');
     }
 
     function setThemeFromStorage() {
-      if (safeStorageGet('theme') === 'light') document.body.classList.add('light-mode');
+      if (safeStorageGet('theme') === 'light') {
+        document.body.classList.add('light-mode');
+      }
     }
 
     function toggleTheme() {
@@ -467,37 +479,45 @@
 
     function applyTranslations() {
       const texts = t();
+
       document.getElementById('languageLabel').textContent = texts.languageLabel;
       document.getElementById('themeToggle').textContent = texts.themeButton;
       document.getElementById('pageSubtitle').textContent = texts.pageSubtitle;
       document.getElementById('memberListTitle').textContent = texts.memberListTitle;
       document.getElementById('authTitle').textContent = texts.authTitle;
       document.getElementById('authSubtitle').textContent = texts.authSubtitle;
+
       document.getElementById('loginTabBtn').textContent = texts.tabLogin;
       document.getElementById('registerTabBtn').textContent = texts.tabRegister;
       document.getElementById('resetTabBtn').textContent = texts.tabReset;
-      document.getElementById('loginUsernameLabel').textContent = texts.usernameLoginLabel;
+
+      document.getElementById('loginUsernameLabel').textContent = texts.usernameLabel;
       document.getElementById('loginPasswordLabel').textContent = texts.passwordLabel;
       document.getElementById('loginWebsiteLabel').textContent = texts.websiteLabel;
+
       document.getElementById('registerUserLabel').textContent = texts.usernameLabel;
       document.getElementById('registerEmailLabel').textContent = texts.emailLabel;
       document.getElementById('registerPasswordLabel').textContent = texts.passwordLabel;
       document.getElementById('registerWebsiteLabel').textContent = texts.websiteLabel;
+
       document.getElementById('resetEmailLabel').textContent = texts.emailLabel;
       document.getElementById('resetWebsiteLabel').textContent = texts.websiteLabel;
       document.getElementById('resetBtn').textContent = texts.updatePasswordButton;
       document.getElementById('newCaptchaBtn').textContent = texts.newQuestionButton;
       document.getElementById('resetInfoBtn').textContent = texts.infoButton;
+
       document.getElementById('loginBtn').textContent = texts.loginButton;
       document.getElementById('resendConfirmationBtn').textContent = texts.resendConfirmationButton;
       document.getElementById('registerBtn').textContent = texts.createAccountButton;
       document.getElementById('deleteAccountBtn').textContent = texts.deleteAccountButton;
       document.getElementById('logoutBtn').textContent = texts.logoutButton;
+
       if (authShell.classList.contains('hidden')) {
         toggleLoginBtn.textContent = texts.loginButton;
       } else {
         toggleLoginBtn.textContent = texts.hideLoginButton;
       }
+
       if (currentUser) {
         welcomeText.textContent = texts.welcomeUser(currentUser.username, currentUser.role);
       } else {
@@ -530,6 +550,7 @@
     function renderFeatureModules(user) {
       const role = user?.role || 'guest';
       const visibleModules = FEATURE_MODULES.filter((moduleConfig) => !(moduleConfig.adminOnly && role !== 'admin'));
+
       if (visibleModules.length === 0) {
         featureModulesSection.classList.add('hidden');
         featureModulesGrid.innerHTML = '';
@@ -543,6 +564,7 @@
       for (const moduleConfig of visibleModules) {
         const moduleGroup = document.createElement('div');
         moduleGroup.className = 'module-group';
+
         const heading = document.createElement('h4');
         heading.textContent = moduleConfig.title;
         moduleGroup.appendChild(heading);
@@ -579,25 +601,34 @@
         return;
       }
 
-      const response = await fetch('/api/admin/users', { credentials: 'include' });
-      if (!response.ok) {
+      try {
+        const response = await fetch('/api/admin/users', { credentials: 'include' });
+        if (!response.ok) {
+          memberListSection.classList.add('hidden');
+          memberList.innerHTML = '';
+          return;
+        }
+
+        const data = await response.json();
+        memberList.innerHTML = '';
+
+        for (const member of data.users || []) {
+          const li = document.createElement('li');
+          li.textContent = `${member.username}${member.role === 'admin' ? ' (admin)' : ''} (${member.email}) - ${t().countryLabel}: ${member.country || t().unknownCountry}`;
+          memberList.appendChild(li);
+        }
+
+        memberListSection.classList.remove('hidden');
+      } catch (error) {
+        console.error('[index] Failed to render member list:', error);
         memberListSection.classList.add('hidden');
         memberList.innerHTML = '';
-        return;
       }
-
-      const data = await response.json();
-      memberList.innerHTML = '';
-      for (const member of data.users || []) {
-        const li = document.createElement('li');
-        li.textContent = `${member.username}${member.role === 'admin' ? ' (admin)' : ''} (${member.email}) - ${t().countryLabel}: ${member.country || t().unknownCountry}`;
-        memberList.appendChild(li);
-      }
-      memberListSection.classList.remove('hidden');
     }
 
     async function applyUserState(user) {
       currentUser = user;
+
       if (user) {
         welcomeText.textContent = t().welcomeUser(user.username, user.role);
         closeLoginPanel();
@@ -612,16 +643,17 @@
         toggleLoginBtn.classList.remove('hidden');
         toggleLoginBtn.textContent = t().loginButton;
       }
+
       renderFeatureModules(user);
       await renderMemberList(user);
     }
 
     async function login() {
-      const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+      const username = document.getElementById('loginUsername').value.trim().toLowerCase();
       const password = document.getElementById('loginPassword').value;
       const honeypot = document.getElementById('loginWebsite').value;
 
-      if (!email || !password) {
+      if (!username || !password) {
         setStatus(t().statusMissingLoginFields, true);
         return;
       }
@@ -634,21 +666,23 @@
           body: JSON.stringify({ username, password, honeypot })
         });
 
+        const data = await response.json().catch(() => ({}));
+
         if (!response.ok) {
-          const data = await response.json().catch(() => ({}));
           if (data.requiresEmailConfirmation) {
             pendingConfirmationUsername = username;
             resendConfirmationBtn.classList.remove('hidden');
             setStatus(data.error || t().statusConfirmationRequired, true);
             return;
           }
+
           setStatus(data.error || t().statusLoginFailed, true);
           return;
         }
 
-        const data = await response.json();
         pendingConfirmationUsername = '';
         resendConfirmationBtn.classList.add('hidden');
+
         const sessionUser = await fetchSession();
         await applyUserState(sessionUser || data.user);
         setStatus('');
@@ -727,6 +761,7 @@
 
     async function resendConfirmationEmail() {
       const username = pendingConfirmationUsername || document.getElementById('loginUsername').value.trim().toLowerCase();
+
       if (!username) {
         setStatus(t().statusConfirmationRequired, true);
         return;
@@ -740,6 +775,7 @@
         });
 
         const data = await response.json().catch(() => ({}));
+
         if (!response.ok) {
           setStatus(data.error || t().statusResendFailed, true);
           return;
@@ -766,6 +802,7 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ honeypot: '' })
         });
+
         await applyUserState(null);
         setStatus(t().statusLoggedOut);
       } catch (error) {
@@ -802,25 +839,14 @@
       }
     }
 
-    async function init() {
-      setThemeFromStorage();
-      bindUiEventListeners();
-      initQuizLanguage();
-
-      if (handleAuthRedirect()) {
-        return;
-      }
-
-      await applyUserState(null);
-      const user = await fetchSession();
-      if (user) await applyUserState(user);
-    }
-
     function bindUiEventListeners() {
       if (listenersBound) return;
       listenersBound = true;
 
-      document.querySelectorAll('.tab-btn').forEach((btn) => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
+      document.querySelectorAll('.tab-btn').forEach((btn) => {
+        btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+      });
+
       document.getElementById('loginBtn').addEventListener('click', login);
       document.getElementById('registerBtn').addEventListener('click', registerUser);
       document.getElementById('resetBtn').addEventListener('click', selfResetPassword);
@@ -845,8 +871,23 @@
           login();
         }
       };
-      document.getElementById('loginEmail').addEventListener('keydown', submitOnEnter);
+
+      document.getElementById('loginUsername').addEventListener('keydown', submitOnEnter);
       document.getElementById('loginPassword').addEventListener('keydown', submitOnEnter);
+    }
+
+    async function init() {
+      setThemeFromStorage();
+      bindUiEventListeners();
+      initQuizLanguage();
+
+      if (handleAuthRedirect()) {
+        return;
+      }
+
+      await applyUserState(null);
+      const user = await fetchSession();
+      if (user) await applyUserState(user);
     }
 
     init().catch((error) => {
@@ -855,14 +896,12 @@
     });
   </script>
 
-
-
-  <script src='https://storage.ko-fi.com/cdn/scripts/overlay-widget.js'></script>
+  <script src="https://storage.ko-fi.com/cdn/scripts/overlay-widget.js"></script>
   <script>
     kofiWidgetOverlay.draw('sarcasticsir', {
       'type': 'floating-chat',
       'floating-chat.donateButton.text': 'Support me',
-      'floating-chat.donateButton.background-color': '#00000',
+      'floating-chat.donateButton.background-color': '#000000',
       'floating-chat.donateButton.text-color': '#323842'
     });
   </script>
@@ -873,6 +912,5 @@
       bottom: 20px !important;
     }
   </style>
-
 </body>
 </html>
