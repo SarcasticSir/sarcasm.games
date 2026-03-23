@@ -60,6 +60,18 @@ async function handleGetSession(req, res) {
     return;
   }
 
+  let session = null;
+  try {
+    session = await getSessionFromCookies(req, res, { allowRefresh: true });
+  } catch (error) {
+    clearSessionCookie(res);
+  }
+
+  if (!session) {
+    res.status(200).json({ user: null });
+    return;
+  }
+
   if (body.honeypot && String(body.honeypot).trim()) {
     res.status(400).json({ error: 'Request rejected' });
     return;

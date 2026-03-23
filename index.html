@@ -754,30 +754,6 @@
       }
     }
 
-    async function resendConfirmationEmail() {
-      const username = pendingConfirmationUsername || document.getElementById('loginUsername').value.trim().toLowerCase();
-      if (!username) {
-        setStatus(t().statusConfirmationRequired, true);
-        return;
-      }
-
-      const response = await fetch('/api/auth/resend-confirmation', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, honeypot: '' })
-      });
-
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        setStatus(data.error || t().statusResendFailed, true);
-        return;
-      }
-
-      pendingConfirmationUsername = username;
-      resendConfirmationBtn.classList.remove('hidden');
-      setStatus(data.alreadyConfirmed ? t().statusAlreadyConfirmed : t().statusConfirmationResent);
-    }
-
     function showResetHelpInfo() {
       setStatus(t().statusResetHelp);
     }
@@ -824,29 +800,6 @@
         console.error('[index] Delete account request failed:', error);
         setStatus(t().statusDeleteAccountFailed, true);
       }
-    }
-
-    async function deleteAccount() {
-      if (!currentUser) return;
-
-      const confirmed = window.confirm(t().statusDeleteAccountConfirm);
-      if (!confirmed) return;
-
-      const response = await fetch('/api/auth/delete-account', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ honeypot: '' })
-      });
-
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        setStatus(data.error || t().statusDeleteAccountFailed, true);
-        return;
-      }
-
-      await applyUserState(null);
-      setStatus(t().statusDeleteAccountOk);
     }
 
     async function init() {
