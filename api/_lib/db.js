@@ -32,15 +32,32 @@ function serializeDbError(error) {
 
 function getConnectionString() {
   const candidates = [
-    process.env.SUPABASE_DB_URL,
-    process.env.DATABASE_URL,
-    process.env.POSTGRES_URL,
-    process.env.POSTGRES_PRISMA_URL
+    ['SUPABASE_DB_URL', process.env.SUPABASE_DB_URL],
+    ['DATABASE_URL', process.env.DATABASE_URL],
+    ['POSTGRES_URL', process.env.POSTGRES_URL],
+    ['POSTGRES_PRISMA_URL', process.env.POSTGRES_PRISMA_URL]
   ];
 
-  const connectionString = candidates.find((value) => typeof value === 'string' && value.trim().length > 0);
-  if (!connectionString) {
+  const match = candidates.find(([, value]) => typeof value === 'string' && value.trim().length > 0);
+
+  if (!match) {
     throw new Error('Missing Postgres connection string. Set SUPABASE_DB_URL or DATABASE_URL.');
+  }
+
+  const [sourceName, connectionString] = match;
+
+  try {
+    const parsed = new URL(connectionString);
+    console.info('[db] Using connection string source:', {
+      sourceName,
+      host: parsed.hostname,
+      protocol: parsed.protocol
+    });
+  } catch (error) {
+    console.info('[db] Using connection string source:', {
+      sourceName,
+      host: 'UNPARSEABLE_URL'
+    });
   }
 
   return connectionString;
