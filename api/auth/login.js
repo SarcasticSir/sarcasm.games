@@ -19,10 +19,12 @@ function parseRequestBody(body) {
 function isEmailConfirmationError(error) {
   const message = String(error?.message || '').toLowerCase();
   const code = String(error?.code || '').toLowerCase();
-  return message.includes('email not confirmed')
-    || message.includes('not confirmed')
-    || message.includes('email confirmation')
-    || code === 'email_not_confirmed';
+  return (
+    message.includes('email not confirmed') ||
+    message.includes('not confirmed') ||
+    message.includes('email confirmation') ||
+    code === 'email_not_confirmed'
+  );
 }
 
 module.exports = async function handler(req, res) {
@@ -37,22 +39,22 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const { email, password, honeypot } = parseRequestBody(req.body);
+    const { username, password, honeypot } = parseRequestBody(req.body);
 
     if (honeypot && String(honeypot).trim()) {
       res.status(400).json({ error: 'Request rejected' });
       return;
     }
 
-    if (!email || !password) {
-      res.status(400).json({ error: 'email and password are required' });
+    if (!username || !password) {
+      res.status(400).json({ error: 'username and password are required' });
       return;
     }
 
-    const normalizedIdentifier = normalizeUsername(String(username));
+    const normalizedUsername = normalizeUsername(String(username));
     const rawPassword = String(password);
 
-    if (!normalizedIdentifier || normalizedIdentifier.length < 3 || normalizedIdentifier.length > 254) {
+    if (!normalizedUsername || normalizedUsername.length < 3 || normalizedUsername.length > 254) {
       res.status(400).json({ error: 'Invalid username length' });
       return;
     }
@@ -62,11 +64,13 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const profile = await getProfileByIdentifier(normalizedIdentifier);
+    const profile = await getProfileByIdentifier(normalizedUsername);
     if (!profile?.email) {
       res.status(401).json({ error: 'Invalid username or password' });
       return;
     }
+
+    const normalizedEmail = String(profile.email).trim().toLowerCase();
 
     const supabase = getSupabaseAnonClient();
     const { data, error } = await supabase.auth.signInWithPassword({
@@ -100,7 +104,7 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const syncedProfile = await upsertProfileFromAuthUser(data.user) || profile;
+    const syncedProfile = (await upsertProfileFromAuthUser(data.user)) || profile;
 
     setAuthCookies(res, data.session);
 
