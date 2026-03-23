@@ -44,21 +44,7 @@ function getConnectionString() {
     throw new Error('Missing Postgres connection string. Set SUPABASE_DB_URL or DATABASE_URL.');
   }
 
-  const [sourceName, connectionString] = match;
-
-  try {
-    const parsed = new URL(connectionString);
-    console.info('[db] Using connection string source:', {
-      sourceName,
-      host: parsed.hostname,
-      protocol: parsed.protocol
-    });
-  } catch (error) {
-    console.info('[db] Using connection string source:', {
-      sourceName,
-      host: 'UNPARSEABLE_URL'
-    });
-  }
+  const [, connectionString] = match;
 
   return connectionString;
 }
