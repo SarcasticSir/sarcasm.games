@@ -192,6 +192,10 @@
       <p id="setupStatus" class="status" role="status" aria-live="polite"></p>
 
       <section id="categoryGrid" class="grid" aria-label="Quiz quest categories"></section>
+      <div class="actions">
+        <button id="selectAllBtn" type="button">Select all</button>
+        <button id="deselectAllBtn" type="button">Deselect all</button>
+      </div>
 
       <div class="controls">
         <label for="questionCount" id="questionCountLabel">Question count
@@ -243,6 +247,8 @@
         selectedPool: 'Selected pool: {remaining} remaining of {total} total.',
         selectHint: 'Select at least one category to continue.',
         questionCount: 'Question count',
+        selectAll: 'Select all',
+        deselectAll: 'Deselect all',
         selectedPoolCount: 'Selected pool supports between 1 and {count} questions.',
         startQuest: 'Start quest',
         next: 'Next question',
@@ -276,6 +282,8 @@
         selectedPool: 'Valgt pool: {remaining} gjenstår av {total} totalt.',
         selectHint: 'Velg minst én kategori for å fortsette.',
         questionCount: 'Antall spørsmål',
+        selectAll: 'Velg alle',
+        deselectAll: 'Fjern alle',
         selectedPoolCount: 'Valgt pool støtter mellom 1 og {count} spørsmål.',
         startQuest: 'Start quest',
         next: 'Neste spørsmål',
@@ -324,6 +332,8 @@
     const poolStatus = document.getElementById('poolStatus');
     const setupStatus = document.getElementById('setupStatus');
     const categoryGrid = document.getElementById('categoryGrid');
+    const selectAllBtn = document.getElementById('selectAllBtn');
+    const deselectAllBtn = document.getElementById('deselectAllBtn');
     const questionCountLabel = document.getElementById('questionCountLabel');
     const questionCountInput = document.getElementById('questionCount');
     const countMeta = document.getElementById('countMeta');
@@ -512,6 +522,15 @@
       submitBtn.disabled = false;
     }
 
+    function setAllCategorySelection(selected) {
+      if (!state.categories.length) return;
+      for (const category of state.categories) {
+        category.selected = selected;
+      }
+      clearQuestionState();
+      renderCategories();
+    }
+
     function setQuestActive(active) {
       state.isQuestActive = active;
       setupView.classList.toggle('hidden', active);
@@ -549,12 +568,17 @@
         empty.className = 'muted';
         empty.textContent = ui().noCategories;
         categoryGrid.appendChild(empty);
+        selectAllBtn.disabled = true;
+        deselectAllBtn.disabled = true;
         startQuestBtn.disabled = true;
         renderPoolStatus();
         renderQuestionCountState();
         renderResetCategories();
         return;
       }
+
+      selectAllBtn.disabled = false;
+      deselectAllBtn.disabled = false;
 
       state.categories.forEach((category, index) => {
         const wrapper = document.createElement('article');
@@ -620,10 +644,6 @@
           ...entry,
           selected: selectedBefore.size ? selectedBefore.has(entry.name) : false
         }));
-
-        if (!state.categories.some((category) => category.selected) && state.categories.length) {
-          state.categories[0].selected = true;
-        }
 
         renderCategories();
         setupStatus.className = 'status';
@@ -821,6 +841,8 @@
       introText.textContent = ui().intro;
       modeText.textContent = state.session ? ui().modeUser : ui().modeGuest;
       questionCountLabel.childNodes[0].nodeValue = `${ui().questionCount} `;
+      selectAllBtn.textContent = ui().selectAll;
+      deselectAllBtn.textContent = ui().deselectAll;
       startQuestBtn.textContent = ui().startQuest;
       nextBtn.textContent = ui().next;
       submitBtn.textContent = ui().submit;
@@ -831,6 +853,8 @@
     }
 
     questionCountInput.addEventListener('input', renderQuestionCountState);
+    selectAllBtn.addEventListener('click', () => setAllCategorySelection(true));
+    deselectAllBtn.addEventListener('click', () => setAllCategorySelection(false));
     nextBtn.addEventListener('click', proceedAfterAnswer);
     startQuestBtn.addEventListener('click', startQuest);
     answerForm.addEventListener('submit', submitAnswer);
