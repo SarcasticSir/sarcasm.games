@@ -25,6 +25,7 @@
     .status.success { color: var(--accent); }
     .queue-item { border:1px dashed var(--bd); border-radius:8px; padding:10px; margin-top:8px; }
     .queue-item strong { display:block; }
+    .queue-item .queue-actions { margin-top:8px; }
     .answer-row { display:flex; gap:8px; margin-top:8px; }
     .answer-row input { flex: 1; }
     .answer-row button { padding:8px 10px; }
@@ -176,8 +177,23 @@
         meta.className = 'muted';
         meta.textContent = `NO: ${item.question_no} | Answers: ${item.answers.join(', ')} | Difficulty: ${item.difficulty}`;
 
+        const actions = document.createElement('div');
+        actions.className = 'queue-actions';
+
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'btn-danger';
+        removeBtn.textContent = 'Remove question';
+        removeBtn.addEventListener('click', () => {
+          queue.splice(index, 1);
+          renderQueue();
+          setFormStatus('Removed one queued question.');
+        });
+        actions.appendChild(removeBtn);
+
         container.appendChild(title);
         container.appendChild(meta);
+        container.appendChild(actions);
         queueList.appendChild(container);
       });
     }
