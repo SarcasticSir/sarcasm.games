@@ -8,8 +8,7 @@ function normalizeAnswerValues(value) {
   if (!value) return [];
 
   if (Array.isArray(value)) {
-    return value
-      .flatMap((part) => normalizeAnswerValues(part));
+    return value.flatMap((part) => normalizeAnswerValues(part));
   }
 
   return String(value)
@@ -43,7 +42,8 @@ function mapQuestion(row, lang) {
     id: row.id,
     category: row.category || 'General',
     prompt,
-    answers: extractAnswers(row, lang)
+    answers: extractAnswers(row, lang),
+    difficulty: Number(row.difficulty) || null
   };
 }
 
@@ -61,7 +61,7 @@ function shuffleInPlace(values) {
 
 function sampleWithoutReplacement(values, count) {
   if (count <= 0 || !values.length) return [];
-  if (count >= values.length) return [...values];
+  if (count >= values.length) return shuffleInPlace([...values]);
 
   const shuffled = [...values];
   shuffleInPlace(shuffled);
@@ -119,83 +119,74 @@ function orderRowsByIdList(rows, orderedIds) {
   });
 }
 
-async function getQuestionIdBounds(category) {
-  if (category) {
-    const result = await runQuery(
-      `SELECT MIN(id)::int AS min_id, MAX(id)::int AS max_id
-       FROM quiz_questions
-       WHERE category = $1`,
-      [category]
-    );
+function normalizeDifficultyFilter(value) {
+  if (value == null) return [];
 
-    const row = result.rows[0] || {};
-    return {
-      minId: Number(row.min_id) || null,
-      maxId: Number(row.max_id) || null
-    };
+  const rawValues = Array.isArray(value) ? value : [value];
+
+  const normalized = rawValues
+    .map((entry) => Number(entry))
+    .filter((entry) => Number.isInteger(entry) && entry >= 1 && entry <= 3);
+
+  return [...new Set(normalized)];
+}
+
+function buildQuestionFilters({ category, categories, difficulty }) {
+  const conditions = [];
+  const params = [];
+
+  if (typeof category === 'string' && category.trim()) {
+    params.push(category.trim());
+    conditions.push(`category = $${params.length}`);
   }
 
-  const result = await runQuery(
-    `SELECT MIN(id)::int AS min_id, MAX(id)::int AS max_id
-     FROM quiz_questions`
-  );
+  if (Array.isArray(categories) && categories.length) {
+    const cleanedCategories = categories
+      .map((entry) => (typeof entry === 'string' ? entry.trim() : ''))
+      .filter(Boolean);
 
-  const row = result.rows[0] || {};
+    if (cleanedCategories.length) {
+      params.push(cleanedCategories);
+      conditions.push(`category = ANY($${params.length})`);
+    }
+  }
+
+  const normalizedDifficulty = normalizeDifficultyFilter(difficulty);
+  if (normalizedDifficulty.length) {
+    params.push(normalizedDifficulty);
+    conditions.push(`difficulty = ANY($${params.length}::int[])`);
+  }
+
   return {
-    minId: Number(row.min_id) || null,
-    maxId: Number(row.max_id) || null
+    whereClause: conditions.length ? `WHERE ${conditions.join(' AND ')}` : '',
+    params,
+    normalizedDifficulty
   };
 }
 
-async function selectIdsFromIdWindow({ category, pivotId, count }) {
-  const params = category
-    ? [category, pivotId, count]
-    : [pivotId, count];
-
-  const categoryClause = category ? 'AND category = $1' : '';
-  const pivotIndex = category ? '$2' : '$1';
-  const limitIndex = category ? '$3' : '$2';
+async function getCandidateQuestionIds({ category, categories, difficulty }) {
+  const { whereClause, params } = buildQuestionFilters({ category, categories, difficulty });
 
   const result = await runQuery(
-    `WITH preferred AS (
-       SELECT id
-       FROM quiz_questions
-       WHERE id >= ${pivotIndex}
-       ${categoryClause}
-       ORDER BY id ASC
-       LIMIT ${limitIndex}
-     ), fallback AS (
-       SELECT id
-       FROM quiz_questions
-       WHERE id < ${pivotIndex}
-       ${categoryClause}
-       ORDER BY id ASC
-       LIMIT ${limitIndex}
-     )
-     SELECT id FROM preferred
-     UNION ALL
-     SELECT id FROM fallback
-     LIMIT ${limitIndex}`,
+    `SELECT id
+     FROM quiz_questions
+     ${whereClause}`,
     params
   );
 
-  return result.rows.map((row) => Number(row.id));
+  return result.rows
+    .map((row) => Number(row.id))
+    .filter((id) => Number.isInteger(id));
 }
 
-async function pickRandomQuestionIds({ count, category }) {
-  const bounds = await getQuestionIdBounds(category);
-
-  if (!bounds.minId || !bounds.maxId) {
-    return [];
-  }
-
-  const pivotId = bounds.minId + randomIndex((bounds.maxId - bounds.minId) + 1);
-  const ids = await selectIdsFromIdWindow({ category, pivotId, count });
+async function pickRandomQuestionIds({ count, category, categories, difficulty }) {
+  const ids = await getCandidateQuestionIds({ category, categories, difficulty });
   return sampleWithoutReplacement(ids, count);
 }
 
 module.exports = async function handler(req, res) {
   const flushEndpointMetric = createEndpointMetric(req, res, 'quiz/start');
+
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' });
     flushEndpointMetric();
@@ -213,8 +204,11 @@ module.exports = async function handler(req, res) {
       mode = 'random10',
       categories,
       count = 10,
-      lang = 'en'
+      lang = 'en',
+      difficulty
     } = parseJsonBody(req.body);
+
+    const normalizedDifficulty = normalizeDifficultyFilter(difficulty);
 
     if (mode === 'categories') {
       if (!Array.isArray(categories) || !categories.length) {
@@ -233,12 +227,21 @@ module.exports = async function handler(req, res) {
 
       const uniqueCategories = [...new Set(selectedCategories)];
 
+      const availabilityParams = [uniqueCategories];
+      let availabilityDifficultyClause = '';
+
+      if (normalizedDifficulty.length) {
+        availabilityParams.push(normalizedDifficulty);
+        availabilityDifficultyClause = `AND difficulty = ANY($2::int[])`;
+      }
+
       const availabilityResult = await runQuery(
         `SELECT category, COUNT(*)::int AS total
          FROM quiz_questions
          WHERE category = ANY($1)
+         ${availabilityDifficultyClause}
          GROUP BY category`,
-        [uniqueCategories]
+        availabilityParams
       );
 
       const availableByCategory = Object.fromEntries(
@@ -274,7 +277,8 @@ module.exports = async function handler(req, res) {
 
         const categoryIds = await pickRandomQuestionIds({
           category,
-          count: targetCount
+          count: targetCount,
+          difficulty: normalizedDifficulty
         });
 
         selectedIds.push(...categoryIds);
@@ -284,7 +288,7 @@ module.exports = async function handler(req, res) {
 
       const query = selectedIds.length
         ? await runQuery(
-          `SELECT id, category, question_en, question_no, answers_en, answers_no
+          `SELECT id, category, question_en, question_no, answers_en, answers_no, difficulty
            FROM quiz_questions
            WHERE id = ANY($1::int[])`,
           [selectedIds]
@@ -302,6 +306,7 @@ module.exports = async function handler(req, res) {
         totalAvailable,
         selectedCategories: uniqueCategories,
         categoryAllocation,
+        difficulty: normalizedDifficulty,
         questions
       });
       return;
@@ -312,11 +317,20 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const selectedIds = await pickRandomQuestionIds({ count: 10 });
+    const requestedCount = Number(count);
+    if (!Number.isInteger(requestedCount) || requestedCount < 1) {
+      res.status(400).json({ error: 'count must be a positive integer.' });
+      return;
+    }
+
+    const selectedIds = await pickRandomQuestionIds({
+      count: requestedCount,
+      difficulty: normalizedDifficulty
+    });
 
     const query = selectedIds.length
       ? await runQuery(
-        `SELECT id, category, question_en, question_no, answers_en, answers_no
+        `SELECT id, category, question_en, question_no, answers_en, answers_no, difficulty
          FROM quiz_questions
          WHERE id = ANY($1::int[])`,
         [selectedIds]
@@ -331,6 +345,7 @@ module.exports = async function handler(req, res) {
     res.status(200).json({
       mode,
       count: questions.length,
+      difficulty: normalizedDifficulty,
       questions
     });
   } catch (error) {
