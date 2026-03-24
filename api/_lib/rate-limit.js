@@ -88,7 +88,7 @@ async function isRateLimitedInSharedStore(req, scope) {
     `INSERT INTO quiz_rate_limits (
        scope, client_ip, window_bucket, window_count, burst_bucket, burst_count, updated_at
      )
-     VALUES ($1, $2, $3, 1, $4, CASE WHEN $4 IS NULL THEN 0 ELSE 1 END, NOW())
+     VALUES ($1, $2, $3, 1, $4::bigint, CASE WHEN $4::bigint IS NULL THEN 0 ELSE 1 END, NOW())
      ON CONFLICT (scope, client_ip)
      DO UPDATE SET
        window_bucket = CASE
