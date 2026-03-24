@@ -65,6 +65,7 @@
     .grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      align-items: stretch;
       gap: 10px;
       margin: 0 0 16px;
     }
@@ -74,6 +75,7 @@
       border-radius:10px;
       padding:10px;
       background:#181920;
+      height: 100%;
       transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
     }
 
@@ -86,10 +88,11 @@
     .cat label {
       display:flex;
       gap:8px;
-      align-items:center;
+      align-items:flex-start;
       cursor:pointer;
       position: relative;
       min-height: 24px;
+      height: 100%;
     }
 
     .cat input[type="checkbox"] {
@@ -115,8 +118,20 @@
       box-shadow: 0 0 0 3px rgba(67, 200, 159, 0.2);
     }
 
-    .cat-name { font-weight:700; }
-    .cat-count { color:var(--muted); font-size: 14px; }
+    .cat-name {
+      display: block;
+      font-weight:700;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    .cat-count {
+      display: block;
+      color:var(--muted);
+      font-size: 14px;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
 
     .controls {
       display:flex;
@@ -275,6 +290,10 @@
 
       <p id="status" class="status" role="status" aria-live="polite">Loading categories…</p>
       <section id="categoryGrid" class="grid" aria-label="Quiz categories"></section>
+      <div class="actions">
+        <button id="selectAllBtn" type="button">Select all</button>
+        <button id="deselectAllBtn" type="button">Deselect all</button>
+      </div>
 
       <div class="controls">
         <label>
@@ -348,6 +367,8 @@
         setupLead: 'Choose one or more categories. Max question count updates based on your selection.',
         loadingCategories: 'Loading categories…',
         questionCount: 'Question count',
+        selectAll: 'Select all',
+        deselectAll: 'Deselect all',
         startQuiz: 'Start quiz',
         backHome: 'Back to sarcasm.games',
         abortQuiz: 'Abort quiz',
@@ -404,6 +425,8 @@
         setupLead: 'Velg én eller flere kategorier. Maks antall spørsmål oppdateres basert på valget ditt.',
         loadingCategories: 'Laster kategorier…',
         questionCount: 'Antall spørsmål',
+        selectAll: 'Velg alle',
+        deselectAll: 'Fjern alle',
         startQuiz: 'Start quiz',
         backHome: 'Tilbake til sarcasm.games',
         abortQuiz: 'Avbryt quiz',
@@ -459,6 +482,8 @@
 
     const activeLang = readQuizLanguage();
     const categoryGrid = document.getElementById('categoryGrid');
+    const selectAllBtn = document.getElementById('selectAllBtn');
+    const deselectAllBtn = document.getElementById('deselectAllBtn');
     const setupView = document.getElementById('setupView');
     const questionView = document.getElementById('questionView');
     const resultView = document.getElementById('resultView');
@@ -576,6 +601,15 @@
 
     function renderCategories() {
       categoryGrid.innerHTML = '';
+      if (!runtimeState.categories.length) {
+        selectAllBtn.disabled = true;
+        deselectAllBtn.disabled = true;
+        renderCountState();
+        return;
+      }
+
+      selectAllBtn.disabled = false;
+      deselectAllBtn.disabled = false;
 
       runtimeState.categories.forEach((category, index) => {
         const wrapper = document.createElement('article');
@@ -617,6 +651,14 @@
       });
 
       renderCountState();
+    }
+
+    function setAllCategoriesSelected(selected) {
+      if (!runtimeState.categories.length) return;
+      runtimeState.categories.forEach((category) => {
+        category.selected = selected;
+      });
+      renderCategories();
     }
 
     function getFilteredAnsweredQuestions() {
@@ -773,17 +815,16 @@
 
         if (!categories.length || !payload.totalQuestions) {
           runtimeState.categories = [];
-          categoryGrid.innerHTML = '';
           statusEl.classList.remove('error');
           statusEl.textContent = uiCopy().noCategories;
-          renderCountState();
+          renderCategories();
           return;
         }
 
         runtimeState.categories = categories.map((category) => ({
           name: category.name,
           questionCount: Number(category.questionCount) || 0,
-          selected: true
+          selected: false
         }));
 
         statusEl.classList.remove('error');
@@ -793,14 +834,15 @@
         renderCategories();
       } catch (error) {
         runtimeState.categories = [];
-        categoryGrid.innerHTML = '';
         statusEl.classList.add('error');
         statusEl.textContent = uiCopy().loadCategoriesError.replace('{message}', error.message);
-        renderCountState();
+        renderCategories();
       }
     }
 
     countInput.addEventListener('change', renderCountState);
+    selectAllBtn.addEventListener('click', () => setAllCategoriesSelected(true));
+    deselectAllBtn.addEventListener('click', () => setAllCategoriesSelected(false));
 
     startButton.addEventListener('click', async () => {
       const selectedCategories = getSelectedCategories().map((category) => category.name);
@@ -995,6 +1037,8 @@
       setupLead.textContent = c.setupLead;
       statusEl.textContent = c.loadingCategories;
       questionCountLabel.firstChild.textContent = `${c.questionCount} `;
+      selectAllBtn.textContent = c.selectAll;
+      deselectAllBtn.textContent = c.deselectAll;
       startButton.textContent = c.startQuiz;
       for (const backLink of backLinks) {
         backLink.textContent = c.backHome;
