@@ -290,7 +290,15 @@
       }
     };
 
-    const FEATURE_MODULES = [];
+    const FEATURE_MODULES = [
+      {
+        title: 'Quiz admin',
+        adminOnly: true,
+        links: [
+          { href: '/insertquiz/', label: 'Insert quiz questions' }
+        ]
+      }
+    ];
 
     let currentCaptcha = null;
     let failedResetAttempts = 0;
