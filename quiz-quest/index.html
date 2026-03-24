@@ -54,6 +54,7 @@
 
     .status.error { color: var(--danger); }
     .status.ok { color: var(--ok); }
+    .status.almost { color: #ffd166; }
 
     .grid {
       display: grid;
@@ -234,6 +235,7 @@
         <input id="answerInput" type="text" placeholder="Write your answer" autocomplete="off" />
         <div class="btn-row">
           <button id="submitBtn" type="submit" class="btn-primary">Submit</button>
+          <button id="showAnswerBtn" type="button" class="hidden">Show answer</button>
           <button id="nextBtn" type="button" class="hidden">Next question</button>
         </div>
       </form>
@@ -263,6 +265,8 @@
         startQuest: 'Start quest',
         next: 'Next question',
         submit: 'Submit',
+        showAnswer: 'Show answer',
+        hideAnswer: 'Hide answer',
         back: 'Back to sarcasm.games',
         resetCategory: 'Reset category',
         resetCategoryLabel: 'Reset category',
@@ -279,7 +283,8 @@
         progress: 'Question {current} of {total}',
         roundDone: 'Round complete! Start a new quest when ready.',
         correct: '✅ Correct! Removed from your pool.',
-        wrong: '❌ Wrong. Move to another random question.',
+        almost: '🟡 Close! Try once more before moving on.',
+        wrong: '❌ Wrong. You can reveal the answer and move to another random question.',
         answerPrefix: 'Accepted answer: {answer}',
         yourAnswerMissing: 'Write an answer first.',
         placeholder: 'Write your answer',
@@ -298,6 +303,8 @@
         startQuest: 'Start quest',
         next: 'Neste spørsmål',
         submit: 'Svar',
+        showAnswer: 'Vis fasit',
+        hideAnswer: 'Skjul fasit',
         back: 'Tilbake til sarcasm.games',
         resetCategory: 'Reset kategori',
         resetCategoryLabel: 'Reset kategori',
@@ -314,7 +321,8 @@
         progress: 'Spørsmål {current} av {total}',
         roundDone: 'Runden er fullført! Start en ny quest når du vil.',
         correct: '✅ Riktig! Fjernet fra poolen din.',
-        wrong: '❌ Feil. Gå videre til et nytt tilfeldig spørsmål.',
+        almost: '🟡 Nesten! Du kan prøve én gang til før du går videre.',
+        wrong: '❌ Feil. Du kan vise fasit og gå videre til et nytt tilfeldig spørsmål.',
         answerPrefix: 'Godkjent svar: {answer}',
         yourAnswerMissing: 'Skriv et svar først.',
         placeholder: 'Skriv svaret ditt',
@@ -333,7 +341,8 @@
       pendingSolvedQuestionIds: [],
       roundTarget: 0,
       roundAnswered: 0,
-      isQuestActive: false
+      isQuestActive: false,
+      awaitingRetry: false
     };
 
     const setupView = document.getElementById('setupView');
@@ -359,6 +368,7 @@
     const answerForm = document.getElementById('answerForm');
     const answerInput = document.getElementById('answerInput');
     const submitBtn = document.getElementById('submitBtn');
+    const showAnswerBtn = document.getElementById('showAnswerBtn');
     const nextBtn = document.getElementById('nextBtn');
     const questionStatus = document.getElementById('questionStatus');
     const answerReveal = document.getElementById('answerReveal');
@@ -528,8 +538,12 @@
       questionStatus.className = 'status';
       answerReveal.classList.add('hidden');
       answerReveal.textContent = '';
+      showAnswerBtn.classList.add('hidden');
+      showAnswerBtn.textContent = ui().showAnswer;
       nextBtn.classList.add('hidden');
       submitBtn.disabled = false;
+      answerInput.disabled = false;
+      state.awaitingRetry = false;
     }
 
     function setAllCategorySelection(selected) {
@@ -701,7 +715,11 @@
         questionStatus.className = 'status';
         answerReveal.classList.add('hidden');
         answerReveal.textContent = '';
+        showAnswerBtn.classList.add('hidden');
+        showAnswerBtn.textContent = ui().showAnswer;
+        answerInput.disabled = false;
         submitBtn.disabled = false;
+        state.awaitingRetry = false;
         nextBtn.classList.add('hidden');
         return true;
       } catch (error) {
@@ -777,7 +795,7 @@
             answer,
             lang: activeLang,
             mode: 'quest',
-            retryAvailable: false
+            retryAvailable: !state.awaitingRetry
           })
         });
 
@@ -786,6 +804,20 @@
         }
 
         const payload = await response.json();
+
+        if (payload.status === 'almost' && !state.awaitingRetry) {
+          state.awaitingRetry = true;
+          questionStatus.className = 'status almost';
+          questionStatus.textContent = ui().almost;
+          answerReveal.classList.add('hidden');
+          showAnswerBtn.classList.add('hidden');
+          answerInput.value = '';
+          answerInput.focus();
+          submitBtn.disabled = false;
+          return;
+        }
+
+        state.awaitingRetry = false;
 
         if (payload.status === 'correct') {
           if (!state.session) {
@@ -796,21 +828,27 @@
           questionStatus.textContent = ui().correct;
           answerReveal.classList.add('hidden');
           answerReveal.textContent = '';
+          showAnswerBtn.classList.add('hidden');
+          showAnswerBtn.textContent = ui().showAnswer;
         } else {
           questionStatus.className = 'status error';
           questionStatus.textContent = ui().wrong;
-          answerReveal.classList.remove('hidden');
+          answerReveal.classList.add('hidden');
           answerReveal.textContent = ui().answerPrefix.replace('{answer}', payload.acceptedAnswer || '—');
+          showAnswerBtn.classList.remove('hidden');
+          showAnswerBtn.textContent = ui().showAnswer;
         }
 
         state.roundAnswered += 1;
         nextBtn.classList.remove('hidden');
+        answerInput.disabled = true;
+        submitBtn.disabled = true;
       } catch (error) {
         questionStatus.className = 'status error';
         questionStatus.textContent = ui().failedAnswer;
+        submitBtn.disabled = false;
       } finally {
         state.isSubmitting = false;
-        submitBtn.disabled = false;
       }
     }
 
@@ -853,6 +891,7 @@
       startQuestBtn.textContent = ui().startQuest;
       nextBtn.textContent = ui().next;
       submitBtn.textContent = ui().submit;
+      showAnswerBtn.textContent = ui().showAnswer;
       backLink.textContent = ui().back;
       resetLabel.textContent = ui().resetCategoryLabel;
       resetCategoryBtn.textContent = ui().resetCategory;
@@ -863,6 +902,10 @@
     selectAllBtn.addEventListener('click', () => setAllCategorySelection(true));
     deselectAllBtn.addEventListener('click', () => setAllCategorySelection(false));
     nextBtn.addEventListener('click', proceedAfterAnswer);
+    showAnswerBtn.addEventListener('click', () => {
+      const isHidden = answerReveal.classList.toggle('hidden');
+      showAnswerBtn.textContent = isHidden ? ui().showAnswer : ui().hideAnswer;
+    });
     startQuestBtn.addEventListener('click', startQuest);
     answerForm.addEventListener('submit', submitAnswer);
     resetCategoryBtn.addEventListener('click', resetCategoryProgress);
