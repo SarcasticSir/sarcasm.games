@@ -25,6 +25,9 @@
     .status.success { color: var(--accent); }
     .queue-item { border:1px dashed var(--bd); border-radius:8px; padding:10px; margin-top:8px; }
     .queue-item strong { display:block; }
+    .answer-row { display:flex; gap:8px; margin-top:8px; }
+    .answer-row input { flex: 1; }
+    .answer-row button { padding:8px 10px; }
     .muted { color: var(--muted); }
     .hidden { display:none !important; }
     .top-links { display:flex; gap:10px; margin-bottom:10px; }
@@ -55,7 +58,6 @@
         <div>
           <label for="difficulty">Difficulty</label>
           <select id="difficulty">
-            <option value="">Choose difficulty</option>
             <option value="1">1</option>
             <option value="2">2</option>
             <option value="3">3</option>
@@ -70,8 +72,9 @@
           <input id="questionNo" type="text" />
         </div>
         <div class="full">
-          <label for="sharedAnswer">Answer for both languages</label>
-          <input id="sharedAnswer" type="text" />
+          <label>Answers for both languages</label>
+          <div id="answersContainer"></div>
+          <button id="addAnswerBtn" class="btn-neutral" type="button">+ Add answer</button>
         </div>
       </div>
 
@@ -102,7 +105,8 @@
     const difficultyInput = document.getElementById('difficulty');
     const questionEnInput = document.getElementById('questionEn');
     const questionNoInput = document.getElementById('questionNo');
-    const sharedAnswerInput = document.getElementById('sharedAnswer');
+    const answersContainer = document.getElementById('answersContainer');
+    const addAnswerBtn = document.getElementById('addAnswerBtn');
 
     function readString(value) {
       return typeof value === 'string' && value.trim() ? value.trim() : null;
@@ -113,6 +117,45 @@
       if (type === 'error') formStatus.classList.add('error');
       if (type === 'success') formStatus.classList.add('success');
       formStatus.textContent = message || '';
+    }
+
+    function createAnswerInput(value = '') {
+      const row = document.createElement('div');
+      row.className = 'answer-row';
+
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.placeholder = 'Answer';
+      input.value = value;
+
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.className = 'btn-danger';
+      removeBtn.textContent = 'Remove';
+      removeBtn.addEventListener('click', () => {
+        row.remove();
+        if (!answersContainer.querySelector('.answer-row')) {
+          createAnswerInput();
+        }
+      });
+
+      row.appendChild(input);
+      row.appendChild(removeBtn);
+      answersContainer.appendChild(row);
+    }
+
+    function readAnswers() {
+      const rawAnswers = Array.from(answersContainer.querySelectorAll('input'))
+        .map((input) => readString(input.value))
+        .filter(Boolean);
+
+      const seen = new Set();
+      return rawAnswers.filter((answer) => {
+        const key = answer.toLowerCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
     }
 
     function renderQueue() {
@@ -131,7 +174,7 @@
 
         const meta = document.createElement('div');
         meta.className = 'muted';
-        meta.textContent = `NO: ${item.question_no} | Answer: ${item.shared_answer} | Difficulty: ${item.difficulty}`;
+        meta.textContent = `NO: ${item.question_no} | Answers: ${item.answers.join(', ')} | Difficulty: ${item.difficulty}`;
 
         container.appendChild(title);
         container.appendChild(meta);
@@ -141,10 +184,11 @@
 
     function resetFormInputs() {
       categoryInput.value = '';
-      difficultyInput.value = '';
       questionEnInput.value = '';
       questionNoInput.value = '';
-      sharedAnswerInput.value = '';
+      answersContainer.innerHTML = '';
+      createAnswerInput();
+      difficultyInput.value = '1';
       categoryInput.focus();
     }
 
@@ -152,10 +196,10 @@
       const category = readString(categoryInput.value);
       const question_en = readString(questionEnInput.value);
       const question_no = readString(questionNoInput.value);
-      const shared_answer = readString(sharedAnswerInput.value);
+      const answers = readAnswers();
       const difficulty = Number(difficultyInput.value);
 
-      if (!category || !question_en || !question_no || !shared_answer) {
+      if (!category || !question_en || !question_no || !answers.length) {
         return { error: 'Please fill out all fields before adding to queue.' };
       }
 
@@ -168,7 +212,7 @@
           category,
           question_en,
           question_no,
-          shared_answer,
+          answers,
           difficulty
         }
       };
@@ -261,6 +305,12 @@
       }
     });
 
+    addAnswerBtn.addEventListener('click', () => {
+      createAnswerInput();
+    });
+
+    difficultyInput.value = '1';
+    createAnswerInput();
     ensureAdminAccess();
   </script>
 </body>
