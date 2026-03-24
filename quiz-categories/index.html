@@ -65,6 +65,7 @@
     .grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      align-items: stretch;
       gap: 10px;
       margin: 0 0 16px;
     }
@@ -74,6 +75,7 @@
       border-radius:10px;
       padding:10px;
       background:#181920;
+      height: 100%;
       transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
     }
 
@@ -86,10 +88,11 @@
     .cat label {
       display:flex;
       gap:8px;
-      align-items:center;
+      align-items:flex-start;
       cursor:pointer;
       position: relative;
       min-height: 24px;
+      height: 100%;
     }
 
     .cat input[type="checkbox"] {
@@ -115,8 +118,20 @@
       box-shadow: 0 0 0 3px rgba(67, 200, 159, 0.2);
     }
 
-    .cat-name { font-weight:700; }
-    .cat-count { color:var(--muted); font-size: 14px; }
+    .cat-name {
+      display: block;
+      font-weight:700;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    .cat-count {
+      display: block;
+      color:var(--muted);
+      font-size: 14px;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
 
     .controls {
       display:flex;
