@@ -124,6 +124,9 @@
         playAgain: 'Try again',
         progress: 'Question {current} of {total}',
         category: 'Category: {category}',
+        difficultyEasy: 'Easy',
+        difficultyMedium: 'Medium',
+        difficultyHard: 'Hard',
         answerPrefix: 'Answer: {answer}',
         fetchError: 'Could not load questions right now.',
         notEnoughQuestions: 'Not enough questions available.',
@@ -166,6 +169,9 @@
         playAgain: 'Prøv igjen',
         progress: 'Spørsmål {current} av {total}',
         category: 'Kategori: {category}',
+        difficultyEasy: 'Lett',
+        difficultyMedium: 'Middels',
+        difficultyHard: 'Vanskelig',
         answerPrefix: 'Fasit: {answer}',
         fetchError: 'Kunne ikke laste spørsmål nå.',
         notEnoughQuestions: 'Ikke nok spørsmål tilgjengelig.',
@@ -229,7 +235,6 @@
       quizStarted: false
     };
 
-
     function syncLanguageFromStorage() {
       state.language = getStoredQuizLanguage();
     }
@@ -248,7 +253,6 @@
       questionView.classList.toggle('hidden', view !== 'question');
       resultView.classList.toggle('hidden', view !== 'result');
     }
-
 
     function setStartLoading(isLoading) {
       startBtn.disabled = isLoading;
@@ -303,12 +307,38 @@
         ? raw.answers
         : [raw.answer, raw.answer_en, raw.answer_no].filter(Boolean);
 
+      const parsedDifficulty = Number(raw.difficulty);
+      const difficulty = [1, 2, 3].includes(parsedDifficulty) ? parsedDifficulty : null;
+
       return {
         id: raw.id || `api-${idx}`,
         category: raw.category || 'General',
+        difficulty,
         prompt: raw.prompt || raw.question || raw.question_en || raw.question_no || 'Missing question text',
         answers
       };
+    }
+
+    function getDifficultyLabel(difficulty) {
+      const c = uiCopy();
+
+      if (difficulty === 1) return c.difficultyEasy;
+      if (difficulty === 2) return c.difficultyMedium;
+      if (difficulty === 3) return c.difficultyHard;
+
+      return '';
+    }
+
+    function formatCategoryLine(question) {
+      const baseCategory = question?.category || 'General';
+      const categoryText = uiCopy().category.replace('{category}', baseCategory);
+      const difficultyLabel = getDifficultyLabel(question?.difficulty);
+
+      if (!difficultyLabel) {
+        return categoryText;
+      }
+
+      return `${categoryText} · ${difficultyLabel}`;
     }
 
     async function loadQuestions() {
@@ -344,7 +374,7 @@
         .replace('{current}', String(state.index + 1))
         .replace('{total}', String(state.questions.length));
       questionTitle.textContent = q.prompt;
-      questionCategory.textContent = uiCopy().category.replace('{category}', q.category);
+      questionCategory.textContent = formatCategoryLine(q);
       answerInput.value = '';
       answerInput.disabled = false;
       answerInput.focus();
@@ -575,7 +605,6 @@
     syncLanguageFromStorage();
     applyCopy();
   </script>
-
 
   <script src='https://storage.ko-fi.com/cdn/scripts/overlay-widget.js'></script>
   <script>
