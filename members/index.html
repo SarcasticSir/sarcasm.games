@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Members | sarcasm.games</title>
+  <style>
+    :root { --bg:#0b0c10; --card:#1e1f25; --txt:#eaeaea; --bd:#2f313a; --accent:#4ecca3; --danger:#ff6b6b; --muted:#9aa0ad; }
+    body { margin:0; font:16px/1.4 system-ui, Segoe UI, Roboto, Arial; background:var(--bg); color:var(--txt); min-height:100dvh; }
+    main { max-width:1100px; margin:0 auto; padding:24px 16px 40px; }
+    .top-links { display:flex; gap:10px; margin-bottom:12px; }
+    .top-links a { color:var(--accent); }
+    .card { background:var(--card); border:1px solid var(--bd); border-radius:12px; padding:14px; margin-bottom:12px; }
+    .muted { color:var(--muted); }
+    .status { min-height:20px; color:var(--muted); }
+    .status.error { color:var(--danger); }
+    .filters { display:grid; gap:10px; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); align-items:end; margin-top:12px; }
+    label { display:block; margin-bottom:4px; color:var(--muted); font-size:.9rem; }
+    input, select { width:100%; box-sizing:border-box; background:var(--bg); border:1px solid var(--bd); color:var(--txt); padding:8px 10px; border-radius:8px; }
+    button { border:0; border-radius:8px; padding:8px 12px; cursor:pointer; font-weight:700; }
+    .btn-primary { background:var(--accent); color:#111; }
+    .btn-danger { background:var(--danger); color:#fff; }
+    .btn-neutral { background:var(--bd); color:var(--txt); }
+    .btn-danger:disabled { opacity:.5; cursor:not-allowed; }
+    table { width:100%; border-collapse:collapse; }
+    th, td { border-bottom:1px solid var(--bd); padding:8px; text-align:left; }
+    th { color:var(--muted); font-weight:600; }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="top-links">
+      <a href="/" id="backLink">← Home</a>
+    </div>
+
+    <section class="card">
+      <h1 id="title">Members</h1>
+      <p class="muted" id="subtitle">Admin-only member list.</p>
+      <div class="filters">
+        <div>
+          <label for="countryFilter" id="countryLabel">Filter by country</label>
+          <select id="countryFilter"></select>
+        </div>
+        <div>
+          <label for="usernameSearch" id="usernameLabel">Search by username</label>
+          <input id="usernameSearch" type="text" autocomplete="off" />
+        </div>
+        <div>
+          <label for="emailSearch" id="emailLabel">Search by email</label>
+          <input id="emailSearch" type="text" autocomplete="off" />
+        </div>
+        <div>
+          <button type="button" class="btn-primary" id="searchBtn">Search</button>
+        </div>
+      </div>
+      <div class="status" id="statusBox"></div>
+    </section>
+
+    <section class="card" id="tableCard" style="display:none">
+      <table>
+        <thead>
+          <tr>
+            <th id="thUsername">Username</th>
+            <th id="thEmail">Email</th>
+            <th id="thCountry">Country</th>
+            <th id="thRole">Role</th>
+            <th id="thAction">Action</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </section>
+  </main>
+
+  <script>
+    const QUIZ_LANGUAGE_KEY = 'quizLanguage';
+    let currentLanguage = 'en';
+
+    const I18N = {
+      en: {
+        backHome: '← Home',
+        title: 'Members',
+        subtitle: 'Admin-only member list.',
+        search: 'Search',
+        searchEmail: 'Search by email',
+        searchUsername: 'Search by username',
+        filterCountry: 'Filter by country',
+        loading: 'Loading…',
+        forbidden: 'Access denied. Admin only.',
+        noResults: 'No results.',
+        username: 'Username',
+        email: 'Email',
+        country: 'Country',
+        role: 'Role',
+        action: 'Action',
+        delete: 'Delete',
+        cannotDeleteAdmin: 'Cannot delete admin',
+        cannotDeleteSelf: 'Cannot delete yourself',
+        confirmDelete: 'Delete this member?',
+        loadFailed: 'Failed to load members.',
+        deleteFailed: 'Failed to delete member.',
+        allCountries: 'All countries'
+      },
+      no: {
+        backHome: '← Hjem',
+        title: 'Medlemmer',
+        subtitle: 'Kun admin: medlemsliste.',
+        search: 'Søk',
+        searchEmail: 'Søk på e-post',
+        searchUsername: 'Søk på brukernavn',
+        filterCountry: 'Filtrer på land',
+        loading: 'Laster…',
+        forbidden: 'Ingen tilgang. Kun admin.',
+        noResults: 'Ingen treff.',
+        username: 'Brukernavn',
+        email: 'E-post',
+        country: 'Land',
+        role: 'Rolle',
+        action: 'Handling',
+        delete: 'Slett',
+        cannotDeleteAdmin: 'Kan ikke slette admin',
+        cannotDeleteSelf: 'Kan ikke slette deg selv',
+        confirmDelete: 'Slette dette medlemmet?',
+        loadFailed: 'Kunne ikke laste medlemmer.',
+        deleteFailed: 'Kunne ikke slette medlem.',
+        allCountries: 'Alle land'
+      }
+    };
+
+    function getLanguage() {
+      const stored = window.localStorage.getItem(QUIZ_LANGUAGE_KEY);
+      return stored === 'no' ? 'no' : 'en';
+    }
+
+    function t() {
+      return I18N[currentLanguage] || I18N.en;
+    }
+
+    function setStatus(message, type = '') {
+      const statusBox = document.getElementById('statusBox');
+      statusBox.classList.remove('error');
+      if (type === 'error') statusBox.classList.add('error');
+      statusBox.textContent = message || '';
+    }
+
+    function applyTranslations() {
+      document.getElementById('backLink').textContent = t().backHome;
+      document.getElementById('title').textContent = t().title;
+      document.getElementById('subtitle').textContent = t().subtitle;
+      document.getElementById('countryLabel').textContent = t().filterCountry;
+      document.getElementById('usernameLabel').textContent = t().searchUsername;
+      document.getElementById('emailLabel').textContent = t().searchEmail;
+      document.getElementById('searchBtn').textContent = t().search;
+      document.getElementById('thUsername').textContent = t().username;
+      document.getElementById('thEmail').textContent = t().email;
+      document.getElementById('thCountry').textContent = t().country;
+      document.getElementById('thRole').textContent = t().role;
+      document.getElementById('thAction').textContent = t().action;
+    }
+
+    async function ensureAdmin() {
+      const response = await fetch('/api/auth/session', { credentials: 'include' });
+      if (!response.ok) {
+        window.location.replace('/?login=1&redirect=%2Fmembers%2F');
+        return null;
+      }
+
+      const data = await response.json();
+      if (data?.user?.role !== 'admin') {
+        setStatus(t().forbidden, 'error');
+        return null;
+      }
+
+      return data.user;
+    }
+
+    function getFilters() {
+      return {
+        country: document.getElementById('countryFilter').value.trim(),
+        username: document.getElementById('usernameSearch').value.trim(),
+        email: document.getElementById('emailSearch').value.trim()
+      };
+    }
+
+    async function fetchMembers() {
+      const filters = getFilters();
+      const params = new URLSearchParams();
+      if (filters.country) params.set('country', filters.country);
+      if (filters.username) params.set('username', filters.username);
+      if (filters.email) params.set('email', filters.email);
+
+      const queryString = params.toString();
+      const response = await fetch(`/api/admin/users${queryString ? `?${queryString}` : ''}`, { credentials: 'include' });
+      if (!response.ok) throw new Error('load_failed');
+      const data = await response.json();
+      return Array.isArray(data.users) ? data.users : [];
+    }
+
+    function renderCountryOptions(users) {
+      const select = document.getElementById('countryFilter');
+      const selectedValue = select.value;
+      const countries = [...new Set(users.map((entry) => (entry.country || '').trim()).filter(Boolean))].sort();
+
+      select.innerHTML = '';
+      const allOption = document.createElement('option');
+      allOption.value = '';
+      allOption.textContent = t().allCountries;
+      select.appendChild(allOption);
+
+      for (const country of countries) {
+        const option = document.createElement('option');
+        option.value = country;
+        option.textContent = country;
+        select.appendChild(option);
+      }
+
+      select.value = countries.includes(selectedValue) ? selectedValue : '';
+    }
+
+    async function deleteMember(userId) {
+      const response = await fetch('/api/admin/delete-user', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId })
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.code || 'DELETE_FAILED');
+      }
+    }
+
+    function renderTable(users) {
+      const tableBody = document.getElementById('tableBody');
+      tableBody.innerHTML = '';
+
+      if (!users.length) {
+        const row = document.createElement('tr');
+        const cell = document.createElement('td');
+        cell.colSpan = 5;
+        cell.textContent = t().noResults;
+        row.appendChild(cell);
+        tableBody.appendChild(row);
+        return;
+      }
+
+      for (const member of users) {
+        const row = document.createElement('tr');
+
+        const username = document.createElement('td');
+        username.textContent = member.username || '-';
+        row.appendChild(username);
+
+        const email = document.createElement('td');
+        email.textContent = member.email || '-';
+        row.appendChild(email);
+
+        const country = document.createElement('td');
+        country.textContent = member.country || '-';
+        row.appendChild(country);
+
+        const role = document.createElement('td');
+        role.textContent = member.role || 'user';
+        row.appendChild(role);
+
+        const action = document.createElement('td');
+        const btn = document.createElement('button');
+        btn.type = 'button';
+
+        if (member.role === 'admin') {
+          btn.className = 'btn-neutral';
+          btn.textContent = t().cannotDeleteAdmin;
+          btn.disabled = true;
+        } else {
+          btn.className = 'btn-danger';
+          btn.textContent = t().delete;
+          btn.addEventListener('click', async () => {
+            if (!window.confirm(t().confirmDelete)) return;
+
+            try {
+              await deleteMember(member.id);
+              await loadMembers();
+            } catch (error) {
+              if (error?.message === 'CANNOT_DELETE_ADMIN') {
+                setStatus(t().cannotDeleteAdmin, 'error');
+                return;
+              }
+              if (error?.message === 'CANNOT_DELETE_SELF') {
+                setStatus(t().cannotDeleteSelf, 'error');
+                return;
+              }
+              setStatus(t().deleteFailed, 'error');
+            }
+          });
+        }
+
+        action.appendChild(btn);
+        row.appendChild(action);
+        tableBody.appendChild(row);
+      }
+    }
+
+    async function loadMembers() {
+      setStatus(t().loading);
+
+      try {
+        const users = await fetchMembers();
+        renderTable(users);
+        document.getElementById('tableCard').style.display = 'block';
+        setStatus('');
+      } catch {
+        setStatus(t().loadFailed, 'error');
+      }
+    }
+
+    async function init() {
+      currentLanguage = getLanguage();
+      applyTranslations();
+
+      const adminUser = await ensureAdmin();
+      if (!adminUser) return;
+
+      const initialUsers = await fetchMembers().catch(() => []);
+      renderCountryOptions(initialUsers);
+      document.getElementById('countryFilter').addEventListener('change', loadMembers);
+      document.getElementById('searchBtn').addEventListener('click', loadMembers);
+      document.getElementById('usernameSearch').addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') loadMembers();
+      });
+      document.getElementById('emailSearch').addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') loadMembers();
+      });
+
+      renderTable(initialUsers);
+      document.getElementById('tableCard').style.display = 'block';
+      setStatus('');
+    }
+
+    init();
+  </script>
+</body>
+</html>
