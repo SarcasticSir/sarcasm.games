@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Privacy | sarcasm.games</title>
+  <style>
+    :root { --bg:#0b0c10; --card:#1e1f25; --txt:#eaeaea; --bd:#2f313a; --accent:#4ecca3; --muted:#9aa0ad; }
+    body { margin:0; font:16px/1.5 system-ui, Segoe UI, Roboto, Arial; background:var(--bg); color:var(--txt); }
+    main { max-width:760px; margin:0 auto; padding:24px 18px 40px; }
+    .card { background:var(--card); border:1px solid var(--bd); border-radius:12px; padding:16px; }
+    .top-links { display:flex; gap:10px; margin-bottom:12px; }
+    .top-links a { color:var(--accent); }
+    h1 { margin-top:0; }
+    h2 { margin-top:18px; font-size:1.05rem; }
+    p { color:var(--muted); margin:8px 0; }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="top-links">
+      <a href="/" id="backLink">← Home</a>
+      <a href="/contact/" id="contactLink">Contact</a>
+    </div>
+
+    <section class="card">
+      <h1 id="title">Privacy at sarcasm.games</h1>
+
+      <h2 id="h1">What we store</h2>
+      <p id="p1">Registered users can submit a contact message through sarcasm.games. When they do, we store the name, reply email, and message content they submit.</p>
+
+      <h2 id="h2">Account and login data</h2>
+      <p id="p2">We process account-related information needed for login and authentication so users can access their account and protected features.</p>
+
+      <h2 id="h3">How data is used</h2>
+      <p id="p3">Data may be used to operate the service, keep the site secure, and respond to contact messages sent by users.</p>
+
+      <h2 id="h4">Privacy questions</h2>
+      <p id="p4">If you have privacy questions, please use the contact page at sarcasm.games/contact after signing in.</p>
+    </section>
+  </main>
+
+  <script>
+    const QUIZ_LANGUAGE_KEY = 'quizLanguage';
+
+    const I18N = {
+      en: {
+        backHome: '← Home',
+        contact: 'Contact',
+        title: 'Privacy at sarcasm.games',
+        h1: 'What we store',
+        p1: 'Registered users can submit a contact message through sarcasm.games. When they do, we store the name, reply email, and message content they submit.',
+        h2: 'Account and login data',
+        p2: 'We process account-related information needed for login and authentication so users can access their account and protected features.',
+        h3: 'How data is used',
+        p3: 'Data may be used to operate the service, keep the site secure, and respond to contact messages sent by users.',
+        h4: 'Privacy questions',
+        p4: 'If you have privacy questions, please use the contact page at sarcasm.games/contact after signing in.'
+      },
+      no: {
+        backHome: '← Hjem',
+        contact: 'Kontakt',
+        title: 'Personvern hos sarcasm.games',
+        h1: 'Hva vi lagrer',
+        p1: 'Registrerte brukere kan sende kontaktmelding via sarcasm.games. Når de gjør det, lagrer vi navn, e-post for svar og meldingsinnholdet de sender inn.',
+        h2: 'Konto- og innloggingsdata',
+        p2: 'Vi behandler kontoinformasjon som trengs for innlogging og autentisering, slik at brukere kan få tilgang til kontoen sin og beskyttede funksjoner.',
+        h3: 'Hvordan data brukes',
+        p3: 'Data kan brukes for å drifte tjenesten, holde nettstedet sikkert og svare på kontaktmeldinger fra brukere.',
+        h4: 'Spørsmål om personvern',
+        p4: 'Hvis du har spørsmål om personvern, bruk kontaktsiden på sarcasm.games/contact etter innlogging.'
+      }
+    };
+
+    const lang = window.localStorage.getItem(QUIZ_LANGUAGE_KEY) === 'no' ? 'no' : 'en';
+    const texts = I18N[lang] || I18N.en;
+
+    Object.entries(texts).forEach(([key, value]) => {
+      const node = document.getElementById(key);
+      if (node) node.textContent = value;
+    });
+  </script>
+</body>
+</html>

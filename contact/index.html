@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Contact | sarcasm.games</title>
+  <style>
+    :root { --bg:#0b0c10; --card:#1e1f25; --txt:#eaeaea; --bd:#2f313a; --accent:#4ecca3; --danger:#ff6b6b; --muted:#9aa0ad; }
+    body { margin:0; font:16px/1.4 system-ui, Segoe UI, Roboto, Arial; background:var(--bg); color:var(--txt); min-height:100dvh; }
+    main { max-width:720px; margin:0 auto; padding:26px 18px 40px; }
+    .card { background:var(--card); border:1px solid var(--bd); border-radius:12px; padding:16px; }
+    .top-links { display:flex; gap:10px; margin-bottom:12px; }
+    .top-links a { color:var(--accent); }
+    .field { margin-bottom:12px; }
+    label { display:block; margin-bottom:5px; color:var(--muted); font-size:.92rem; }
+    input, textarea { width:100%; box-sizing:border-box; border:1px solid var(--bd); border-radius:8px; background:var(--bg); color:var(--txt); padding:10px 12px; font:inherit; }
+    textarea { min-height:120px; resize:vertical; }
+    .submit-row { display:flex; justify-content:flex-end; }
+    button { border:0; border-radius:8px; padding:10px 14px; background:var(--accent); color:#111; font-weight:700; cursor:pointer; }
+    .status { min-height:20px; margin-top:10px; color:var(--muted); }
+    .status.error { color:var(--danger); }
+    .status.success { color:var(--accent); }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="top-links">
+      <a href="/" id="backLink">← Home</a>
+      <a href="/gdpr/" id="gdprLink">Privacy</a>
+    </div>
+
+    <section class="card">
+      <h1 id="title">Contact us</h1>
+      <p id="subtitle" style="color:var(--muted)">Send a short message to the team.</p>
+
+      <form id="contactForm" novalidate>
+        <div class="field">
+          <label for="name" id="nameLabel">Name</label>
+          <input id="name" name="name" type="text" maxlength="10" required />
+        </div>
+
+        <div class="field">
+          <label for="email" id="emailLabel">Reply email</label>
+          <input id="email" name="email" type="email" maxlength="50" required />
+        </div>
+
+        <div class="field">
+          <label for="message" id="messageLabel">Message</label>
+          <textarea id="message" name="message" maxlength="100" required></textarea>
+        </div>
+
+        <div class="submit-row">
+          <button type="submit" id="submitBtn">Send message</button>
+        </div>
+      </form>
+
+      <div class="status" id="statusBox"></div>
+    </section>
+  </main>
+
+  <script>
+    const QUIZ_LANGUAGE_KEY = 'quizLanguage';
+    let currentLanguage = 'en';
+
+    const I18N = {
+      en: {
+        backHome: '← Home',
+        privacy: 'Privacy',
+        title: 'Contact us',
+        subtitle: 'Send a short message to the team.',
+        name: 'Name',
+        email: 'Reply email',
+        message: 'Message',
+        submit: 'Send message',
+        invalidName: 'Name is required and must be 10 characters or fewer.',
+        invalidEmail: 'Please enter a valid email (max 50 characters).',
+        invalidMessage: 'Message is required and must be 100 characters or fewer.',
+        success: 'Message sent. Thank you!',
+        failed: 'Could not send message. Please try again.',
+        rateLimited: 'Too many messages sent. Please wait a few minutes and try again.',
+        loginRedirect: 'Please log in to open the contact page.'
+      },
+      no: {
+        backHome: '← Hjem',
+        privacy: 'Personvern',
+        title: 'Kontakt oss',
+        subtitle: 'Send en kort melding til teamet.',
+        name: 'Navn',
+        email: 'E-post for svar',
+        message: 'Melding',
+        submit: 'Send melding',
+        invalidName: 'Navn er påkrevd og må være maks 10 tegn.',
+        invalidEmail: 'Skriv inn en gyldig e-post (maks 50 tegn).',
+        invalidMessage: 'Melding er påkrevd og må være maks 100 tegn.',
+        success: 'Meldingen er sendt. Takk!',
+        failed: 'Kunne ikke sende melding. Prøv igjen.',
+        rateLimited: 'For mange meldinger sendt. Vent noen minutter og prøv igjen.',
+        loginRedirect: 'Logg inn for å åpne kontaktsiden.'
+      }
+    };
+
+    function getLanguage() {
+      const stored = window.localStorage.getItem(QUIZ_LANGUAGE_KEY);
+      return stored === 'no' ? 'no' : 'en';
+    }
+
+    function t() {
+      return I18N[currentLanguage] || I18N.en;
+    }
+
+    function setStatus(message, type = '') {
+      const statusBox = document.getElementById('statusBox');
+      statusBox.classList.remove('error', 'success');
+      if (type) statusBox.classList.add(type);
+      statusBox.textContent = message || '';
+    }
+
+    function validateForm(name, email, message) {
+      if (!name || name.length > 10) return t().invalidName;
+      if (!email || email.length > 50 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return t().invalidEmail;
+      if (!message || message.length > 100) return t().invalidMessage;
+      return null;
+    }
+
+    function applyTranslations() {
+      document.getElementById('backLink').textContent = t().backHome;
+      document.getElementById('gdprLink').textContent = t().privacy;
+      document.getElementById('title').textContent = t().title;
+      document.getElementById('subtitle').textContent = t().subtitle;
+      document.getElementById('nameLabel').textContent = t().name;
+      document.getElementById('emailLabel').textContent = t().email;
+      document.getElementById('messageLabel').textContent = t().message;
+      document.getElementById('submitBtn').textContent = t().submit;
+    }
+
+    async function ensureLoggedIn() {
+      const response = await fetch('/api/auth/session', { credentials: 'include' });
+      if (response.ok) return true;
+
+      const redirect = encodeURIComponent('/contact/');
+      const status = encodeURIComponent(t().loginRedirect);
+      window.location.replace(`/?login=1&redirect=${redirect}&status=${status}`);
+      return false;
+    }
+
+    async function onSubmit(event) {
+      event.preventDefault();
+      setStatus('');
+
+      const name = document.getElementById('name').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const message = document.getElementById('message').value.trim();
+
+      const validationError = validateForm(name, email, message);
+      if (validationError) {
+        setStatus(validationError, 'error');
+        return;
+      }
+
+      const response = await fetch('/api/contact/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ name, email, message })
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        if (response.status === 429 || data.code === 'RATE_LIMITED') {
+          setStatus(t().rateLimited, 'error');
+          return;
+        }
+        setStatus(data.error || t().failed, 'error');
+        return;
+      }
+
+      document.getElementById('contactForm').reset();
+      setStatus(t().success, 'success');
+    }
+
+    async function init() {
+      currentLanguage = getLanguage();
+      applyTranslations();
+
+      const allowed = await ensureLoggedIn();
+      if (!allowed) return;
+
+      document.getElementById('contactForm').addEventListener('submit', onSubmit);
+    }
+
+    init().catch(() => setStatus(t().failed, 'error'));
+  </script>
+</body>
+</html>

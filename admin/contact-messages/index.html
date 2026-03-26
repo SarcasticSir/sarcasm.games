@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Contact messages | sarcasm.games</title>
+  <style>
+    :root { --bg:#0b0c10; --card:#1e1f25; --txt:#eaeaea; --bd:#2f313a; --accent:#4ecca3; --danger:#ff6b6b; --muted:#9aa0ad; }
+    body { margin:0; font:16px/1.4 system-ui, Segoe UI, Roboto, Arial; background:var(--bg); color:var(--txt); min-height:100dvh; }
+    main { max-width:1050px; margin:0 auto; padding:24px 16px 40px; }
+    .card { background:var(--card); border:1px solid var(--bd); border-radius:12px; padding:14px; margin-bottom:12px; }
+    .top-links { display:flex; gap:10px; margin-bottom:12px; }
+    .top-links a { color:var(--accent); }
+    .muted { color:var(--muted); }
+    table { width:100%; border-collapse:collapse; }
+    th, td { border-bottom:1px solid var(--bd); padding:8px; text-align:left; vertical-align:top; }
+    th { color:var(--muted); font-weight:600; }
+    button { border:0; border-radius:8px; padding:8px 12px; cursor:pointer; font-weight:700; }
+    .btn-neutral { background:var(--bd); color:var(--txt); }
+    .status { min-height:20px; color:var(--muted); }
+    .status.error { color:var(--danger); }
+    .details { margin-top:8px; border-top:1px dashed var(--bd); padding-top:8px; white-space:pre-wrap; }
+    .pill { display:inline-block; padding:2px 8px; border-radius:999px; border:1px solid var(--bd); font-size:.85rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="top-links">
+      <a href="/" id="backLink">← Home</a>
+      <a href="/insertquiz/" id="quizLink">Insert quiz</a>
+    </div>
+
+    <section class="card">
+      <h1 id="title">Contact messages</h1>
+      <p class="muted" id="subtitle">Admin-only inbox for contact form submissions.</p>
+      <div class="status" id="statusBox">Loading…</div>
+    </section>
+
+    <section class="card" id="tableCard" style="display:none">
+      <table>
+        <thead>
+          <tr>
+            <th id="thCreated">Created</th>
+            <th id="thName">Name</th>
+            <th id="thEmail">Email</th>
+            <th id="thStatus">Status</th>
+            <th id="thAction">Action</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </section>
+  </main>
+
+  <script>
+    const QUIZ_LANGUAGE_KEY = 'quizLanguage';
+    let currentLanguage = 'en';
+
+    const I18N = {
+      en: {
+        backHome: '← Home',
+        insertQuiz: 'Insert quiz',
+        title: 'Contact messages',
+        subtitle: 'Admin-only inbox for contact form submissions.',
+        loading: 'Loading…',
+        forbidden: 'Access denied. Admin only.',
+        created: 'Created',
+        name: 'Name',
+        email: 'Email',
+        status: 'Status',
+        action: 'Action',
+        view: 'View',
+        hide: 'Hide',
+        empty: 'No messages yet.',
+        loadFailed: 'Failed to load messages.',
+        viewFailed: 'Failed to open message.'
+      },
+      no: {
+        backHome: '← Hjem',
+        insertQuiz: 'Sett inn quiz',
+        title: 'Kontaktmeldinger',
+        subtitle: 'Kun admin: innboks for meldinger fra kontaktskjemaet.',
+        loading: 'Laster…',
+        forbidden: 'Ingen tilgang. Kun admin.',
+        created: 'Opprettet',
+        name: 'Navn',
+        email: 'E-post',
+        status: 'Status',
+        action: 'Handling',
+        view: 'Vis',
+        hide: 'Skjul',
+        empty: 'Ingen meldinger ennå.',
+        loadFailed: 'Kunne ikke laste meldinger.',
+        viewFailed: 'Kunne ikke åpne melding.'
+      }
+    };
+
+    function getLanguage() {
+      const stored = window.localStorage.getItem(QUIZ_LANGUAGE_KEY);
+      return stored === 'no' ? 'no' : 'en';
+    }
+
+    function t() {
+      return I18N[currentLanguage] || I18N.en;
+    }
+
+    function setStatus(message, type = '') {
+      const statusBox = document.getElementById('statusBox');
+      statusBox.classList.remove('error');
+      if (type === 'error') statusBox.classList.add('error');
+      statusBox.textContent = message || '';
+    }
+
+    function formatDate(value) {
+      try {
+        return new Date(value).toLocaleString(currentLanguage === 'no' ? 'nb-NO' : 'en-US');
+      } catch {
+        return value || '-';
+      }
+    }
+
+    function applyTranslations() {
+      document.getElementById('backLink').textContent = t().backHome;
+      document.getElementById('quizLink').textContent = t().insertQuiz;
+      document.getElementById('title').textContent = t().title;
+      document.getElementById('subtitle').textContent = t().subtitle;
+      document.getElementById('thCreated').textContent = t().created;
+      document.getElementById('thName').textContent = t().name;
+      document.getElementById('thEmail').textContent = t().email;
+      document.getElementById('thStatus').textContent = t().status;
+      document.getElementById('thAction').textContent = t().action;
+    }
+
+    async function fetchMessage(id) {
+      const response = await fetch(`/api/admin/contact-messages/${id}`, { credentials: 'include' });
+      if (!response.ok) throw new Error('fetch_failed');
+      const data = await response.json();
+      return data.message;
+    }
+
+    async function markRead(id) {
+      await fetch(`/api/admin/contact-messages/${id}`, {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    function renderTable(messages) {
+      const tableBody = document.getElementById('tableBody');
+      tableBody.innerHTML = '';
+
+      if (!messages.length) {
+        const row = document.createElement('tr');
+        const cell = document.createElement('td');
+        cell.colSpan = 5;
+        cell.textContent = t().empty;
+        row.appendChild(cell);
+        tableBody.appendChild(row);
+        return;
+      }
+
+      for (const entry of messages) {
+        const row = document.createElement('tr');
+
+        const created = document.createElement('td');
+        created.textContent = formatDate(entry.created_at);
+        row.appendChild(created);
+
+        const name = document.createElement('td');
+        name.textContent = entry.name;
+        row.appendChild(name);
+
+        const email = document.createElement('td');
+        email.textContent = entry.email;
+        row.appendChild(email);
+
+        const statusCell = document.createElement('td');
+        const statusPill = document.createElement('span');
+        statusPill.className = 'pill';
+        statusPill.textContent = entry.status;
+        statusCell.appendChild(statusPill);
+        row.appendChild(statusCell);
+
+        const action = document.createElement('td');
+        const btn = document.createElement('button');
+        btn.className = 'btn-neutral';
+        btn.textContent = t().view;
+        btn.type = 'button';
+
+        const detail = document.createElement('div');
+        detail.className = 'details';
+        detail.style.display = 'none';
+
+        btn.addEventListener('click', async () => {
+          if (detail.style.display === 'block') {
+            detail.style.display = 'none';
+            btn.textContent = t().view;
+            return;
+          }
+
+          try {
+            const fullMessage = await fetchMessage(entry.id);
+            detail.textContent = fullMessage.message;
+            detail.style.display = 'block';
+            btn.textContent = t().hide;
+
+            if (entry.status === 'new') {
+              await markRead(entry.id);
+              entry.status = 'read';
+              statusPill.textContent = 'read';
+            }
+          } catch {
+            setStatus(t().viewFailed, 'error');
+          }
+        });
+
+        action.appendChild(btn);
+        action.appendChild(detail);
+        row.appendChild(action);
+        tableBody.appendChild(row);
+      }
+    }
+
+    async function ensureAdmin() {
+      const response = await fetch('/api/auth/session', { credentials: 'include' });
+      if (!response.ok) {
+        window.location.replace('/?login=1&redirect=%2Fadmin%2Fcontact-messages%2F');
+        return null;
+      }
+
+      const data = await response.json();
+      if (data?.user?.role !== 'admin') {
+        setStatus(t().forbidden, 'error');
+        return null;
+      }
+
+      return data.user;
+    }
+
+    async function init() {
+      currentLanguage = getLanguage();
+      applyTranslations();
+      setStatus(t().loading);
+
+      const adminUser = await ensureAdmin();
+      if (!adminUser) return;
+
+      try {
+        const response = await fetch('/api/admin/contact-messages', { credentials: 'include' });
+        if (!response.ok) {
+          setStatus(t().loadFailed, 'error');
+          return;
+        }
+
+        const data = await response.json();
+        renderTable(data.messages || []);
+        document.getElementById('tableCard').style.display = 'block';
+        setStatus('');
+      } catch {
+        setStatus(t().loadFailed, 'error');
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
