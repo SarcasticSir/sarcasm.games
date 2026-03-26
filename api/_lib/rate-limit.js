@@ -25,6 +25,10 @@ const SCOPE_LIMITS = {
     maxRequests: 180,
     burstWindowMs: 10 * 1000,
     burstMaxRequests: 36
+  },
+  'contact:create': {
+    windowMs: 10 * 60 * 1000,
+    maxRequests: 5
   }
 };
 

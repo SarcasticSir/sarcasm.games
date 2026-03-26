@@ -48,6 +48,8 @@
     .season-grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
     .module-group{border:1px dashed var(--bd);border-radius:10px;padding:10px}
     .module-group h4{margin:0 0 8px}
+    .public-links{margin-top:16px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+    .public-links a{padding:10px 12px}
   </style>
 </head>
 <body>
@@ -74,6 +76,10 @@
       <h1>sarcasm.games</h1>
       <p id="pageSubtitle">Where do you want to go?</p>
       <div class="grid" id="gameGrid"></div>
+      <div class="public-links">
+        <a href="/contact/" id="contactLink" class="hidden">Contact</a>
+        <a href="/gdpr/" id="gdprLink">Privacy</a>
+      </div>
 
       <section class="season-card hidden" id="featureModulesSection">
         <h3 id="featureModulesTitle">Admin modules</h3>
@@ -227,6 +233,9 @@
         statusDeleteAccountConfirm: 'This will permanently delete your account. Continue?',
         statusDeleteAccountFailed: 'Could not delete account.',
         statusDeleteAccountOk: 'Your account has been deleted.',
+        contactLink: 'Contact',
+        privacyLink: 'Privacy',
+        statusMustLoginFirst: 'Please log in to continue.',
         captchaPool: [
           { id: 'site_first_word', question: 'What is the first word in this website name?' },
           { id: 'bil_reverse', question: 'Type the word BIL backwards' },
@@ -281,6 +290,9 @@
         statusDeleteAccountConfirm: 'Dette vil slette kontoen permanent. Vil du fortsette?',
         statusDeleteAccountFailed: 'Kunne ikke slette kontoen.',
         statusDeleteAccountOk: 'Kontoen din er slettet.',
+        contactLink: 'Kontakt',
+        privacyLink: 'Personvern',
+        statusMustLoginFirst: 'Logg inn for å fortsette.',
         captchaPool: [
           { id: 'site_first_word', question: 'Hva er første ord i nettsidens navn?' },
           { id: 'bil_reverse', question: 'Skriv ordet BIL baklengs' },
@@ -295,7 +307,8 @@
         title: 'Quiz admin',
         adminOnly: true,
         links: [
-          { href: '/insertquiz/', label: 'Insert quiz questions' }
+          { href: '/insertquiz/', label: 'Insert quiz questions' },
+          { href: '/admin/contact-messages/', label: 'Contact messages' }
         ]
       }
     ];
@@ -305,6 +318,7 @@
     let currentUser = null;
     let currentLanguage = 'en';
     let pendingConfirmationUsername = '';
+    let postLoginRedirect = null;
     let listenersBound = false;
 
     const statusBox = document.getElementById('statusBox');
@@ -324,6 +338,7 @@
     const languageSelect = document.getElementById('languageSelect');
     const activeLanguageLabel = document.getElementById('activeLanguageLabel');
     const gameGrid = document.getElementById('gameGrid');
+    const contactLink = document.getElementById('contactLink');
 
     function t() {
       return I18N[currentLanguage] || I18N.en;
@@ -519,6 +534,8 @@
       document.getElementById('registerBtn').textContent = texts.createAccountButton;
       document.getElementById('deleteAccountBtn').textContent = texts.deleteAccountButton;
       document.getElementById('logoutBtn').textContent = texts.logoutButton;
+      document.getElementById('contactLink').textContent = texts.contactLink;
+      document.getElementById('gdprLink').textContent = texts.privacyLink;
 
       if (authShell.classList.contains('hidden')) {
         toggleLoginBtn.textContent = texts.loginButton;
@@ -643,6 +660,7 @@
         deleteAccountBtn.classList.remove('hidden');
         logoutBtn.classList.remove('hidden');
         toggleLoginBtn.classList.add('hidden');
+        contactLink.classList.remove('hidden');
       } else {
         welcomeText.textContent = t().welcomeGuest;
         closeLoginPanel();
@@ -650,6 +668,7 @@
         logoutBtn.classList.add('hidden');
         toggleLoginBtn.classList.remove('hidden');
         toggleLoginBtn.textContent = t().loginButton;
+        contactLink.classList.add('hidden');
       }
 
       renderFeatureModules(user);
@@ -693,6 +712,12 @@
 
         const sessionUser = await fetchSession();
         await applyUserState(sessionUser || data.user);
+        if (postLoginRedirect && typeof postLoginRedirect === 'string' && postLoginRedirect.startsWith('/')) {
+          const destination = postLoginRedirect;
+          postLoginRedirect = null;
+          window.location.assign(destination);
+          return;
+        }
         setStatus('');
       } catch (error) {
         console.error('[index] Login request failed:', error);
@@ -896,6 +921,23 @@
       await applyUserState(null);
       const user = await fetchSession();
       if (user) await applyUserState(user);
+
+      const params = new URLSearchParams(window.location.search);
+      const requestedRedirect = params.get('redirect');
+      if (requestedRedirect && requestedRedirect.startsWith('/')) {
+        postLoginRedirect = requestedRedirect;
+      }
+
+      if (params.get('status')) {
+        setStatus(params.get('status'));
+      }
+
+      if (params.get('login') === '1' && !currentUser) {
+        toggleLoginPanel();
+        setStatus(params.get('status') || t().statusMustLoginFirst);
+      } else if (params.get('login') === '1' && currentUser && postLoginRedirect) {
+        window.location.assign(postLoginRedirect);
+      }
     }
 
     init().catch((error) => {
