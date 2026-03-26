@@ -44,7 +44,7 @@
     a:hover{transform:translateY(-1px);border-color:#767a88}
     a:hover .tooltip-text{visibility:visible;opacity:1}
 
-    .season-card,.member-list{margin-top:24px;background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;text-align:left}
+    .season-card{margin-top:24px;background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;text-align:left}
     .season-grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
     .module-group{border:1px dashed var(--bd);border-radius:10px;padding:10px}
     .module-group h4{margin:0 0 8px}
@@ -86,10 +86,6 @@
         <div class="season-grid" id="featureModulesGrid"></div>
       </section>
 
-      <section id="memberListSection" class="member-list hidden">
-        <h3 id="memberListTitle">Member list (admin only)</h3>
-        <ul id="memberList"></ul>
-      </section>
     </div>
 
     <div id="authShell" class="auth-shell hidden">
@@ -196,7 +192,6 @@
         logoutButton: 'Logout',
         deleteAccountButton: 'Delete me',
         pageSubtitle: 'Where do you want to go?',
-        memberListTitle: 'Member list (admin only)',
         authTitle: 'Optional login',
         authSubtitle: 'Log in for personal or admin-only features.',
         tabLogin: 'Login',
@@ -253,7 +248,6 @@
         logoutButton: 'Logg ut',
         deleteAccountButton: 'Slett meg',
         pageSubtitle: 'Hvor vil du gå?',
-        memberListTitle: 'Medlemsliste (kun admin)',
         authTitle: 'Valgfri innlogging',
         authSubtitle: 'Logg inn for personlige eller admin-funksjoner.',
         tabLogin: 'Logg inn',
@@ -308,7 +302,8 @@
         adminOnly: true,
         links: [
           { href: '/insertquiz/', label: 'Insert quiz questions' },
-          { href: '/admin/contact-messages/', label: 'Contact messages' }
+          { href: '/admin/contact-messages/', label: 'Contact messages' },
+          { href: '/members/', label: 'Members' }
         ]
       }
     ];
@@ -324,8 +319,6 @@
     const statusBox = document.getElementById('statusBox');
     const authShell = document.getElementById('authShell');
     const welcomeText = document.getElementById('welcomeText');
-    const memberListSection = document.getElementById('memberListSection');
-    const memberList = document.getElementById('memberList');
     const featureModulesSection = document.getElementById('featureModulesSection');
     const featureModulesTitle = document.getElementById('featureModulesTitle');
     const featureModulesGrid = document.getElementById('featureModulesGrid');
@@ -506,7 +499,6 @@
       document.getElementById('languageLabel').textContent = texts.languageLabel;
       document.getElementById('themeToggle').textContent = texts.themeButton;
       document.getElementById('pageSubtitle').textContent = texts.pageSubtitle;
-      document.getElementById('memberListTitle').textContent = texts.memberListTitle;
       document.getElementById('authTitle').textContent = texts.authTitle;
       document.getElementById('authSubtitle').textContent = texts.authSubtitle;
 
@@ -619,38 +611,6 @@
       }
     }
 
-    async function renderMemberList(user) {
-      if (!user || user.role !== 'admin') {
-        memberListSection.classList.add('hidden');
-        memberList.innerHTML = '';
-        return;
-      }
-
-      try {
-        const response = await fetch('/api/admin/users', { credentials: 'include' });
-        if (!response.ok) {
-          memberListSection.classList.add('hidden');
-          memberList.innerHTML = '';
-          return;
-        }
-
-        const data = await response.json();
-        memberList.innerHTML = '';
-
-        for (const member of data.users || []) {
-          const li = document.createElement('li');
-          li.textContent = `${member.username}${member.role === 'admin' ? ' (admin)' : ''} (${member.email}) - ${t().countryLabel}: ${member.country || t().unknownCountry}`;
-          memberList.appendChild(li);
-        }
-
-        memberListSection.classList.remove('hidden');
-      } catch (error) {
-        console.error('[index] Failed to render member list:', error);
-        memberListSection.classList.add('hidden');
-        memberList.innerHTML = '';
-      }
-    }
-
     async function applyUserState(user) {
       currentUser = user;
 
@@ -672,7 +632,6 @@
       }
 
       renderFeatureModules(user);
-      await renderMemberList(user);
     }
 
     async function login() {
