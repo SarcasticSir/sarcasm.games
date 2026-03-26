@@ -331,11 +331,32 @@ async function upsertProfileFromAuthUser(authUser) {
   return result.rows[0] || null;
 }
 
-async function listProfiles() {
+async function listProfiles({ country = null, username = null, email = null } = {}) {
+  const clauses = [];
+  const params = [];
+
+  if (readString(country)) {
+    params.push(String(country).trim().toUpperCase());
+    clauses.push(`country = $${params.length}`);
+  }
+
+  if (readString(username)) {
+    params.push(`%${String(username).trim().toLowerCase()}%`);
+    clauses.push(`username_normalized LIKE $${params.length}`);
+  }
+
+  if (readString(email)) {
+    params.push(`%${String(email).trim().toLowerCase()}%`);
+    clauses.push(`email_normalized LIKE $${params.length}`);
+  }
+
+  const whereClause = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
   const result = await runQuery(
     `SELECT auth_user_id, username, email, role, country, created_at
      FROM public.profiles
-     ORDER BY created_at ASC, username_normalized ASC`
+     ${whereClause}
+     ORDER BY created_at ASC, username_normalized ASC`,
+    params
   );
 
   return result.rows;
