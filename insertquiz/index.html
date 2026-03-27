@@ -234,19 +234,21 @@
       };
     }
 
+    function redirectToHome() {
+      window.location.replace('https://sarcasm.games/');
+    }
+
     async function ensureAdminAccess() {
       try {
         const response = await fetch('/api/auth/session', { credentials: 'include' });
         if (!response.ok) {
-          accessStatus.textContent = 'Access denied. Please log in as admin.';
-          accessStatus.classList.add('error');
+          redirectToHome();
           return;
         }
 
         const data = await response.json();
         if (data?.user?.role !== 'admin') {
-          accessStatus.textContent = 'Access denied. This page is admin-only.';
-          accessStatus.classList.add('error');
+          redirectToHome();
           return;
         }
 
@@ -256,8 +258,7 @@
         queueCard.classList.remove('hidden');
         renderQueue();
       } catch (error) {
-        accessStatus.textContent = 'Could not verify access due to a network error.';
-        accessStatus.classList.add('error');
+        redirectToHome();
       }
     }
 

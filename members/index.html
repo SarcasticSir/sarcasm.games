@@ -158,16 +158,20 @@
       document.getElementById('thAction').textContent = t().action;
     }
 
+    function redirectToHome() {
+      window.location.replace('https://sarcasm.games/');
+    }
+
     async function ensureAdmin() {
       const response = await fetch('/api/auth/session', { credentials: 'include' });
       if (!response.ok) {
-        window.location.replace('/?login=1&redirect=%2Fmembers%2F');
+        redirectToHome();
         return null;
       }
 
       const data = await response.json();
       if (data?.user?.role !== 'admin') {
-        setStatus(t().forbidden, 'error');
+        redirectToHome();
         return null;
       }
 
