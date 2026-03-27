@@ -170,20 +170,34 @@
       document.documentElement.classList.remove('auth-pending');
     }
 
-    async function ensureAdmin() {
-      const response = await fetch('/api/auth/session', { credentials: 'include' });
-      if (!response.ok) {
+    async function ensureAdmin(attempt = 0) {
+      try {
+        const response = await fetch('/api/auth/session', { credentials: 'include' });
+        if (response.status === 429 && attempt < 3) {
+          await new Promise((resolve) => setTimeout(resolve, 700 * (attempt + 1)));
+          return ensureAdmin(attempt + 1);
+        }
+
+        if (!response.ok) {
+          redirectToHome();
+          return null;
+        }
+
+        const data = await response.json();
+        if (data?.user?.role !== 'admin') {
+          redirectToHome();
+          return null;
+        }
+
+        return data.user;
+      } catch {
+        if (attempt < 3) {
+          await new Promise((resolve) => setTimeout(resolve, 700 * (attempt + 1)));
+          return ensureAdmin(attempt + 1);
+        }
         redirectToHome();
         return null;
       }
-
-      const data = await response.json();
-      if (data?.user?.role !== 'admin') {
-        redirectToHome();
-        return null;
-      }
-
-      return data.user;
     }
 
     function getFilters() {

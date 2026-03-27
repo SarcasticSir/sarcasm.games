@@ -246,9 +246,14 @@
       document.documentElement.classList.remove('auth-pending');
     }
 
-    async function ensureAdminAccess() {
+    async function ensureAdminAccess(attempt = 0) {
       try {
         const response = await fetch('/api/auth/session', { credentials: 'include' });
+        if (response.status === 429 && attempt < 3) {
+          await new Promise((resolve) => setTimeout(resolve, 700 * (attempt + 1)));
+          return ensureAdminAccess(attempt + 1);
+        }
+
         if (!response.ok) {
           redirectToHome();
           return;
@@ -267,6 +272,10 @@
         queueCard.classList.remove('hidden');
         renderQueue();
       } catch (error) {
+        if (attempt < 3) {
+          await new Promise((resolve) => setTimeout(resolve, 700 * (attempt + 1)));
+          return ensureAdminAccess(attempt + 1);
+        }
         redirectToHome();
       }
     }
