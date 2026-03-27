@@ -73,6 +73,23 @@ module.exports = async function handler(req, res) {
       return;
     }
 
+    if (req.method === 'DELETE') {
+      const deleteResult = await runQuery(
+        `DELETE FROM public.contact_messages
+         WHERE id = $1
+         RETURNING id`,
+        [id]
+      );
+
+      if (!deleteResult.rows[0]) {
+        res.status(404).json({ error: 'Message not found' });
+        return;
+      }
+
+      res.status(200).json({ deleted: true, id });
+      return;
+    }
+
     res.status(405).json({ error: 'Method not allowed' });
   } catch (error) {
     console.error('[admin/contact-messages/:id] Failed:', error?.message);

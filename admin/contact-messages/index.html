@@ -21,10 +21,12 @@
     th { color:var(--muted); font-weight:600; }
     button { border:0; border-radius:8px; padding:8px 12px; cursor:pointer; font-weight:700; }
     .btn-neutral { background:var(--bd); color:var(--txt); }
+    .btn-danger { background:var(--danger); color:#fff; }
     .status { min-height:20px; color:var(--muted); }
     .status.error { color:var(--danger); }
     .details { margin-top:8px; border-top:1px dashed var(--bd); padding-top:8px; white-space:pre-wrap; }
     .pill { display:inline-block; padding:2px 8px; border-radius:999px; border:1px solid var(--bd); font-size:.85rem; }
+    .action-buttons { display:flex; gap:8px; flex-wrap:wrap; }
   </style>
 </head>
 <body>
@@ -75,6 +77,9 @@
         action: 'Action',
         view: 'View',
         hide: 'Hide',
+        delete: 'Delete',
+        confirmDelete: 'Delete this message?',
+        deleteFailed: 'Failed to delete message.',
         empty: 'No messages yet.',
         loadFailed: 'Failed to load messages.',
         viewFailed: 'Failed to open message.'
@@ -93,6 +98,9 @@
         action: 'Handling',
         view: 'Vis',
         hide: 'Skjul',
+        delete: 'Slett',
+        confirmDelete: 'Slette denne meldingen?',
+        deleteFailed: 'Kunne ikke slette melding.',
         empty: 'Ingen meldinger ennå.',
         loadFailed: 'Kunne ikke laste meldinger.',
         viewFailed: 'Kunne ikke åpne melding.'
@@ -150,6 +158,17 @@
       });
     }
 
+    async function deleteMessage(id) {
+      const response = await fetch(`/api/admin/contact-messages/${id}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        throw new Error('delete_failed');
+      }
+    }
+
     function renderTable(messages) {
       const tableBody = document.getElementById('tableBody');
       tableBody.innerHTML = '';
@@ -187,10 +206,18 @@
         row.appendChild(statusCell);
 
         const action = document.createElement('td');
+        const actionButtons = document.createElement('div');
+        actionButtons.className = 'action-buttons';
+
         const btn = document.createElement('button');
         btn.className = 'btn-neutral';
         btn.textContent = t().view;
         btn.type = 'button';
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'btn-danger';
+        deleteBtn.textContent = t().delete;
+        deleteBtn.type = 'button';
 
         const detail = document.createElement('div');
         detail.className = 'details';
@@ -219,7 +246,23 @@
           }
         });
 
-        action.appendChild(btn);
+        deleteBtn.addEventListener('click', async () => {
+          if (!window.confirm(t().confirmDelete)) return;
+          try {
+            await deleteMessage(entry.id);
+            row.remove();
+            const hasRows = document.querySelectorAll('#tableBody tr').length > 0;
+            if (!hasRows) {
+              renderTable([]);
+            }
+          } catch {
+            setStatus(t().deleteFailed, 'error');
+          }
+        });
+
+        actionButtons.appendChild(btn);
+        actionButtons.appendChild(deleteBtn);
+        action.appendChild(actionButtons);
         action.appendChild(detail);
         row.appendChild(action);
         tableBody.appendChild(row);
