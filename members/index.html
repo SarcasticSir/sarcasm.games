@@ -4,8 +4,12 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Members | sarcasm.games</title>
+  <script>
+    document.documentElement.classList.add('auth-pending');
+  </script>
   <style>
     :root { --bg:#0b0c10; --card:#1e1f25; --txt:#eaeaea; --bd:#2f313a; --accent:#4ecca3; --danger:#ff6b6b; --muted:#9aa0ad; }
+    .auth-pending body { visibility: hidden; }
     body { margin:0; font:16px/1.4 system-ui, Segoe UI, Roboto, Arial; background:var(--bg); color:var(--txt); min-height:100dvh; }
     main { max-width:1100px; margin:0 auto; padding:24px 16px 40px; }
     .top-links { display:flex; gap:10px; margin-bottom:12px; }
@@ -160,6 +164,10 @@
 
     function redirectToHome() {
       window.location.replace('https://sarcasm.games/');
+    }
+
+    function revealProtectedPage() {
+      document.documentElement.classList.remove('auth-pending');
     }
 
     async function ensureAdmin() {
@@ -324,6 +332,7 @@
 
       const adminUser = await ensureAdmin();
       if (!adminUser) return;
+      revealProtectedPage();
 
       const initialUsers = await fetchMembers().catch(() => []);
       renderCountryOptions(initialUsers);
