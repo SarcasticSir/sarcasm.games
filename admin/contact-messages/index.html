@@ -4,8 +4,12 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Contact messages | sarcasm.games</title>
+  <script>
+    document.documentElement.classList.add('auth-pending');
+  </script>
   <style>
     :root { --bg:#0b0c10; --card:#1e1f25; --txt:#eaeaea; --bd:#2f313a; --accent:#4ecca3; --danger:#ff6b6b; --muted:#9aa0ad; }
+    .auth-pending body { visibility: hidden; }
     body { margin:0; font:16px/1.4 system-ui, Segoe UI, Roboto, Arial; background:var(--bg); color:var(--txt); min-height:100dvh; }
     main { max-width:1050px; margin:0 auto; padding:24px 16px 40px; }
     .card { background:var(--card); border:1px solid var(--bd); border-radius:12px; padding:14px; margin-bottom:12px; }
@@ -17,10 +21,12 @@
     th { color:var(--muted); font-weight:600; }
     button { border:0; border-radius:8px; padding:8px 12px; cursor:pointer; font-weight:700; }
     .btn-neutral { background:var(--bd); color:var(--txt); }
+    .btn-danger { background:var(--danger); color:#fff; }
     .status { min-height:20px; color:var(--muted); }
     .status.error { color:var(--danger); }
     .details { margin-top:8px; border-top:1px dashed var(--bd); padding-top:8px; white-space:pre-wrap; }
     .pill { display:inline-block; padding:2px 8px; border-radius:999px; border:1px solid var(--bd); font-size:.85rem; }
+    .action-buttons { display:flex; gap:8px; flex-wrap:wrap; }
   </style>
 </head>
 <body>
@@ -71,6 +77,9 @@
         action: 'Action',
         view: 'View',
         hide: 'Hide',
+        delete: 'Delete',
+        confirmDelete: 'Delete this message?',
+        deleteFailed: 'Failed to delete message.',
         empty: 'No messages yet.',
         loadFailed: 'Failed to load messages.',
         viewFailed: 'Failed to open message.'
@@ -89,6 +98,9 @@
         action: 'Handling',
         view: 'Vis',
         hide: 'Skjul',
+        delete: 'Slett',
+        confirmDelete: 'Slette denne meldingen?',
+        deleteFailed: 'Kunne ikke slette melding.',
         empty: 'Ingen meldinger ennå.',
         loadFailed: 'Kunne ikke laste meldinger.',
         viewFailed: 'Kunne ikke åpne melding.'
@@ -146,6 +158,17 @@
       });
     }
 
+    async function deleteMessage(id) {
+      const response = await fetch(`/api/admin/contact-messages/${id}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        throw new Error('delete_failed');
+      }
+    }
+
     function renderTable(messages) {
       const tableBody = document.getElementById('tableBody');
       tableBody.innerHTML = '';
@@ -183,10 +206,18 @@
         row.appendChild(statusCell);
 
         const action = document.createElement('td');
+        const actionButtons = document.createElement('div');
+        actionButtons.className = 'action-buttons';
+
         const btn = document.createElement('button');
         btn.className = 'btn-neutral';
         btn.textContent = t().view;
         btn.type = 'button';
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'btn-danger';
+        deleteBtn.textContent = t().delete;
+        deleteBtn.type = 'button';
 
         const detail = document.createElement('div');
         detail.className = 'details';
@@ -215,27 +246,65 @@
           }
         });
 
-        action.appendChild(btn);
+        deleteBtn.addEventListener('click', async () => {
+          if (!window.confirm(t().confirmDelete)) return;
+          try {
+            await deleteMessage(entry.id);
+            row.remove();
+            const hasRows = document.querySelectorAll('#tableBody tr').length > 0;
+            if (!hasRows) {
+              renderTable([]);
+            }
+          } catch {
+            setStatus(t().deleteFailed, 'error');
+          }
+        });
+
+        actionButtons.appendChild(btn);
+        actionButtons.appendChild(deleteBtn);
+        action.appendChild(actionButtons);
         action.appendChild(detail);
         row.appendChild(action);
         tableBody.appendChild(row);
       }
     }
 
-    async function ensureAdmin() {
-      const response = await fetch('/api/auth/session', { credentials: 'include' });
-      if (!response.ok) {
-        window.location.replace('/?login=1&redirect=%2Fadmin%2Fcontact-messages%2F');
+    function redirectToHome() {
+      window.location.replace('https://sarcasm.games/');
+    }
+
+    function revealProtectedPage() {
+      document.documentElement.classList.remove('auth-pending');
+    }
+
+    async function ensureAdmin(attempt = 0) {
+      try {
+        const response = await fetch('/api/auth/session', { credentials: 'include' });
+        if (response.status === 429 && attempt < 3) {
+          await new Promise((resolve) => setTimeout(resolve, 700 * (attempt + 1)));
+          return ensureAdmin(attempt + 1);
+        }
+
+        if (!response.ok) {
+          redirectToHome();
+          return null;
+        }
+
+        const data = await response.json();
+        if (data?.user?.role !== 'admin') {
+          redirectToHome();
+          return null;
+        }
+
+        return data.user;
+      } catch {
+        if (attempt < 3) {
+          await new Promise((resolve) => setTimeout(resolve, 700 * (attempt + 1)));
+          return ensureAdmin(attempt + 1);
+        }
+        redirectToHome();
         return null;
       }
-
-      const data = await response.json();
-      if (data?.user?.role !== 'admin') {
-        setStatus(t().forbidden, 'error');
-        return null;
-      }
-
-      return data.user;
     }
 
     async function init() {
@@ -245,6 +314,7 @@
 
       const adminUser = await ensureAdmin();
       if (!adminUser) return;
+      revealProtectedPage();
 
       try {
         const response = await fetch('/api/admin/contact-messages', { credentials: 'include' });

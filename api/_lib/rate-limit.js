@@ -8,6 +8,12 @@ const SCOPE_LIMITS = {
     windowMs: DEFAULT_WINDOW_MS,
     maxRequests: DEFAULT_MAX_REQUESTS_PER_WINDOW
   },
+  'auth:session': {
+    windowMs: 60 * 1000,
+    maxRequests: 60,
+    burstWindowMs: 10 * 1000,
+    burstMaxRequests: 20
+  },
   'quiz:start': {
     windowMs: 60 * 1000,
     maxRequests: 60,

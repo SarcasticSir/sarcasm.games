@@ -4,8 +4,12 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Insert quiz question</title>
+  <script>
+    document.documentElement.classList.add('auth-pending');
+  </script>
   <style>
     :root { --bg:#0b0c10; --card:#1e1f25; --txt:#eaeaea; --bd:#2f313a; --accent:#4ecca3; --danger:#ff6b6b; --muted:#9aa0ad; }
+    .auth-pending body { visibility: hidden; }
     body { margin:0; font:16px/1.4 system-ui, Segoe UI, Roboto, Arial; background:var(--bg); color:var(--txt); min-height:100dvh; }
     main { max-width: 920px; margin: 0 auto; padding: 28px 18px 40px; }
     .card { background:var(--card); border:1px solid var(--bd); border-radius:12px; padding:16px; margin-bottom:14px; }
@@ -234,30 +238,45 @@
       };
     }
 
-    async function ensureAdminAccess() {
+    function redirectToHome() {
+      window.location.replace('https://sarcasm.games/');
+    }
+
+    function revealProtectedPage() {
+      document.documentElement.classList.remove('auth-pending');
+    }
+
+    async function ensureAdminAccess(attempt = 0) {
       try {
         const response = await fetch('/api/auth/session', { credentials: 'include' });
+        if (response.status === 429 && attempt < 3) {
+          await new Promise((resolve) => setTimeout(resolve, 700 * (attempt + 1)));
+          return ensureAdminAccess(attempt + 1);
+        }
+
         if (!response.ok) {
-          accessStatus.textContent = 'Access denied. Please log in as admin.';
-          accessStatus.classList.add('error');
+          redirectToHome();
           return;
         }
 
         const data = await response.json();
         if (data?.user?.role !== 'admin') {
-          accessStatus.textContent = 'Access denied. This page is admin-only.';
-          accessStatus.classList.add('error');
+          redirectToHome();
           return;
         }
 
+        revealProtectedPage();
         accessStatus.textContent = `Admin access confirmed for ${data.user.username}.`;
         accessStatus.classList.add('success');
         formCard.classList.remove('hidden');
         queueCard.classList.remove('hidden');
         renderQueue();
       } catch (error) {
-        accessStatus.textContent = 'Could not verify access due to a network error.';
-        accessStatus.classList.add('error');
+        if (attempt < 3) {
+          await new Promise((resolve) => setTimeout(resolve, 700 * (attempt + 1)));
+          return ensureAdminAccess(attempt + 1);
+        }
+        redirectToHome();
       }
     }
 
