@@ -233,11 +233,28 @@
       isSubmitting: false,
       isAdvancing: false,
       quizStarted: false,
-      pendingRevealAnswer: ''
+      pendingRevealAnswerEncoded: ''
     };
 
     function syncLanguageFromStorage() {
       state.language = getStoredQuizLanguage();
+    }
+
+    function encodeAnswerForReveal(answer) {
+      return btoa(unescape(encodeURIComponent(answer || '')));
+    }
+
+    function decodeAnswerForReveal(encodedAnswer) {
+      if (!encodedAnswer) return '—';
+      try {
+        return decodeURIComponent(escape(atob(encodedAnswer)));
+      } catch (error) {
+        return '—';
+      }
+    }
+
+    function isNextQuestionVisible() {
+      return !nextQuestionBtn.classList.contains('hidden');
     }
 
     function uiCopy() {
@@ -386,7 +403,7 @@
       statusText.className = 'status';
       answerReveal.classList.add('hidden');
       answerReveal.textContent = '';
-      state.pendingRevealAnswer = q.answers[0] || '—';
+      state.pendingRevealAnswerEncoded = encodeAnswerForReveal(q.answers[0] || '—');
       showAnswerBtn.classList.add('hidden');
       nextQuestionBtn.classList.add('hidden');
       abortConfirmRow.classList.add('hidden');
@@ -423,7 +440,7 @@
       statusText.textContent = '';
       answerReveal.classList.add('hidden');
       answerReveal.textContent = '';
-      state.pendingRevealAnswer = '';
+      state.pendingRevealAnswerEncoded = '';
       abortConfirmRow.classList.add('hidden');
       setStartLoading(false);
     }
@@ -516,7 +533,7 @@
       });
       state.awaitingRetry = false;
       state.isSubmitting = false;
-      state.pendingRevealAnswer = result.acceptedAnswer || question.answers?.[0] || '—';
+      state.pendingRevealAnswerEncoded = encodeAnswerForReveal(result.acceptedAnswer || question.answers?.[0] || '—');
       statusText.className = 'status wrong';
       statusText.textContent = uiCopy().wrongStatus;
       showAnswerBtn.classList.remove('hidden');
@@ -597,13 +614,22 @@
     showAnswerBtn.addEventListener('click', () => {
       const isHidden = answerReveal.classList.toggle('hidden');
       if (!isHidden) {
-        answerReveal.textContent = uiCopy().answerPrefix.replace('{answer}', state.pendingRevealAnswer || '—');
+        const decodedAnswer = decodeAnswerForReveal(state.pendingRevealAnswerEncoded);
+        answerReveal.textContent = uiCopy().answerPrefix.replace('{answer}', decodedAnswer);
       } else {
         answerReveal.textContent = '';
       }
     });
 
     nextQuestionBtn.addEventListener('click', () => {
+      moveNextQuestion();
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter') return;
+      if (!isNextQuestionVisible()) return;
+      if (document.activeElement === showAnswerBtn) return;
+      event.preventDefault();
       moveNextQuestion();
     });
 
