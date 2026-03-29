@@ -18,9 +18,7 @@ function normalizeAnswerValues(value) {
 }
 
 function extractAnswers(row, lang) {
-  const preferred = lang === 'no'
-    ? [row.answers_no, row.answers_en]
-    : [row.answers_en, row.answers_no];
+  const preferred = [row.answers_en];
 
   const seen = new Set();
   return preferred
@@ -288,7 +286,7 @@ module.exports = async function handler(req, res) {
 
       const query = selectedIds.length
         ? await runQuery(
-          `SELECT id, category, question_en, question_no, answers_en, answers_no, difficulty
+          `SELECT id, category, question_en, question_no, answers_en, difficulty
            FROM quiz_questions
            WHERE id = ANY($1::int[])`,
           [selectedIds]
@@ -330,7 +328,7 @@ module.exports = async function handler(req, res) {
 
     const query = selectedIds.length
       ? await runQuery(
-        `SELECT id, category, question_en, question_no, answers_en, answers_no, difficulty
+        `SELECT id, category, question_en, question_no, answers_en, difficulty
          FROM quiz_questions
          WHERE id = ANY($1::int[])`,
         [selectedIds]

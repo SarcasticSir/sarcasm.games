@@ -20,10 +20,8 @@ function normalizeAnswerValues(value) {
     .filter(Boolean);
 }
 
-function extractAcceptedAnswers(row, lang) {
-  const candidates = lang === 'no'
-    ? [row.answers_no, row.answers_en]
-    : [row.answers_en, row.answers_no];
+function extractAcceptedAnswers(row) {
+  const candidates = [row.answers_en];
   const seen = new Set();
 
   return candidates
@@ -66,7 +64,7 @@ module.exports = async function handler(req, res) {
 
   try {
     const body = parseJsonBody(req.body);
-    const { questionId: rawQuestionId, answer: rawAnswer = '', lang = 'en' } = body;
+    const { questionId: rawQuestionId, answer: rawAnswer = '' } = body;
     const questionId = Number(rawQuestionId);
     const answer = String(rawAnswer).trim();
 
@@ -76,7 +74,7 @@ module.exports = async function handler(req, res) {
     }
 
     const questionResult = await runQuery(
-      `SELECT id, answers_en, answers_no
+      `SELECT id, answers_en
        FROM quiz_questions
        WHERE id = $1
        LIMIT 1`,
@@ -89,7 +87,7 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const acceptedAnswers = extractAcceptedAnswers(question, lang);
+    const acceptedAnswers = extractAcceptedAnswers(question);
     const evaluation = evaluateAnswer({
       userAnswer: answer,
       acceptedAnswers,
