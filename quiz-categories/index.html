@@ -530,11 +530,29 @@
       selectedCategories: [],
       count: 0,
       answeredQuestions: [],
-      resultFilter: 'all'
+      resultFilter: 'all',
+      pendingRevealAnswerEncoded: ''
     };
 
     function uiCopy() {
       return copy[runtimeState.activeLang] || copy[fallbackLanguage];
+    }
+
+    function encodeAnswerForReveal(answer) {
+      return btoa(unescape(encodeURIComponent(answer || '')));
+    }
+
+    function decodeAnswerForReveal(encodedAnswer) {
+      if (!encodedAnswer) return '—';
+      try {
+        return decodeURIComponent(escape(atob(encodedAnswer)));
+      } catch (error) {
+        return '—';
+      }
+    }
+
+    function isNextQuestionVisible() {
+      return !nextQuestionBtn.classList.contains('hidden');
     }
 
     function syncLanguageFromStorage() {
@@ -746,7 +764,8 @@
       showAnswerBtn.classList.add('hidden');
       nextQuestionBtn.classList.add('hidden');
       answerReveal.classList.add('hidden');
-      answerReveal.textContent = uiCopy().answerPrefix.replace('{answer}', question.answers[0] || '—');
+      answerReveal.textContent = '';
+      runtimeState.pendingRevealAnswerEncoded = encodeAnswerForReveal(question.answers[0] || '—');
       showAnswerBtn.textContent = uiCopy().showAnswer;
       abortConfirmRow.classList.add('hidden');
       runtimeState.awaitingRetry = false;
@@ -947,6 +966,7 @@
 
       runtimeState.wrong += 1;
       runtimeState.awaitingRetry = false;
+      runtimeState.pendingRevealAnswerEncoded = encodeAnswerForReveal(result.acceptedAnswer || current.answers[0] || '—');
       runtimeState.answeredQuestions.push({
         prompt: current.prompt,
         status: 'wrong',
@@ -965,10 +985,24 @@
 
     showAnswerBtn.addEventListener('click', () => {
       const isHidden = answerReveal.classList.toggle('hidden');
+      if (!isHidden) {
+        const decodedAnswer = decodeAnswerForReveal(runtimeState.pendingRevealAnswerEncoded);
+        answerReveal.textContent = uiCopy().answerPrefix.replace('{answer}', decodedAnswer);
+      } else {
+        answerReveal.textContent = '';
+      }
       showAnswerBtn.textContent = isHidden ? uiCopy().showAnswer : uiCopy().hideAnswer;
     });
 
     nextQuestionBtn.addEventListener('click', () => {
+      moveNextQuestion();
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter') return;
+      if (!isNextQuestionVisible()) return;
+      if (document.activeElement === showAnswerBtn) return;
+      event.preventDefault();
       moveNextQuestion();
     });
 

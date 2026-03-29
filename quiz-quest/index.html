@@ -342,7 +342,8 @@
       roundTarget: 0,
       roundAnswered: 0,
       isQuestActive: false,
-      awaitingRetry: false
+      awaitingRetry: false,
+      pendingRevealAnswerEncoded: ''
     };
 
     const setupView = document.getElementById('setupView');
@@ -375,6 +376,23 @@
 
     function ui() {
       return copy[activeLang] || copy.en;
+    }
+
+    function encodeAnswerForReveal(answer) {
+      return btoa(unescape(encodeURIComponent(answer || '')));
+    }
+
+    function decodeAnswerForReveal(encodedAnswer) {
+      if (!encodedAnswer) return '—';
+      try {
+        return decodeURIComponent(escape(atob(encodedAnswer)));
+      } catch (error) {
+        return '—';
+      }
+    }
+
+    function isNextQuestionVisible() {
+      return !nextBtn.classList.contains('hidden');
     }
 
     function readGuestProgress() {
@@ -544,6 +562,7 @@
       submitBtn.disabled = false;
       answerInput.disabled = false;
       state.awaitingRetry = false;
+      state.pendingRevealAnswerEncoded = '';
     }
 
     function setAllCategorySelection(selected) {
@@ -720,6 +739,7 @@
         answerInput.disabled = false;
         submitBtn.disabled = false;
         state.awaitingRetry = false;
+        state.pendingRevealAnswerEncoded = '';
         nextBtn.classList.add('hidden');
         return true;
       } catch (error) {
@@ -810,6 +830,8 @@
           questionStatus.className = 'status almost';
           questionStatus.textContent = ui().almost;
           answerReveal.classList.add('hidden');
+          answerReveal.textContent = '';
+          state.pendingRevealAnswerEncoded = '';
           showAnswerBtn.classList.add('hidden');
           answerInput.value = '';
           answerInput.focus();
@@ -828,13 +850,15 @@
           questionStatus.textContent = ui().correct;
           answerReveal.classList.add('hidden');
           answerReveal.textContent = '';
+          state.pendingRevealAnswerEncoded = '';
           showAnswerBtn.classList.add('hidden');
           showAnswerBtn.textContent = ui().showAnswer;
         } else {
           questionStatus.className = 'status error';
           questionStatus.textContent = ui().wrong;
           answerReveal.classList.add('hidden');
-          answerReveal.textContent = ui().answerPrefix.replace('{answer}', payload.acceptedAnswer || '—');
+          answerReveal.textContent = '';
+          state.pendingRevealAnswerEncoded = encodeAnswerForReveal(payload.acceptedAnswer || '—');
           showAnswerBtn.classList.remove('hidden');
           showAnswerBtn.textContent = ui().showAnswer;
         }
@@ -904,11 +928,25 @@
     nextBtn.addEventListener('click', proceedAfterAnswer);
     showAnswerBtn.addEventListener('click', () => {
       const isHidden = answerReveal.classList.toggle('hidden');
+      if (!isHidden) {
+        const decodedAnswer = decodeAnswerForReveal(state.pendingRevealAnswerEncoded);
+        answerReveal.textContent = ui().answerPrefix.replace('{answer}', decodedAnswer);
+      } else {
+        answerReveal.textContent = '';
+      }
       showAnswerBtn.textContent = isHidden ? ui().showAnswer : ui().hideAnswer;
     });
     startQuestBtn.addEventListener('click', startQuest);
     answerForm.addEventListener('submit', submitAnswer);
     resetCategoryBtn.addEventListener('click', resetCategoryProgress);
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter') return;
+      if (!isNextQuestionVisible()) return;
+      if (document.activeElement === showAnswerBtn) return;
+      event.preventDefault();
+      proceedAfterAnswer();
+    });
 
     async function init() {
       state.session = await fetchSession();
