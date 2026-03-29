@@ -51,9 +51,7 @@ function normalizeAnswerValues(value) {
 }
 
 function extractAnswers(row, lang) {
-  const preferred = lang === 'no'
-    ? [row.answers_no, row.answers_en]
-    : [row.answers_en, row.answers_no];
+  const preferred = [row.answers_en];
 
   const seen = new Set();
   return preferred
@@ -128,7 +126,7 @@ async function getNextQuestionCandidateFromPivot({ userId, categories, solvedQue
   if (userId) {
     const result = await runQuery(
       `WITH preferred AS (
-         SELECT q.id, q.category, q.question_en, q.question_no, q.answers_en, q.answers_no
+         SELECT q.id, q.category, q.question_en, q.question_no, q.answers_en
          FROM quiz_questions q
          LEFT JOIN user_answers ua
            ON ua.question_id = q.id
@@ -139,7 +137,7 @@ async function getNextQuestionCandidateFromPivot({ userId, categories, solvedQue
          ORDER BY q.id ASC
          LIMIT 1
        ), fallback AS (
-         SELECT q.id, q.category, q.question_en, q.question_no, q.answers_en, q.answers_no
+         SELECT q.id, q.category, q.question_en, q.question_no, q.answers_en
          FROM quiz_questions q
          LEFT JOIN user_answers ua
            ON ua.question_id = q.id
@@ -163,7 +161,7 @@ async function getNextQuestionCandidateFromPivot({ userId, categories, solvedQue
   const excludedIds = solvedQuestionIds.length ? solvedQuestionIds : [0];
   const result = await runQuery(
     `WITH preferred AS (
-       SELECT q.id, q.category, q.question_en, q.question_no, q.answers_en, q.answers_no
+       SELECT q.id, q.category, q.question_en, q.question_no, q.answers_en
        FROM quiz_questions q
        WHERE q.category = ANY($1)
          AND NOT (q.id = ANY($2::int[]))
@@ -171,7 +169,7 @@ async function getNextQuestionCandidateFromPivot({ userId, categories, solvedQue
        ORDER BY q.id ASC
        LIMIT 1
      ), fallback AS (
-       SELECT q.id, q.category, q.question_en, q.question_no, q.answers_en, q.answers_no
+       SELECT q.id, q.category, q.question_en, q.question_no, q.answers_en
        FROM quiz_questions q
        WHERE q.category = ANY($1)
          AND NOT (q.id = ANY($2::int[]))

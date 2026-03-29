@@ -56,14 +56,12 @@ async function insertQuizQuestion(entry) {
       question_en,
       question_no,
       answers_en,
-      answers_no,
       difficulty
-    ) VALUES ($1, $2, $3, $4::text[], $5::text[], $6)`,
+    ) VALUES ($1, $2, $3, $4::text[], $5)`,
     [
       entry.category,
       entry.question_en,
       entry.question_no,
-      entry.answers,
       entry.answers,
       entry.difficulty
     ]

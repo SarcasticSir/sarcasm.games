@@ -30,9 +30,6 @@
     .queue-item { border:1px dashed var(--bd); border-radius:8px; padding:10px; margin-top:8px; }
     .queue-item strong { display:block; }
     .queue-item .queue-actions { margin-top:8px; }
-    .answer-row { display:flex; gap:8px; margin-top:8px; }
-    .answer-row input { flex: 1; }
-    .answer-row button { padding:8px 10px; }
     .muted { color: var(--muted); }
     .hidden { display:none !important; }
     .top-links { display:flex; gap:10px; margin-bottom:10px; }
@@ -77,9 +74,8 @@
           <input id="questionNo" type="text" />
         </div>
         <div class="full">
-          <label>Answers for both languages</label>
-          <div id="answersContainer"></div>
-          <button id="addAnswerBtn" class="btn-neutral" type="button">+ Add answer</button>
+          <label>Accepted answers</label>
+          <input id="answersInput" type="text" placeholder="Use | between answers (e.g. 5 | five | fem)" />
         </div>
       </div>
 
@@ -110,8 +106,7 @@
     const difficultyInput = document.getElementById('difficulty');
     const questionEnInput = document.getElementById('questionEn');
     const questionNoInput = document.getElementById('questionNo');
-    const answersContainer = document.getElementById('answersContainer');
-    const addAnswerBtn = document.getElementById('addAnswerBtn');
+    const answersInput = document.getElementById('answersInput');
 
     function readString(value) {
       return typeof value === 'string' && value.trim() ? value.trim() : null;
@@ -124,34 +119,11 @@
       formStatus.textContent = message || '';
     }
 
-    function createAnswerInput(value = '') {
-      const row = document.createElement('div');
-      row.className = 'answer-row';
-
-      const input = document.createElement('input');
-      input.type = 'text';
-      input.placeholder = 'Answer';
-      input.value = value;
-
-      const removeBtn = document.createElement('button');
-      removeBtn.type = 'button';
-      removeBtn.className = 'btn-danger';
-      removeBtn.textContent = 'Remove';
-      removeBtn.addEventListener('click', () => {
-        row.remove();
-        if (!answersContainer.querySelector('.answer-row')) {
-          createAnswerInput();
-        }
-      });
-
-      row.appendChild(input);
-      row.appendChild(removeBtn);
-      answersContainer.appendChild(row);
-    }
-
     function readAnswers() {
-      const rawAnswers = Array.from(answersContainer.querySelectorAll('input'))
-        .map((input) => readString(input.value))
+      const rawAnswers = String(answersInput.value || '')
+        .split('|')
+        .map((part) => part.trim())
+        .map((value) => readString(value))
         .filter(Boolean);
 
       const seen = new Set();
@@ -206,8 +178,7 @@
       categoryInput.value = '';
       questionEnInput.value = '';
       questionNoInput.value = '';
-      answersContainer.innerHTML = '';
-      createAnswerInput();
+      answersInput.value = '';
       difficultyInput.value = '1';
       categoryInput.focus();
     }
@@ -220,7 +191,7 @@
       const difficulty = Number(difficultyInput.value);
 
       if (!category || !question_en || !question_no || !answers.length) {
-        return { error: 'Please fill out all fields before adding to queue.' };
+        return { error: 'Please fill out all fields before adding to queue. Add multiple answers with |.' };
       }
 
       if (!Number.isInteger(difficulty) || difficulty < 1 || difficulty > 3) {
@@ -340,12 +311,7 @@
       }
     });
 
-    addAnswerBtn.addEventListener('click', () => {
-      createAnswerInput();
-    });
-
     difficultyInput.value = '1';
-    createAnswerInput();
     ensureAdminAccess();
   </script>
 </body>
