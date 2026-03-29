@@ -232,7 +232,8 @@
       awaitingRetry: false,
       isSubmitting: false,
       isAdvancing: false,
-      quizStarted: false
+      quizStarted: false,
+      pendingRevealAnswer: ''
     };
 
     function syncLanguageFromStorage() {
@@ -384,7 +385,8 @@
       statusText.textContent = '';
       statusText.className = 'status';
       answerReveal.classList.add('hidden');
-      answerReveal.textContent = uiCopy().answerPrefix.replace('{answer}', q.answers[0]);
+      answerReveal.textContent = '';
+      state.pendingRevealAnswer = q.answers[0] || '—';
       showAnswerBtn.classList.add('hidden');
       nextQuestionBtn.classList.add('hidden');
       abortConfirmRow.classList.add('hidden');
@@ -420,6 +422,8 @@
       introError.textContent = '';
       statusText.textContent = '';
       answerReveal.classList.add('hidden');
+      answerReveal.textContent = '';
+      state.pendingRevealAnswer = '';
       abortConfirmRow.classList.add('hidden');
       setStartLoading(false);
     }
@@ -512,6 +516,7 @@
       });
       state.awaitingRetry = false;
       state.isSubmitting = false;
+      state.pendingRevealAnswer = result.acceptedAnswer || question.answers?.[0] || '—';
       statusText.className = 'status wrong';
       statusText.textContent = uiCopy().wrongStatus;
       showAnswerBtn.classList.remove('hidden');
@@ -590,7 +595,12 @@
     });
 
     showAnswerBtn.addEventListener('click', () => {
-      answerReveal.classList.toggle('hidden');
+      const isHidden = answerReveal.classList.toggle('hidden');
+      if (!isHidden) {
+        answerReveal.textContent = uiCopy().answerPrefix.replace('{answer}', state.pendingRevealAnswer || '—');
+      } else {
+        answerReveal.textContent = '';
+      }
     });
 
     nextQuestionBtn.addEventListener('click', () => {

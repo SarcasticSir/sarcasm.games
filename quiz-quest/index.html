@@ -342,7 +342,8 @@
       roundTarget: 0,
       roundAnswered: 0,
       isQuestActive: false,
-      awaitingRetry: false
+      awaitingRetry: false,
+      pendingRevealAnswer: ''
     };
 
     const setupView = document.getElementById('setupView');
@@ -544,6 +545,7 @@
       submitBtn.disabled = false;
       answerInput.disabled = false;
       state.awaitingRetry = false;
+      state.pendingRevealAnswer = '';
     }
 
     function setAllCategorySelection(selected) {
@@ -720,6 +722,7 @@
         answerInput.disabled = false;
         submitBtn.disabled = false;
         state.awaitingRetry = false;
+        state.pendingRevealAnswer = '';
         nextBtn.classList.add('hidden');
         return true;
       } catch (error) {
@@ -810,6 +813,8 @@
           questionStatus.className = 'status almost';
           questionStatus.textContent = ui().almost;
           answerReveal.classList.add('hidden');
+          answerReveal.textContent = '';
+          state.pendingRevealAnswer = '';
           showAnswerBtn.classList.add('hidden');
           answerInput.value = '';
           answerInput.focus();
@@ -828,13 +833,15 @@
           questionStatus.textContent = ui().correct;
           answerReveal.classList.add('hidden');
           answerReveal.textContent = '';
+          state.pendingRevealAnswer = '';
           showAnswerBtn.classList.add('hidden');
           showAnswerBtn.textContent = ui().showAnswer;
         } else {
           questionStatus.className = 'status error';
           questionStatus.textContent = ui().wrong;
           answerReveal.classList.add('hidden');
-          answerReveal.textContent = ui().answerPrefix.replace('{answer}', payload.acceptedAnswer || '—');
+          answerReveal.textContent = '';
+          state.pendingRevealAnswer = payload.acceptedAnswer || '—';
           showAnswerBtn.classList.remove('hidden');
           showAnswerBtn.textContent = ui().showAnswer;
         }
@@ -904,6 +911,11 @@
     nextBtn.addEventListener('click', proceedAfterAnswer);
     showAnswerBtn.addEventListener('click', () => {
       const isHidden = answerReveal.classList.toggle('hidden');
+      if (!isHidden) {
+        answerReveal.textContent = ui().answerPrefix.replace('{answer}', state.pendingRevealAnswer || '—');
+      } else {
+        answerReveal.textContent = '';
+      }
       showAnswerBtn.textContent = isHidden ? ui().showAnswer : ui().hideAnswer;
     });
     startQuestBtn.addEventListener('click', startQuest);

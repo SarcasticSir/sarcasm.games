@@ -530,7 +530,8 @@
       selectedCategories: [],
       count: 0,
       answeredQuestions: [],
-      resultFilter: 'all'
+      resultFilter: 'all',
+      pendingRevealAnswer: ''
     };
 
     function uiCopy() {
@@ -746,7 +747,8 @@
       showAnswerBtn.classList.add('hidden');
       nextQuestionBtn.classList.add('hidden');
       answerReveal.classList.add('hidden');
-      answerReveal.textContent = uiCopy().answerPrefix.replace('{answer}', question.answers[0] || '—');
+      answerReveal.textContent = '';
+      runtimeState.pendingRevealAnswer = question.answers[0] || '—';
       showAnswerBtn.textContent = uiCopy().showAnswer;
       abortConfirmRow.classList.add('hidden');
       runtimeState.awaitingRetry = false;
@@ -947,6 +949,7 @@
 
       runtimeState.wrong += 1;
       runtimeState.awaitingRetry = false;
+      runtimeState.pendingRevealAnswer = result.acceptedAnswer || current.answers[0] || '—';
       runtimeState.answeredQuestions.push({
         prompt: current.prompt,
         status: 'wrong',
@@ -965,6 +968,11 @@
 
     showAnswerBtn.addEventListener('click', () => {
       const isHidden = answerReveal.classList.toggle('hidden');
+      if (!isHidden) {
+        answerReveal.textContent = uiCopy().answerPrefix.replace('{answer}', runtimeState.pendingRevealAnswer || '—');
+      } else {
+        answerReveal.textContent = '';
+      }
       showAnswerBtn.textContent = isHidden ? uiCopy().showAnswer : uiCopy().hideAnswer;
     });
 
