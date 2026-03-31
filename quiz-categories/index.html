@@ -600,6 +600,12 @@
       return decoded || '—';
     }
 
+    function getSelectedOptionText(question, selectedOptionId) {
+      const match = (question?.options || [])
+        .find((option) => Number(option.option_id) === Number(selectedOptionId));
+      return match?.option_en || String(selectedOptionId || '');
+    }
+
     function syncLanguageFromStorage() {
       runtimeState.activeLang = readQuizLanguage();
     }
@@ -983,13 +989,16 @@
       const current = runtimeState.questions[runtimeState.index];
       const questionType = getQuestionType(current);
       let userAnswer = '';
+      let userAnswerForSummary = '';
       if (questionType === 'multiple_choice') {
         const selectedOptionId = getSelectedOptionId();
         if (!Number.isInteger(selectedOptionId)) return;
         userAnswer = String(selectedOptionId);
+        userAnswerForSummary = getSelectedOptionText(current, selectedOptionId);
       } else {
         userAnswer = answerInput.value.trim();
         if (!userAnswer) return;
+        userAnswerForSummary = userAnswer;
       }
       let result;
 
@@ -1006,7 +1015,7 @@
         runtimeState.answeredQuestions.push({
           prompt: current.prompt,
           status: 'correct',
-          userAnswer,
+          userAnswer: userAnswerForSummary,
           acceptedAnswer: getQuestionType(current) === 'multiple_choice'
             ? getRevealAnswerText(current, current.answers?.[0] || '')
             : decodeAnswerForReveal(current.answers?.[0] || ''),
@@ -1040,7 +1049,7 @@
       runtimeState.answeredQuestions.push({
         prompt: current.prompt,
         status: 'wrong',
-        userAnswer,
+        userAnswer: userAnswerForSummary,
         acceptedAnswer: getQuestionType(current) === 'multiple_choice'
           ? getRevealAnswerText(current, current.answers?.[0] || '')
           : (result.acceptedAnswer || decodeAnswerForReveal(current.answers?.[0] || '') || null),

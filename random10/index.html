@@ -303,6 +303,12 @@
       return decoded || '—';
     }
 
+    function getSelectedOptionText(question, selectedOptionId) {
+      const match = (question?.options || [])
+        .find((option) => Number(option.option_id) === Number(selectedOptionId));
+      return match?.option_en || String(selectedOptionId || '');
+    }
+
     function uiCopy() {
       return copy[state.language] || copy[fallbackLanguage];
     }
@@ -534,13 +540,16 @@
       const question = state.questions[state.index];
       const questionType = getQuestionType(question);
       let userAnswer = '';
+      let userAnswerForSummary = '';
       if (questionType === 'multiple_choice') {
         const selectedOptionId = getSelectedOptionId();
         if (!Number.isInteger(selectedOptionId)) return;
         userAnswer = String(selectedOptionId);
+        userAnswerForSummary = getSelectedOptionText(question, selectedOptionId);
       } else {
         userAnswer = answerInput.value.trim();
         if (!userAnswer) return;
+        userAnswerForSummary = userAnswer;
       }
       const submittedIndex = state.index;
       state.isSubmitting = true;
@@ -567,7 +576,7 @@
         state.answeredQuestions.push({
           prompt: question.prompt,
           status: 'correct',
-          userAnswer,
+          userAnswer: userAnswerForSummary,
           acceptedAnswer: getQuestionType(question) === 'multiple_choice'
             ? getRevealAnswerText(question, question.answers?.[0] || '')
             : decodeAnswerForReveal(question.answers?.[0] || '')
@@ -598,7 +607,7 @@
       state.answeredQuestions.push({
         prompt: question.prompt,
         status: 'wrong',
-        userAnswer,
+        userAnswer: userAnswerForSummary,
         acceptedAnswer: getQuestionType(question) === 'multiple_choice'
           ? getRevealAnswerText(question, question.answers?.[0] || '')
           : (result.acceptedAnswer || decodeAnswerForReveal(question.answers?.[0] || '') || null)
