@@ -50,6 +50,10 @@ function normalizeAnswerValues(value) {
     .filter(Boolean);
 }
 
+function obfuscateAnswerValue(value) {
+  return Buffer.from(String(value || ''), 'utf8').toString('base64');
+}
+
 function extractAnswers(row, lang) {
   const preferred = [row.answers_en];
 
@@ -64,21 +68,60 @@ function extractAnswers(row, lang) {
     });
 }
 
-function mapQuestion(row, lang) {
+function shuffleInPlace(values) {
+  for (let index = values.length - 1; index > 0; index -= 1) {
+    const targetIndex = randomIndex(index + 1);
+    [values[index], values[targetIndex]] = [values[targetIndex], values[index]];
+  }
+  return values;
+}
+
+function mapQuestion(row, lang, options = []) {
   const prompt = lang === 'no'
     ? row.question_no || row.question_en || ''
     : row.question_en || row.question_no || '';
+  const questionType = row.question_type === 'multiple_choice' ? 'multiple_choice' : 'text';
 
-  return {
+  const baseQuestion = {
     id: row.id,
     category: row.category || 'General',
     prompt,
-    answers: extractAnswers(row, lang)
+    difficulty: Number(row.difficulty) || null,
+    question_type: questionType
+  };
+
+  if (questionType === 'multiple_choice') {
+    const shuffledOptions = shuffleInPlace([...options]).map((option) => ({
+      option_id: Number(option.id),
+      option_en: option.option_en
+    }));
+    const obfuscatedCorrectOptionIds = options
+      .filter((option) => option.is_correct)
+      .map((option) => obfuscateAnswerValue(option.id));
+
+    return {
+      ...baseQuestion,
+      answers: obfuscatedCorrectOptionIds,
+      options: shuffledOptions
+    };
+  }
+
+  return {
+    ...baseQuestion,
+    answers: extractAnswers(row, lang).map((answer) => obfuscateAnswerValue(answer))
   };
 }
 
 function isQuestionValid(question) {
-  return Boolean(question && question.prompt && Array.isArray(question.answers) && question.answers.length);
+  if (!question || !question.prompt || !Array.isArray(question.answers) || !question.answers.length) {
+    return false;
+  }
+
+  if (question.question_type === 'multiple_choice') {
+    return Array.isArray(question.options) && question.options.length > 1;
+  }
+
+  return true;
 }
 
 
@@ -126,7 +169,7 @@ async function getNextQuestionCandidateFromPivot({ userId, categories, solvedQue
   if (userId) {
     const result = await runQuery(
       `WITH preferred AS (
-         SELECT q.id, q.category, q.question_en, q.question_no, q.answers_en
+         SELECT q.id, q.category, q.question_en, q.question_no, q.answers_en, q.difficulty, q.question_type
          FROM quiz_questions q
          LEFT JOIN user_answers ua
            ON ua.question_id = q.id
@@ -137,7 +180,7 @@ async function getNextQuestionCandidateFromPivot({ userId, categories, solvedQue
          ORDER BY q.id ASC
          LIMIT 1
        ), fallback AS (
-         SELECT q.id, q.category, q.question_en, q.question_no, q.answers_en
+         SELECT q.id, q.category, q.question_en, q.question_no, q.answers_en, q.difficulty, q.question_type
          FROM quiz_questions q
          LEFT JOIN user_answers ua
            ON ua.question_id = q.id
@@ -161,7 +204,7 @@ async function getNextQuestionCandidateFromPivot({ userId, categories, solvedQue
   const excludedIds = solvedQuestionIds.length ? solvedQuestionIds : [0];
   const result = await runQuery(
     `WITH preferred AS (
-       SELECT q.id, q.category, q.question_en, q.question_no, q.answers_en
+       SELECT q.id, q.category, q.question_en, q.question_no, q.answers_en, q.difficulty, q.question_type
        FROM quiz_questions q
        WHERE q.category = ANY($1)
          AND NOT (q.id = ANY($2::int[]))
@@ -169,7 +212,7 @@ async function getNextQuestionCandidateFromPivot({ userId, categories, solvedQue
        ORDER BY q.id ASC
        LIMIT 1
      ), fallback AS (
-       SELECT q.id, q.category, q.question_en, q.question_no, q.answers_en
+       SELECT q.id, q.category, q.question_en, q.question_no, q.answers_en, q.difficulty, q.question_type
        FROM quiz_questions q
        WHERE q.category = ANY($1)
          AND NOT (q.id = ANY($2::int[]))
@@ -185,6 +228,21 @@ async function getNextQuestionCandidateFromPivot({ userId, categories, solvedQue
   );
 
   return result.rows[0] || null;
+}
+
+async function fetchQuestionOptions(questionId) {
+  const result = await runQuery(
+    `SELECT id, option_en, is_correct
+     FROM quiz_question_options
+     WHERE question_id = $1`,
+    [questionId]
+  );
+
+  return result.rows.map((row) => ({
+    id: Number(row.id),
+    option_en: row.option_en,
+    is_correct: Boolean(row.is_correct)
+  }));
 }
 
 function createGuestProgressToken() {
@@ -351,7 +409,10 @@ module.exports = async function handler(req, res) {
         });
 
         if (!row) continue;
-        const mapped = mapQuestion(row, lang);
+        const options = row.question_type === 'multiple_choice'
+          ? await fetchQuestionOptions(row.id)
+          : [];
+        const mapped = mapQuestion(row, lang, options);
         if (!isQuestionValid(mapped)) continue;
         question = mapped;
         break;

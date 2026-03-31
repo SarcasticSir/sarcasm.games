@@ -163,6 +163,23 @@
       padding:12px;
     }
 
+    .mc-options {
+      display: grid;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .mc-option {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border: 1px solid var(--bd);
+      border-radius: 8px;
+      padding: 10px;
+      background: var(--bg);
+      cursor: pointer;
+    }
+
     button,
     .link-btn {
       font-weight:700;
@@ -233,6 +250,7 @@
       <h2 id="questionPrompt">Question</h2>
       <form id="answerForm">
         <input id="answerInput" type="text" placeholder="Write your answer" autocomplete="off" />
+        <div id="mcOptions" class="mc-options hidden" role="radiogroup" aria-label="Multiple choice options"></div>
         <div class="btn-row">
           <button id="submitBtn" type="submit" class="btn-primary">Submit</button>
           <button id="showAnswerBtn" type="button" class="hidden">Show answer</button>
@@ -287,6 +305,7 @@
         wrong: '❌ Wrong. You can reveal the answer and move to another random question.',
         answerPrefix: 'Accepted answer: {answer}',
         yourAnswerMissing: 'Write an answer first.',
+        optionMissing: 'Choose an option first.',
         placeholder: 'Write your answer',
         noCategories: 'No categories available.'
       },
@@ -325,6 +344,7 @@
         wrong: '❌ Feil. Du kan vise fasit og gå videre til et nytt tilfeldig spørsmål.',
         answerPrefix: 'Godkjent svar: {answer}',
         yourAnswerMissing: 'Skriv et svar først.',
+        optionMissing: 'Velg et alternativ først.',
         placeholder: 'Skriv svaret ditt',
         noCategories: 'Ingen kategorier tilgjengelig.'
       }
@@ -368,6 +388,7 @@
     const questionPrompt = document.getElementById('questionPrompt');
     const answerForm = document.getElementById('answerForm');
     const answerInput = document.getElementById('answerInput');
+    const mcOptions = document.getElementById('mcOptions');
     const submitBtn = document.getElementById('submitBtn');
     const showAnswerBtn = document.getElementById('showAnswerBtn');
     const nextBtn = document.getElementById('nextBtn');
@@ -393,6 +414,59 @@
 
     function isNextQuestionVisible() {
       return !nextBtn.classList.contains('hidden');
+    }
+
+    function getQuestionType(question) {
+      return question?.question_type === 'multiple_choice' ? 'multiple_choice' : 'text';
+    }
+
+    function getSelectedOptionId() {
+      const selected = mcOptions.querySelector('input[name="mcOption"]:checked');
+      return selected ? Number(selected.value) : null;
+    }
+
+    function decodeRevealToken(encodedAnswer) {
+      if (!encodedAnswer) return '';
+      try {
+        return decodeURIComponent(escape(atob(encodedAnswer)));
+      } catch (error) {
+        return '';
+      }
+    }
+
+    function getRevealAnswerText(question, encodedAnswer) {
+      const decoded = decodeRevealToken(encodedAnswer);
+      if (!decoded) return '—';
+
+      if (getQuestionType(question) === 'multiple_choice') {
+        const selectedId = Number(decoded);
+        const options = Array.isArray(question?.options) ? question.options : [];
+        const match = options.find((option) => Number(option.option_id) === selectedId);
+        return match?.option_en || '—';
+      }
+
+      return decoded;
+    }
+
+    function renderMultipleChoiceOptions(question) {
+      mcOptions.innerHTML = '';
+      const options = Array.isArray(question?.options) ? question.options : [];
+
+      for (const option of options) {
+        const label = document.createElement('label');
+        label.className = 'mc-option';
+
+        const input = document.createElement('input');
+        input.type = 'radio';
+        input.name = 'mcOption';
+        input.value = String(option.option_id);
+
+        const text = document.createElement('span');
+        text.textContent = option.option_en || '';
+
+        label.append(input, text);
+        mcOptions.appendChild(label);
+      }
     }
 
     function readGuestProgress() {
@@ -561,6 +635,9 @@
       nextBtn.classList.add('hidden');
       submitBtn.disabled = false;
       answerInput.disabled = false;
+      answerInput.classList.remove('hidden');
+      mcOptions.classList.add('hidden');
+      mcOptions.innerHTML = '';
       state.awaitingRetry = false;
       state.pendingRevealAnswerEncoded = '';
     }
@@ -729,7 +806,18 @@
         questionPrompt.textContent = question.prompt;
         answerInput.value = '';
         answerInput.placeholder = ui().placeholder;
-        answerInput.focus();
+        if (getQuestionType(question) === 'multiple_choice') {
+          answerInput.classList.add('hidden');
+          answerInput.disabled = true;
+          mcOptions.classList.remove('hidden');
+          renderMultipleChoiceOptions(question);
+        } else {
+          answerInput.classList.remove('hidden');
+          answerInput.disabled = false;
+          mcOptions.classList.add('hidden');
+          mcOptions.innerHTML = '';
+          answerInput.focus();
+        }
         questionStatus.textContent = '';
         questionStatus.className = 'status';
         answerReveal.classList.add('hidden');
@@ -796,7 +884,22 @@
       event.preventDefault();
       if (!state.currentQuestion || state.isSubmitting) return;
 
-      const answer = answerInput.value.trim();
+      const questionType = getQuestionType(state.currentQuestion);
+      let answer = '';
+
+      if (questionType === 'multiple_choice') {
+        const selectedOptionId = getSelectedOptionId();
+        if (!Number.isInteger(selectedOptionId)) {
+          questionStatus.className = 'status error';
+          questionStatus.textContent = ui().optionMissing;
+          return;
+        }
+
+        answer = String(selectedOptionId);
+      } else {
+        answer = answerInput.value.trim();
+      }
+
       if (!answer) {
         questionStatus.className = 'status error';
         questionStatus.textContent = ui().yourAnswerMissing;
@@ -833,8 +936,10 @@
           answerReveal.textContent = '';
           state.pendingRevealAnswerEncoded = '';
           showAnswerBtn.classList.add('hidden');
-          answerInput.value = '';
-          answerInput.focus();
+          if (questionType === 'text') {
+            answerInput.value = '';
+            answerInput.focus();
+          }
           submitBtn.disabled = false;
           return;
         }
@@ -858,7 +963,11 @@
           questionStatus.textContent = ui().wrong;
           answerReveal.classList.add('hidden');
           answerReveal.textContent = '';
-          state.pendingRevealAnswerEncoded = encodeAnswerForReveal(payload.acceptedAnswer || '—');
+          if (questionType === 'multiple_choice') {
+            state.pendingRevealAnswerEncoded = state.currentQuestion.answers?.[0] || '';
+          } else {
+            state.pendingRevealAnswerEncoded = encodeAnswerForReveal(payload.acceptedAnswer || '—');
+          }
           showAnswerBtn.classList.remove('hidden');
           showAnswerBtn.textContent = ui().showAnswer;
         }
@@ -866,6 +975,11 @@
         state.roundAnswered += 1;
         nextBtn.classList.remove('hidden');
         answerInput.disabled = true;
+        const selectedInput = mcOptions.querySelector('input[name="mcOption"]:checked');
+        if (selectedInput) selectedInput.disabled = true;
+        for (const input of mcOptions.querySelectorAll('input[name="mcOption"]')) {
+          input.disabled = true;
+        }
         submitBtn.disabled = true;
       } catch (error) {
         questionStatus.className = 'status error';
@@ -929,7 +1043,7 @@
     showAnswerBtn.addEventListener('click', () => {
       const isHidden = answerReveal.classList.toggle('hidden');
       if (!isHidden) {
-        const decodedAnswer = decodeAnswerForReveal(state.pendingRevealAnswerEncoded);
+        const decodedAnswer = getRevealAnswerText(state.currentQuestion, state.pendingRevealAnswerEncoded);
         answerReveal.textContent = ui().answerPrefix.replace('{answer}', decodedAnswer);
       } else {
         answerReveal.textContent = '';

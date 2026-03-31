@@ -321,6 +321,7 @@
       </div>
       <form id="answerForm">
         <input id="answerInput" type="text" placeholder="Write your answer" autocomplete="off" />
+        <div id="mcOptions" class="hidden" style="display:grid;gap:8px;margin-top:10px;"></div>
         <div class="btn-row">
           <button id="submitBtn" class="btn-primary" type="submit">Submit answer</button>
           <button id="showAnswerBtn" class="hidden" type="button">Show answer</button>
@@ -492,6 +493,7 @@
     const questionDifficulty = document.getElementById('questionDifficulty');
     const answerForm = document.getElementById('answerForm');
     const answerInput = document.getElementById('answerInput');
+    const mcOptions = document.getElementById('mcOptions');
     const submitBtn = document.getElementById('submitBtn');
     const showAnswerBtn = document.getElementById('showAnswerBtn');
     const nextQuestionBtn = document.getElementById('nextQuestionBtn');
@@ -553,6 +555,49 @@
 
     function isNextQuestionVisible() {
       return !nextQuestionBtn.classList.contains('hidden');
+    }
+
+    function getQuestionType(question) {
+      return question?.question_type === 'multiple_choice' ? 'multiple_choice' : 'text';
+    }
+
+    function getSelectedOptionId() {
+      const selected = mcOptions.querySelector('input[name="mcOption"]:checked');
+      return selected ? Number(selected.value) : null;
+    }
+
+    function renderMcOptions(question) {
+      mcOptions.innerHTML = '';
+      for (const option of (question?.options || [])) {
+        const label = document.createElement('label');
+        label.style.display = 'flex';
+        label.style.gap = '8px';
+        label.style.padding = '10px';
+        label.style.border = '1px solid var(--bd)';
+        label.style.borderRadius = '8px';
+        label.style.background = 'var(--bg)';
+
+        const input = document.createElement('input');
+        input.type = 'radio';
+        input.name = 'mcOption';
+        input.value = String(option.option_id);
+
+        const text = document.createElement('span');
+        text.textContent = option.option_en || '';
+
+        label.append(input, text);
+        mcOptions.appendChild(label);
+      }
+    }
+
+    function getRevealAnswerText(question, encodedAnswer) {
+      const decoded = decodeAnswerForReveal(encodedAnswer);
+      if (getQuestionType(question) === 'multiple_choice') {
+        const selectedId = Number(decoded);
+        const match = (question.options || []).find((option) => Number(option.option_id) === selectedId);
+        return match?.option_en || '—';
+      }
+      return decoded || '—';
     }
 
     function syncLanguageFromStorage() {
@@ -757,7 +802,17 @@
       questionDifficulty.classList.remove('hidden');
 
       answerInput.value = '';
-      answerInput.disabled = false;
+      if (getQuestionType(question) === 'multiple_choice') {
+        answerInput.classList.add('hidden');
+        answerInput.disabled = true;
+        mcOptions.classList.remove('hidden');
+        renderMcOptions(question);
+      } else {
+        answerInput.classList.remove('hidden');
+        answerInput.disabled = false;
+        mcOptions.classList.add('hidden');
+        mcOptions.innerHTML = '';
+      }
       submitBtn.disabled = false;
       questionStatus.textContent = '';
       questionStatus.className = 'status';
@@ -765,11 +820,13 @@
       nextQuestionBtn.classList.add('hidden');
       answerReveal.classList.add('hidden');
       answerReveal.textContent = '';
-      runtimeState.pendingRevealAnswerEncoded = encodeAnswerForReveal(question.answers[0] || '—');
+      runtimeState.pendingRevealAnswerEncoded = question.answers?.[0] || '';
       showAnswerBtn.textContent = uiCopy().showAnswer;
       abortConfirmRow.classList.add('hidden');
       runtimeState.awaitingRetry = false;
-      answerInput.focus();
+      if (getQuestionType(question) === 'text') {
+        answerInput.focus();
+      }
     }
 
     function moveNextQuestion() {
@@ -923,10 +980,17 @@
       event.preventDefault();
       if (submitBtn.disabled) return;
 
-      const userAnswer = answerInput.value.trim();
-      if (!userAnswer) return;
-
       const current = runtimeState.questions[runtimeState.index];
+      const questionType = getQuestionType(current);
+      let userAnswer = '';
+      if (questionType === 'multiple_choice') {
+        const selectedOptionId = getSelectedOptionId();
+        if (!Number.isInteger(selectedOptionId)) return;
+        userAnswer = String(selectedOptionId);
+      } else {
+        userAnswer = answerInput.value.trim();
+        if (!userAnswer) return;
+      }
       let result;
 
       try {
@@ -943,7 +1007,9 @@
           prompt: current.prompt,
           status: 'correct',
           userAnswer,
-          acceptedAnswer: current.answers[0] || null,
+          acceptedAnswer: getQuestionType(current) === 'multiple_choice'
+            ? getRevealAnswerText(current, current.answers?.[0] || '')
+            : decodeAnswerForReveal(current.answers?.[0] || ''),
           category: current.category || 'General',
           difficulty: current.difficulty ?? null
         });
@@ -959,19 +1025,25 @@
         runtimeState.awaitingRetry = true;
         questionStatus.className = 'status almost';
         questionStatus.textContent = uiCopy().almostStatus;
-        answerInput.value = '';
-        answerInput.focus();
+        if (questionType === 'text') {
+          answerInput.value = '';
+          answerInput.focus();
+        }
         return;
       }
 
       runtimeState.wrong += 1;
       runtimeState.awaitingRetry = false;
-      runtimeState.pendingRevealAnswerEncoded = encodeAnswerForReveal(result.acceptedAnswer || current.answers[0] || '—');
+      runtimeState.pendingRevealAnswerEncoded = questionType === 'multiple_choice'
+        ? (current.answers?.[0] || '')
+        : encodeAnswerForReveal(result.acceptedAnswer || decodeAnswerForReveal(current.answers?.[0] || '') || '—');
       runtimeState.answeredQuestions.push({
         prompt: current.prompt,
         status: 'wrong',
         userAnswer,
-        acceptedAnswer: result.acceptedAnswer || current.answers[0] || null,
+        acceptedAnswer: getQuestionType(current) === 'multiple_choice'
+          ? getRevealAnswerText(current, current.answers?.[0] || '')
+          : (result.acceptedAnswer || decodeAnswerForReveal(current.answers?.[0] || '') || null),
         category: current.category || 'General',
         difficulty: current.difficulty ?? null
       });
@@ -981,12 +1053,18 @@
       nextQuestionBtn.classList.remove('hidden');
       submitBtn.disabled = true;
       answerInput.disabled = true;
+      for (const input of mcOptions.querySelectorAll('input[name="mcOption"]')) {
+        input.disabled = true;
+      }
     });
 
     showAnswerBtn.addEventListener('click', () => {
       const isHidden = answerReveal.classList.toggle('hidden');
       if (!isHidden) {
-        const decodedAnswer = decodeAnswerForReveal(runtimeState.pendingRevealAnswerEncoded);
+        const decodedAnswer = getRevealAnswerText(
+          runtimeState.questions[runtimeState.index],
+          runtimeState.pendingRevealAnswerEncoded
+        );
         answerReveal.textContent = uiCopy().answerPrefix.replace('{answer}', decodedAnswer);
       } else {
         answerReveal.textContent = '';
