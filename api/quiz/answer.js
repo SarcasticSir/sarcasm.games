@@ -34,6 +34,36 @@ function extractAcceptedAnswers(row) {
     });
 }
 
+async function evaluateMultipleChoiceAnswer(questionId, rawAnswer) {
+  const selectedOptionId = Number(rawAnswer);
+  if (!Number.isInteger(selectedOptionId) || selectedOptionId < 1) {
+    return { error: 'option_id_required' };
+  }
+
+  const optionResult = await runQuery(
+    `SELECT id, option_en, is_correct
+     FROM quiz_question_options
+     WHERE question_id = $1
+       AND (id = $2 OR is_correct = TRUE)`,
+    [questionId, selectedOptionId]
+  );
+
+  const rows = optionResult.rows || [];
+  const selectedOption = rows.find((row) => Number(row.id) === selectedOptionId) || null;
+  const correctOption = rows.find((row) => Boolean(row.is_correct)) || null;
+
+  if (!selectedOption) {
+    return { error: 'option_not_found' };
+  }
+
+  const isCorrect = Boolean(selectedOption.is_correct);
+  return {
+    status: isCorrect ? 'correct' : 'wrong',
+    retryAvailable: false,
+    acceptedAnswer: isCorrect ? null : (correctOption?.option_en || null)
+  };
+}
+
 async function persistProgress(userId, questionId, isCorrect) {
   try {
     await runQuery(
@@ -74,7 +104,7 @@ module.exports = async function handler(req, res) {
     }
 
     const questionResult = await runQuery(
-      `SELECT id, answers_en
+      `SELECT id, answers_en, question_type
        FROM quiz_questions
        WHERE id = $1
        LIMIT 1`,
@@ -87,12 +117,32 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const acceptedAnswers = extractAcceptedAnswers(question);
-    const evaluation = evaluateAnswer({
-      userAnswer: answer,
-      acceptedAnswers,
-      retryAvailable: body.retryAvailable !== false
-    });
+    const questionType = question.question_type === 'multiple_choice' ? 'multiple_choice' : 'text';
+    let evaluation;
+    let acceptedAnswers = [];
+
+    if (questionType === 'multiple_choice') {
+      const multipleChoiceEvaluation = await evaluateMultipleChoiceAnswer(questionId, answer);
+
+      if (multipleChoiceEvaluation.error === 'option_id_required') {
+        res.status(400).json({ error: 'questionId and answer are required' });
+        return;
+      }
+
+      if (multipleChoiceEvaluation.error === 'option_not_found') {
+        res.status(400).json({ error: 'Invalid option for question' });
+        return;
+      }
+
+      evaluation = multipleChoiceEvaluation;
+    } else {
+      acceptedAnswers = extractAcceptedAnswers(question);
+      evaluation = evaluateAnswer({
+        userAnswer: answer,
+        acceptedAnswers,
+        retryAvailable: body.retryAvailable !== false
+      });
+    }
 
     const session = await getSessionFromCookies(req, res, { allowRefresh: true });
 
@@ -105,7 +155,7 @@ module.exports = async function handler(req, res) {
       status: evaluation.status,
       retryAvailable: evaluation.retryAvailable,
       acceptedAnswer: evaluation.status === 'wrong'
-        ? (evaluation.matchedAnswer || acceptedAnswers[0] || null)
+        ? (evaluation.acceptedAnswer || evaluation.matchedAnswer || acceptedAnswers[0] || null)
         : null
     });
   } catch (error) {

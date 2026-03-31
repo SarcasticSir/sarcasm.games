@@ -17,6 +17,10 @@ function normalizeAnswerValues(value) {
     .filter(Boolean);
 }
 
+function obfuscateAnswerValue(value) {
+  return Buffer.from(String(value || ''), 'utf8').toString('base64');
+}
+
 function extractAnswers(row, lang) {
   const preferred = [row.answers_en];
 
@@ -31,17 +35,40 @@ function extractAnswers(row, lang) {
     });
 }
 
-function mapQuestion(row, lang) {
+function mapQuestion(row, lang, optionsByQuestionId = new Map()) {
   const prompt = lang === 'no'
     ? row.question_no || row.question_en || ''
     : row.question_en || row.question_no || '';
+  const questionType = row.question_type === 'multiple_choice' ? 'multiple_choice' : 'text';
 
-  return {
+  const baseQuestion = {
     id: row.id,
     category: row.category || 'General',
     prompt,
-    answers: extractAnswers(row, lang),
-    difficulty: Number(row.difficulty) || null
+    difficulty: Number(row.difficulty) || null,
+    question_type: questionType
+  };
+
+  if (questionType === 'multiple_choice') {
+    const options = optionsByQuestionId.get(Number(row.id)) || [];
+    const shuffledOptions = shuffleInPlace([...options]).map((option) => ({
+      option_id: Number(option.id),
+      option_en: option.option_en
+    }));
+    const obfuscatedCorrectOptionIds = options
+      .filter((option) => option.is_correct)
+      .map((option) => obfuscateAnswerValue(option.id));
+
+    return {
+      ...baseQuestion,
+      answers: obfuscatedCorrectOptionIds,
+      options: shuffledOptions
+    };
+  }
+
+  return {
+    ...baseQuestion,
+    answers: extractAnswers(row, lang).map((answer) => obfuscateAnswerValue(answer))
   };
 }
 
@@ -182,6 +209,30 @@ async function pickRandomQuestionIds({ count, category, categories, difficulty }
   return sampleWithoutReplacement(ids, count);
 }
 
+async function fetchOptionsByQuestionId(questionIds) {
+  if (!questionIds.length) return new Map();
+
+  const result = await runQuery(
+    `SELECT id, question_id, option_en, is_correct
+     FROM quiz_question_options
+     WHERE question_id = ANY($1::int[])`,
+    [questionIds]
+  );
+
+  const grouped = new Map();
+  for (const row of result.rows) {
+    const questionId = Number(row.question_id);
+    if (!grouped.has(questionId)) grouped.set(questionId, []);
+    grouped.get(questionId).push({
+      id: Number(row.id),
+      option_en: row.option_en,
+      is_correct: Boolean(row.is_correct)
+    });
+  }
+
+  return grouped;
+}
+
 module.exports = async function handler(req, res) {
   const flushEndpointMetric = createEndpointMetric(req, res, 'quiz/start');
 
@@ -286,7 +337,7 @@ module.exports = async function handler(req, res) {
 
       const query = selectedIds.length
         ? await runQuery(
-          `SELECT id, category, question_en, question_no, answers_en, difficulty
+          `SELECT id, category, question_en, question_no, answers_en, difficulty, question_type
            FROM quiz_questions
            WHERE id = ANY($1::int[])`,
           [selectedIds]
@@ -294,9 +345,10 @@ module.exports = async function handler(req, res) {
         : { rows: [] };
 
       const orderedRows = orderRowsByIdList(query.rows, selectedIds);
+      const optionsByQuestionId = await fetchOptionsByQuestionId(orderedRows.map((row) => Number(row.id)));
       const questions = orderedRows
-        .map((row) => mapQuestion(row, lang))
-        .filter((row) => row.prompt && row.answers.length);
+        .map((row) => mapQuestion(row, lang, optionsByQuestionId))
+        .filter((row) => row.prompt && row.answers.length && (row.question_type !== 'multiple_choice' || row.options?.length));
 
       res.status(200).json({
         mode: 'categories',
@@ -328,7 +380,7 @@ module.exports = async function handler(req, res) {
 
     const query = selectedIds.length
       ? await runQuery(
-        `SELECT id, category, question_en, question_no, answers_en, difficulty
+        `SELECT id, category, question_en, question_no, answers_en, difficulty, question_type
          FROM quiz_questions
          WHERE id = ANY($1::int[])`,
         [selectedIds]
@@ -336,9 +388,10 @@ module.exports = async function handler(req, res) {
       : { rows: [] };
 
     const orderedRows = orderRowsByIdList(query.rows, selectedIds);
+    const optionsByQuestionId = await fetchOptionsByQuestionId(orderedRows.map((row) => Number(row.id)));
     const questions = orderedRows
-      .map((row) => mapQuestion(row, lang))
-      .filter((row) => row.prompt && row.answers.length);
+      .map((row) => mapQuestion(row, lang, optionsByQuestionId))
+      .filter((row) => row.prompt && row.answers.length && (row.question_type !== 'multiple_choice' || row.options?.length));
 
     res.status(200).json({
       mode,

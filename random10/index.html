@@ -62,6 +62,7 @@
       <p id="questionCategory" class="muted"></p>
       <form id="answerForm">
         <input id="answerInput" type="text" placeholder="Write your answer here" autocomplete="off" />
+        <div id="mcOptions" class="hidden" style="display:grid;gap:8px;margin-top:10px;"></div>
         <div class="btn-row">
           <button id="submitBtn" type="submit" class="btn-primary">Submit answer</button>
           <button id="showAnswerBtn" type="button" class="hidden">Show answer</button>
@@ -197,6 +198,7 @@
     const questionTitle = document.getElementById('questionTitle');
     const questionCategory = document.getElementById('questionCategory');
     const answerInput = document.getElementById('answerInput');
+    const mcOptions = document.getElementById('mcOptions');
     const statusText = document.getElementById('statusText');
     const answerReveal = document.getElementById('answerReveal');
     const showAnswerBtn = document.getElementById('showAnswerBtn');
@@ -255,6 +257,50 @@
 
     function isNextQuestionVisible() {
       return !nextQuestionBtn.classList.contains('hidden');
+    }
+
+    function getQuestionType(question) {
+      return question?.question_type === 'multiple_choice' ? 'multiple_choice' : 'text';
+    }
+
+    function getSelectedOptionId() {
+      const selected = mcOptions.querySelector('input[name="mcOption"]:checked');
+      return selected ? Number(selected.value) : null;
+    }
+
+    function renderMcOptions(question) {
+      mcOptions.innerHTML = '';
+      const options = Array.isArray(question?.options) ? question.options : [];
+      for (const option of options) {
+        const label = document.createElement('label');
+        label.style.display = 'flex';
+        label.style.gap = '8px';
+        label.style.padding = '10px';
+        label.style.border = '1px solid var(--bd)';
+        label.style.borderRadius = '8px';
+        label.style.background = 'var(--bg)';
+
+        const input = document.createElement('input');
+        input.type = 'radio';
+        input.name = 'mcOption';
+        input.value = String(option.option_id);
+
+        const text = document.createElement('span');
+        text.textContent = option.option_en || '';
+
+        label.append(input, text);
+        mcOptions.appendChild(label);
+      }
+    }
+
+    function getRevealAnswerText(question, encodedAnswer) {
+      const decoded = decodeAnswerForReveal(encodedAnswer);
+      if (getQuestionType(question) === 'multiple_choice') {
+        const selectedId = Number(decoded);
+        const match = (question.options || []).find((option) => Number(option.option_id) === selectedId);
+        return match?.option_en || '—';
+      }
+      return decoded || '—';
     }
 
     function uiCopy() {
@@ -333,7 +379,9 @@
         category: raw.category || 'General',
         difficulty,
         prompt: raw.prompt || raw.question || raw.question_en || raw.question_no || 'Missing question text',
-        answers
+        answers,
+        question_type: raw.question_type === 'multiple_choice' ? 'multiple_choice' : 'text',
+        options: Array.isArray(raw.options) ? raw.options : []
       };
     }
 
@@ -394,8 +442,18 @@
       questionTitle.textContent = q.prompt;
       questionCategory.textContent = formatCategoryLine(q);
       answerInput.value = '';
-      answerInput.disabled = false;
-      answerInput.focus();
+      if (getQuestionType(q) === 'multiple_choice') {
+        answerInput.classList.add('hidden');
+        answerInput.disabled = true;
+        mcOptions.classList.remove('hidden');
+        renderMcOptions(q);
+      } else {
+        answerInput.classList.remove('hidden');
+        answerInput.disabled = false;
+        mcOptions.classList.add('hidden');
+        mcOptions.innerHTML = '';
+        answerInput.focus();
+      }
       state.awaitingRetry = false;
       state.isSubmitting = false;
       state.isAdvancing = false;
@@ -403,7 +461,7 @@
       statusText.className = 'status';
       answerReveal.classList.add('hidden');
       answerReveal.textContent = '';
-      state.pendingRevealAnswerEncoded = encodeAnswerForReveal(q.answers[0] || '—');
+      state.pendingRevealAnswerEncoded = q.answers[0] || '';
       showAnswerBtn.classList.add('hidden');
       nextQuestionBtn.classList.add('hidden');
       abortConfirmRow.classList.add('hidden');
@@ -473,9 +531,17 @@
     async function onSubmitAnswer() {
       if (submitBtn.disabled || state.isSubmitting || state.isAdvancing) return;
 
-      const userAnswer = answerInput.value.trim();
-      if (!userAnswer) return;
       const question = state.questions[state.index];
+      const questionType = getQuestionType(question);
+      let userAnswer = '';
+      if (questionType === 'multiple_choice') {
+        const selectedOptionId = getSelectedOptionId();
+        if (!Number.isInteger(selectedOptionId)) return;
+        userAnswer = String(selectedOptionId);
+      } else {
+        userAnswer = answerInput.value.trim();
+        if (!userAnswer) return;
+      }
       const submittedIndex = state.index;
       state.isSubmitting = true;
 
@@ -502,7 +568,9 @@
           prompt: question.prompt,
           status: 'correct',
           userAnswer,
-          acceptedAnswer: question.answers[0] || null
+          acceptedAnswer: getQuestionType(question) === 'multiple_choice'
+            ? getRevealAnswerText(question, question.answers?.[0] || '')
+            : decodeAnswerForReveal(question.answers?.[0] || '')
         });
         state.isSubmitting = false;
         state.isAdvancing = true;
@@ -519,8 +587,10 @@
         state.isSubmitting = false;
         statusText.className = 'status almost';
         statusText.textContent = uiCopy().almostStatus;
-        answerInput.value = '';
-        answerInput.focus();
+        if (questionType === 'text') {
+          answerInput.value = '';
+          answerInput.focus();
+        }
         return;
       }
 
@@ -529,16 +599,23 @@
         prompt: question.prompt,
         status: 'wrong',
         userAnswer,
-        acceptedAnswer: result.acceptedAnswer || null
+        acceptedAnswer: getQuestionType(question) === 'multiple_choice'
+          ? getRevealAnswerText(question, question.answers?.[0] || '')
+          : (result.acceptedAnswer || decodeAnswerForReveal(question.answers?.[0] || '') || null)
       });
       state.awaitingRetry = false;
       state.isSubmitting = false;
-      state.pendingRevealAnswerEncoded = encodeAnswerForReveal(result.acceptedAnswer || question.answers?.[0] || '—');
+      state.pendingRevealAnswerEncoded = questionType === 'multiple_choice'
+        ? (question.answers?.[0] || '')
+        : encodeAnswerForReveal(result.acceptedAnswer || decodeAnswerForReveal(question.answers?.[0] || '') || '—');
       statusText.className = 'status wrong';
       statusText.textContent = uiCopy().wrongStatus;
       showAnswerBtn.classList.remove('hidden');
       nextQuestionBtn.classList.remove('hidden');
       submitBtn.disabled = true;
+      for (const input of mcOptions.querySelectorAll('input[name="mcOption"]')) {
+        input.disabled = true;
+      }
     }
 
     function applyCopy() {
@@ -614,7 +691,7 @@
     showAnswerBtn.addEventListener('click', () => {
       const isHidden = answerReveal.classList.toggle('hidden');
       if (!isHidden) {
-        const decodedAnswer = decodeAnswerForReveal(state.pendingRevealAnswerEncoded);
+        const decodedAnswer = getRevealAnswerText(state.questions[state.index], state.pendingRevealAnswerEncoded);
         answerReveal.textContent = uiCopy().answerPrefix.replace('{answer}', decodedAnswer);
       } else {
         answerReveal.textContent = '';
