@@ -75,6 +75,7 @@
       <form id="answerForm">
         <input id="answerInput" type="text" placeholder="Write your answer here" autocomplete="off" />
         <div id="mcOptions" class="hidden" style="display:grid;gap:8px;margin-top:10px;"></div>
+        <p id="voiceHeard" class="muted hidden"></p>
         <div class="btn-row">
           <button id="submitBtn" type="submit" class="btn-primary">Submit answer</button>
           <button id="showAnswerBtn" type="button" class="hidden">Show answer</button>
@@ -156,7 +157,9 @@
         voiceProcessing: '⏳ Processing speech…',
         voiceUnsupported: 'Voice mode is not supported in this browser.',
         voicePermissionDenied: 'Microphone access denied. Switch to text mode or allow microphone access.',
-        voiceOptionNoMatch: 'Could not map speech to an option. Try letter, number or option text.'
+        voiceOptionNoMatch: 'Could not map speech to an option. Try letter, number or option text.',
+        voiceHeardChoice: '🎙️ Heard: {choice}',
+        answerByVoice: ' (voice)'
       },
       no: {
         title: 'Random10 quiz',
@@ -208,7 +211,9 @@
         voiceProcessing: '⏳ Behandler tale…',
         voiceUnsupported: 'Stemmemodus støttes ikke i denne nettleseren.',
         voicePermissionDenied: 'Mikrofontilgang ble avslått. Bytt til tekstmodus eller tillat mikrofon.',
-        voiceOptionNoMatch: 'Klarte ikke å mappe talen til et alternativ. Prøv bokstav, tall eller alternativtekst.'
+        voiceOptionNoMatch: 'Klarte ikke å mappe talen til et alternativ. Prøv bokstav, tall eller alternativtekst.',
+        voiceHeardChoice: '🎙️ Hørte: {choice}',
+        answerByVoice: ' (stemme)'
       }
     };
 
@@ -228,6 +233,7 @@
     const voiceStatus = document.getElementById('voiceStatus');
     const answerInput = document.getElementById('answerInput');
     const mcOptions = document.getElementById('mcOptions');
+    const voiceHeard = document.getElementById('voiceHeard');
     const statusText = document.getElementById('statusText');
     const answerReveal = document.getElementById('answerReveal');
     const showAnswerBtn = document.getElementById('showAnswerBtn');
@@ -539,8 +545,15 @@
         }
         const selectedInput = mcOptions.querySelector(`input[name="mcOption"][value="${CSS.escape(answer)}"]`);
         if (selectedInput) selectedInput.checked = true;
+        const spokenOptionText = question.options
+          ?.find((option) => String(option.option_id) === String(answer))
+          ?.option_en || '';
+        voiceHeard.textContent = uiCopy().voiceHeardChoice.replace('{choice}', spokenOptionText || transcript);
+        voiceHeard.classList.remove('hidden');
       } else {
         answerInput.value = rawTranscript.trim();
+        voiceHeard.classList.add('hidden');
+        voiceHeard.textContent = '';
       }
       state.voice.lastSubmittedTranscript = transcript;
       state.voice.isProcessing = true;
@@ -641,7 +654,8 @@
 
         const yourAnswer = document.createElement('p');
         yourAnswer.className = 'result-item-answer';
-        const printableAnswer = entry.userAnswer || uiCopy().noAnswer;
+        const answerSuffix = entry.inputMethod === 'voice' ? uiCopy().answerByVoice : '';
+        const printableAnswer = `${entry.userAnswer || uiCopy().noAnswer}${answerSuffix}`;
         yourAnswer.textContent = uiCopy().yourAnswer.replace('{answer}', printableAnswer);
 
         const revealButton = document.createElement('button');
@@ -758,6 +772,8 @@
       statusText.className = 'status';
       answerReveal.classList.add('hidden');
       answerReveal.textContent = '';
+      voiceHeard.classList.add('hidden');
+      voiceHeard.textContent = '';
       state.pendingRevealAnswerEncoded = q.answers[0] || '';
       showAnswerBtn.classList.add('hidden');
       nextQuestionBtn.classList.add('hidden');
@@ -766,6 +782,7 @@
       state.voice.isProcessing = false;
       state.voice.lastQuestionKey = getCurrentQuestionKey();
       state.voice.lastSubmittedTranscript = '';
+      state.voice.shouldListen = state.inputMode === 'voice';
       syncInputModeUi();
       if (state.inputMode === 'voice') {
         startVoiceListening();
@@ -840,8 +857,14 @@
       const questionType = getQuestionType(question);
       let userAnswer = '';
       let userAnswerForSummary = '';
+      const inputMethod = typeof forcedAnswer === 'string' && forcedAnswer.trim() ? 'voice' : 'text';
       if (typeof forcedAnswer === 'string' && forcedAnswer.trim()) {
         userAnswer = forcedAnswer.trim();
+        if (questionType === 'multiple_choice') {
+          userAnswerForSummary = getSelectedOptionText(question, userAnswer);
+        } else {
+          userAnswerForSummary = forcedAnswer.trim();
+        }
       } else if (questionType === 'multiple_choice') {
         const selectedOptionId = getSelectedOptionId();
         if (!Number.isInteger(selectedOptionId)) return;
@@ -885,7 +908,8 @@
           userAnswer: userAnswerForSummary,
           acceptedAnswer: getQuestionType(question) === 'multiple_choice'
             ? getRevealAnswerText(question, question.answers?.[0] || '')
-            : decodeAnswerForReveal(question.answers?.[0] || '')
+            : decodeAnswerForReveal(question.answers?.[0] || ''),
+          inputMethod
         });
         state.isSubmitting = false;
         state.isAdvancing = true;
@@ -921,7 +945,8 @@
         userAnswer: userAnswerForSummary,
         acceptedAnswer: getQuestionType(question) === 'multiple_choice'
           ? getRevealAnswerText(question, question.answers?.[0] || '')
-          : (result.acceptedAnswer || decodeAnswerForReveal(question.answers?.[0] || '') || null)
+          : (result.acceptedAnswer || decodeAnswerForReveal(question.answers?.[0] || '') || null),
+        inputMethod
       });
       state.awaitingRetry = false;
       state.isSubmitting = false;

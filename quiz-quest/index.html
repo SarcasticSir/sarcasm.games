@@ -298,6 +298,7 @@
       <form id="answerForm">
         <input id="answerInput" type="text" placeholder="Write your answer" autocomplete="off" />
         <div id="mcOptions" class="mc-options hidden" role="radiogroup" aria-label="Multiple choice options"></div>
+        <p id="voiceHeard" class="muted hidden"></p>
         <div class="btn-row">
           <button id="submitBtn" type="submit" class="btn-primary">Submit</button>
           <button id="showAnswerBtn" type="button" class="hidden">Show answer</button>
@@ -361,7 +362,8 @@
         voiceProcessing: '⏳ Processing speech…',
         voiceUnsupported: 'Voice mode is not supported in this browser.',
         voicePermissionDenied: 'Microphone access denied. Switch to text mode or allow microphone access.',
-        voiceOptionNoMatch: 'Could not map speech to an option. Try saying letter, number or option text.'
+        voiceOptionNoMatch: 'Could not map speech to an option. Try saying letter, number or option text.',
+        voiceHeardChoice: '🎙️ Heard: {choice}'
       },
       no: {
         intro: 'Velg én eller flere kategorier og svar til poolen er fullført.',
@@ -407,7 +409,8 @@
         voiceProcessing: '⏳ Behandler tale…',
         voiceUnsupported: 'Stemmemodus støttes ikke i denne nettleseren.',
         voicePermissionDenied: 'Mikrofontilgang ble avslått. Bytt til tekstmodus eller tillat mikrofon.',
-        voiceOptionNoMatch: 'Klarte ikke å mappe talen til et alternativ. Prøv bokstav, tall eller alternativtekst.'
+        voiceOptionNoMatch: 'Klarte ikke å mappe talen til et alternativ. Prøv bokstav, tall eller alternativtekst.',
+        voiceHeardChoice: '🎙️ Hørte: {choice}'
       }
     };
 
@@ -466,6 +469,7 @@
     const answerForm = document.getElementById('answerForm');
     const answerInput = document.getElementById('answerInput');
     const mcOptions = document.getElementById('mcOptions');
+    const voiceHeard = document.getElementById('voiceHeard');
     const submitBtn = document.getElementById('submitBtn');
     const showAnswerBtn = document.getElementById('showAnswerBtn');
     const nextBtn = document.getElementById('nextBtn');
@@ -734,6 +738,8 @@
       questionStatus.className = 'status';
       answerReveal.classList.add('hidden');
       answerReveal.textContent = '';
+      voiceHeard.classList.add('hidden');
+      voiceHeard.textContent = '';
       showAnswerBtn.classList.add('hidden');
       showAnswerBtn.textContent = ui().showAnswer;
       nextBtn.classList.add('hidden');
@@ -953,8 +959,15 @@
         }
         const selectedInput = mcOptions.querySelector(`input[name="mcOption"][value="${CSS.escape(answer)}"]`);
         if (selectedInput) selectedInput.checked = true;
+        const spokenOptionText = state.currentQuestion.options
+          ?.find((option) => String(option.option_id) === String(answer))
+          ?.option_en || '';
+        voiceHeard.textContent = ui().voiceHeardChoice.replace('{choice}', spokenOptionText || transcript);
+        voiceHeard.classList.remove('hidden');
       } else {
         answerInput.value = rawTranscript.trim();
+        voiceHeard.classList.add('hidden');
+        voiceHeard.textContent = '';
       }
 
       state.voice.lastSubmittedTranscript = transcript;
@@ -1196,6 +1209,8 @@
         questionStatus.className = 'status';
         answerReveal.classList.add('hidden');
         answerReveal.textContent = '';
+        voiceHeard.classList.add('hidden');
+        voiceHeard.textContent = '';
         showAnswerBtn.classList.add('hidden');
         showAnswerBtn.textContent = ui().showAnswer;
         answerInput.disabled = false;
@@ -1205,6 +1220,7 @@
         state.voice.isProcessing = false;
         state.voice.lastQuestionKey = getCurrentQuestionKey();
         state.voice.lastSubmittedTranscript = '';
+        state.voice.shouldListen = state.inputMode === 'voice';
         syncInputModeUi();
         if (state.inputMode === 'voice') {
           startVoiceListening();

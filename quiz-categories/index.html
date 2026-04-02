@@ -360,6 +360,7 @@
       <form id="answerForm">
         <input id="answerInput" type="text" placeholder="Write your answer" autocomplete="off" />
         <div id="mcOptions" class="hidden" style="display:grid;gap:8px;margin-top:10px;"></div>
+        <p id="voiceHeard" class="muted hidden"></p>
         <div class="btn-row">
           <button id="submitBtn" class="btn-primary" type="submit">Submit answer</button>
           <button id="showAnswerBtn" class="hidden" type="button">Show answer</button>
@@ -459,7 +460,9 @@
         voiceProcessing: '⏳ Processing speech…',
         voiceUnsupported: 'Voice mode is not supported in this browser.',
         voicePermissionDenied: 'Microphone access denied. Switch to text mode or allow microphone access.',
-        voiceOptionNoMatch: 'Could not map speech to an option. Try letter, number or option text.'
+        voiceOptionNoMatch: 'Could not map speech to an option. Try letter, number or option text.',
+        voiceHeardChoice: '🎙️ Heard: {choice}',
+        answerByVoice: ' (voice)'
       },
       no: {
         title: 'Quizkategorier',
@@ -524,7 +527,9 @@
         voiceProcessing: '⏳ Behandler tale…',
         voiceUnsupported: 'Stemmemodus støttes ikke i denne nettleseren.',
         voicePermissionDenied: 'Mikrofontilgang ble avslått. Bytt til tekstmodus eller tillat mikrofon.',
-        voiceOptionNoMatch: 'Klarte ikke å mappe talen til et alternativ. Prøv bokstav, tall eller alternativtekst.'
+        voiceOptionNoMatch: 'Klarte ikke å mappe talen til et alternativ. Prøv bokstav, tall eller alternativtekst.',
+        voiceHeardChoice: '🎙️ Hørte: {choice}',
+        answerByVoice: ' (stemme)'
       }
     };
 
@@ -549,6 +554,7 @@
     const voiceStatus = document.getElementById('voiceStatus');
     const answerInput = document.getElementById('answerInput');
     const mcOptions = document.getElementById('mcOptions');
+    const voiceHeard = document.getElementById('voiceHeard');
     const submitBtn = document.getElementById('submitBtn');
     const showAnswerBtn = document.getElementById('showAnswerBtn');
     const nextQuestionBtn = document.getElementById('nextQuestionBtn');
@@ -841,8 +847,14 @@
       const questionType = getQuestionType(current);
       let userAnswer = '';
       let userAnswerForSummary = '';
+      const inputMethod = typeof forcedAnswer === 'string' && forcedAnswer.trim() ? 'voice' : 'text';
       if (typeof forcedAnswer === 'string' && forcedAnswer.trim()) {
         userAnswer = forcedAnswer.trim();
+        if (questionType === 'multiple_choice') {
+          userAnswerForSummary = getSelectedOptionText(current, userAnswer);
+        } else {
+          userAnswerForSummary = forcedAnswer.trim();
+        }
       } else if (questionType === 'multiple_choice') {
         const selectedOptionId = getSelectedOptionId();
         if (!Number.isInteger(selectedOptionId)) return;
@@ -880,7 +892,8 @@
             ? getRevealAnswerText(current, current.answers?.[0] || '')
             : decodeAnswerForReveal(current.answers?.[0] || ''),
           category: current.category || 'General',
-          difficulty: current.difficulty ?? null
+          difficulty: current.difficulty ?? null,
+          inputMethod
         });
         questionStatus.className = 'status ok';
         questionStatus.textContent = uiCopy().correctStatus;
@@ -921,7 +934,8 @@
           ? getRevealAnswerText(current, current.answers?.[0] || '')
           : (result.acceptedAnswer || decodeAnswerForReveal(current.answers?.[0] || '') || null),
         category: current.category || 'General',
-        difficulty: current.difficulty ?? null
+        difficulty: current.difficulty ?? null,
+        inputMethod
       });
       questionStatus.className = 'status error';
       questionStatus.textContent = uiCopy().wrongStatus;
@@ -966,8 +980,15 @@
         }
         const selectedInput = mcOptions.querySelector(`input[name="mcOption"][value="${CSS.escape(answer)}"]`);
         if (selectedInput) selectedInput.checked = true;
+        const spokenOptionText = question.options
+          ?.find((option) => String(option.option_id) === String(answer))
+          ?.option_en || '';
+        voiceHeard.textContent = uiCopy().voiceHeardChoice.replace('{choice}', spokenOptionText || transcript);
+        voiceHeard.classList.remove('hidden');
       } else {
         answerInput.value = rawTranscript.trim();
+        voiceHeard.classList.add('hidden');
+        voiceHeard.textContent = '';
       }
 
       runtimeState.voice.lastSubmittedTranscript = transcript;
@@ -1196,7 +1217,8 @@
 
         const yourAnswer = document.createElement('p');
         yourAnswer.className = 'result-item-answer';
-        yourAnswer.textContent = uiCopy().yourAnswer.replace('{answer}', entry.userAnswer || uiCopy().noAnswer);
+        const answerSuffix = entry.inputMethod === 'voice' ? uiCopy().answerByVoice : '';
+        yourAnswer.textContent = uiCopy().yourAnswer.replace('{answer}', `${entry.userAnswer || uiCopy().noAnswer}${answerSuffix}`);
 
         const revealButton = document.createElement('button');
         revealButton.type = 'button';
@@ -1248,6 +1270,8 @@
       nextQuestionBtn.classList.add('hidden');
       answerReveal.classList.add('hidden');
       answerReveal.textContent = '';
+      voiceHeard.classList.add('hidden');
+      voiceHeard.textContent = '';
       runtimeState.pendingRevealAnswerEncoded = question.answers?.[0] || '';
       showAnswerBtn.textContent = uiCopy().showAnswer;
       abortConfirmRow.classList.add('hidden');
@@ -1255,6 +1279,7 @@
       runtimeState.voice.isProcessing = false;
       runtimeState.voice.lastQuestionKey = getCurrentQuestionKey();
       runtimeState.voice.lastSubmittedTranscript = '';
+      runtimeState.voice.shouldListen = runtimeState.inputMode === 'voice';
       syncInputModeUi();
       if (runtimeState.inputMode === 'voice') {
         startVoiceListening();
