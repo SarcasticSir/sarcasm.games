@@ -32,6 +32,13 @@
     .result-item-status.wrong { color:var(--bad); }
     .result-item-answer { margin:0 0 8px; color:var(--muted); }
     .result-item-answer strong { color:var(--txt); }
+    .input-mode { display:inline-flex; border:1px solid var(--bd); border-radius:999px; overflow:hidden; margin:4px 0 10px; }
+    .mode-btn { border:0; border-radius:0; padding:8px 12px; background:transparent; color:var(--txt); }
+    .mode-btn.is-active { background:var(--accent); color:#111; }
+    .voice-status { min-height:1.25rem; margin:0 0 10px; color:var(--muted); font-size:14px; font-weight:600; }
+    .voice-status.error { color:var(--bad); }
+    .voice-status.ok { color:var(--ok); }
+    .input-disabled { opacity:0.65; cursor:not-allowed; }
   </style>
 </head>
 <body>
@@ -60,6 +67,11 @@
       </div>
       <h2 id="questionTitle">Question</h2>
       <p id="questionCategory" class="muted"></p>
+      <div class="input-mode" role="group" aria-label="Input mode toggle">
+        <button id="textModeBtn" type="button" class="mode-btn is-active">Text</button>
+        <button id="voiceModeBtn" type="button" class="mode-btn">Voice</button>
+      </div>
+      <p id="voiceStatus" class="voice-status" aria-live="polite"></p>
       <form id="answerForm">
         <input id="answerInput" type="text" placeholder="Write your answer here" autocomplete="off" />
         <div id="mcOptions" class="hidden" style="display:grid;gap:8px;margin-top:10px;"></div>
@@ -137,7 +149,14 @@
         answerSubmitError: 'Could not submit answer. Try again.',
         almostStatus: 'Almost! Try one more time.',
         wrongStatus: 'Not quite. You can reveal the answer and continue.',
-        positiveMessages: ['Good!', 'Great job!', 'Nice one!', 'Excellent!', 'Well done!']
+        positiveMessages: ['Good!', 'Great job!', 'Nice one!', 'Excellent!', 'Well done!'],
+        inputModeText: 'Text',
+        inputModeVoice: 'Voice',
+        voiceListening: '🎙️ Listening…',
+        voiceProcessing: '⏳ Processing speech…',
+        voiceUnsupported: 'Voice mode is not supported in this browser.',
+        voicePermissionDenied: 'Microphone access denied. Switch to text mode or allow microphone access.',
+        voiceOptionNoMatch: 'Could not map speech to an option. Try letter, number or option text.'
       },
       no: {
         title: 'Random10 quiz',
@@ -182,7 +201,14 @@
         answerSubmitError: 'Kunne ikke sende svar. Prøv igjen.',
         almostStatus: 'Nesten! Prøv én gang til.',
         wrongStatus: 'Ikke helt. Du kan vise fasit og gå videre.',
-        positiveMessages: ['Bra!', 'Godt jobba!', 'Nice!', 'Supert!', 'Flott!']
+        positiveMessages: ['Bra!', 'Godt jobba!', 'Nice!', 'Supert!', 'Flott!'],
+        inputModeText: 'Tekst',
+        inputModeVoice: 'Stemmen',
+        voiceListening: '🎙️ Lytter…',
+        voiceProcessing: '⏳ Behandler tale…',
+        voiceUnsupported: 'Stemmemodus støttes ikke i denne nettleseren.',
+        voicePermissionDenied: 'Mikrofontilgang ble avslått. Bytt til tekstmodus eller tillat mikrofon.',
+        voiceOptionNoMatch: 'Klarte ikke å mappe talen til et alternativ. Prøv bokstav, tall eller alternativtekst.'
       }
     };
 
@@ -197,6 +223,9 @@
     const progressText = document.getElementById('progressText');
     const questionTitle = document.getElementById('questionTitle');
     const questionCategory = document.getElementById('questionCategory');
+    const textModeBtn = document.getElementById('textModeBtn');
+    const voiceModeBtn = document.getElementById('voiceModeBtn');
+    const voiceStatus = document.getElementById('voiceStatus');
     const answerInput = document.getElementById('answerInput');
     const mcOptions = document.getElementById('mcOptions');
     const statusText = document.getElementById('statusText');
@@ -235,7 +264,20 @@
       isSubmitting: false,
       isAdvancing: false,
       quizStarted: false,
-      pendingRevealAnswerEncoded: ''
+      pendingRevealAnswerEncoded: '',
+      inputMode: 'text',
+      voice: {
+        supported: false,
+        recognition: null,
+        isListening: false,
+        isProcessing: false,
+        shouldListen: false,
+        restartTimer: null,
+        restartAttempts: 0,
+        permissionDenied: false,
+        lastQuestionKey: '',
+        lastSubmittedTranscript: ''
+      }
     };
 
     function syncLanguageFromStorage() {
@@ -266,6 +308,34 @@
     function getSelectedOptionId() {
       const selected = mcOptions.querySelector('input[name="mcOption"]:checked');
       return selected ? Number(selected.value) : null;
+    }
+
+    function normalizeVoiceText(value) {
+      return String(value || '')
+        .toLowerCase()
+        .trim()
+        .replace(/[.,/#!$%^&*;:{}=\-_`~()?"'[\]\\]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    function getCurrentQuestionKey() {
+      const question = state.questions[state.index];
+      return question ? `${question.id}:${state.index}` : '';
+    }
+
+    function isVoiceNextCommand(transcript) {
+      const normalized = normalizeVoiceText(transcript);
+      if (!normalized) return false;
+      return new Set([
+        'next',
+        'next question',
+        'continue',
+        'go next',
+        'neste',
+        'neste spørsmål',
+        'fortsett'
+      ]).has(normalized);
     }
 
     function renderMcOptions(question) {
@@ -309,6 +379,221 @@
       return match?.option_en || String(selectedOptionId || '');
     }
 
+    function renderVoiceStatus() {
+      voiceStatus.className = 'voice-status';
+      if (state.inputMode !== 'voice') {
+        voiceStatus.textContent = '';
+        return;
+      }
+      const c = uiCopy();
+      if (!state.voice.supported) {
+        voiceStatus.classList.add('error');
+        voiceStatus.textContent = c.voiceUnsupported;
+      } else if (state.voice.permissionDenied) {
+        voiceStatus.classList.add('error');
+        voiceStatus.textContent = c.voicePermissionDenied;
+      } else if (state.voice.isProcessing || state.isSubmitting) {
+        voiceStatus.textContent = c.voiceProcessing;
+      } else if (state.voice.isListening) {
+        voiceStatus.classList.add('ok');
+        voiceStatus.textContent = c.voiceListening;
+      } else {
+        voiceStatus.textContent = '';
+      }
+    }
+
+    function syncInputModeUi() {
+      const question = state.questions[state.index];
+      const isVoice = state.inputMode === 'voice';
+      textModeBtn.classList.toggle('is-active', !isVoice);
+      voiceModeBtn.classList.toggle('is-active', isVoice);
+      if (!question) {
+        renderVoiceStatus();
+        return;
+      }
+      if (getQuestionType(question) === 'text') {
+        answerInput.disabled = isVoice || submitBtn.disabled;
+        answerInput.classList.toggle('input-disabled', isVoice);
+      }
+      if (getQuestionType(question) === 'multiple_choice') {
+        for (const input of mcOptions.querySelectorAll('input[name="mcOption"]')) {
+          if (isVoice && !submitBtn.disabled) input.disabled = true;
+        }
+      }
+      renderVoiceStatus();
+    }
+
+    function stopVoiceListening() {
+      state.voice.shouldListen = false;
+      if (state.voice.restartTimer) {
+        clearTimeout(state.voice.restartTimer);
+        state.voice.restartTimer = null;
+      }
+      if (state.voice.recognition && state.voice.isListening) {
+        state.voice.recognition.stop();
+      }
+      state.voice.isListening = false;
+      renderVoiceStatus();
+    }
+
+    function scheduleVoiceRestart(delayMs = 300) {
+      const question = state.questions[state.index];
+      if (!state.voice.supported || !state.voice.recognition) return;
+      if (!state.quizStarted || !question || state.inputMode !== 'voice') return;
+      if (!state.voice.shouldListen || state.voice.permissionDenied) return;
+      if (state.isSubmitting || state.isAdvancing) return;
+      if (submitBtn.disabled && !isNextQuestionVisible()) return;
+      if (state.voice.restartTimer || state.voice.restartAttempts >= 8) return;
+      state.voice.restartTimer = setTimeout(() => {
+        state.voice.restartTimer = null;
+        startVoiceListening();
+      }, delayMs);
+    }
+
+    function startVoiceListening() {
+      const question = state.questions[state.index];
+      if (!state.voice.supported || !state.voice.recognition) return;
+      if (!state.quizStarted || !question || state.inputMode !== 'voice') return;
+      if (!state.voice.shouldListen || state.voice.permissionDenied) return;
+      if (state.isSubmitting || state.isAdvancing) return;
+      if (submitBtn.disabled && !isNextQuestionVisible()) return;
+      if (state.voice.isListening) return;
+      try {
+        state.voice.recognition.start();
+      } catch (error) {
+        state.voice.restartAttempts += 1;
+        scheduleVoiceRestart(600 + (state.voice.restartAttempts * 200));
+      }
+    }
+
+    function setInputMode(mode) {
+      const nextMode = mode === 'voice' ? 'voice' : 'text';
+      if (nextMode === 'voice' && !state.voice.supported) {
+        state.inputMode = 'text';
+        renderVoiceStatus();
+        return;
+      }
+      state.inputMode = nextMode;
+      state.voice.isProcessing = false;
+      if (state.inputMode === 'voice') {
+        state.voice.shouldListen = true;
+        state.voice.restartAttempts = 0;
+        startVoiceListening();
+      } else {
+        stopVoiceListening();
+      }
+      syncInputModeUi();
+    }
+
+    function resolveSpokenMultipleChoice(transcript, question) {
+      const normalized = normalizeVoiceText(transcript);
+      if (!normalized) return null;
+      const options = Array.isArray(question?.options) ? question.options : [];
+      if (!options.length) return null;
+      const letterMap = new Map([['a', 0], ['ay', 0], ['b', 1], ['bee', 1], ['c', 2], ['see', 2], ['d', 3], ['dee', 3]]);
+      const numberMap = new Map([['1', 0], ['one', 0], ['en', 0], ['2', 1], ['two', 1], ['to', 1], ['3', 2], ['three', 2], ['tre', 2], ['4', 3], ['four', 3], ['fire', 3]]);
+      const tokens = normalized.split(' ').filter(Boolean);
+      for (const token of tokens) {
+        if (letterMap.has(token)) {
+          const idx = letterMap.get(token);
+          if (idx < options.length) return String(options[idx].option_id);
+        }
+      }
+      for (const token of tokens) {
+        if (numberMap.has(token)) {
+          const idx = numberMap.get(token);
+          if (idx < options.length) return String(options[idx].option_id);
+        }
+      }
+      const normalizedOptions = options.map((option) => ({ id: String(option.option_id), text: normalizeVoiceText(option.option_en || '') }));
+      const exactMatch = normalizedOptions.find((option) => option.text === normalized);
+      if (exactMatch) return exactMatch.id;
+      const containsMatches = normalizedOptions.filter((option) => option.text && (option.text.includes(normalized) || normalized.includes(option.text)));
+      return containsMatches.length === 1 ? containsMatches[0].id : null;
+    }
+
+    async function handleVoiceTranscript(rawTranscript) {
+      const transcript = normalizeVoiceText(rawTranscript);
+      const question = state.questions[state.index];
+      if (!transcript || state.inputMode !== 'voice' || !question || state.isSubmitting) return;
+      if (isNextQuestionVisible()) {
+        if (isVoiceNextCommand(transcript)) {
+          state.voice.lastSubmittedTranscript = transcript;
+          moveNextQuestion();
+        }
+        return;
+      }
+      const questionKey = getCurrentQuestionKey();
+      if (state.voice.lastQuestionKey !== questionKey) {
+        state.voice.lastQuestionKey = questionKey;
+        state.voice.lastSubmittedTranscript = '';
+      }
+      if (state.voice.lastSubmittedTranscript === transcript) return;
+      let answer = transcript;
+      if (getQuestionType(question) === 'multiple_choice') {
+        answer = resolveSpokenMultipleChoice(transcript, question);
+        if (!answer) {
+          statusText.className = 'status wrong';
+          statusText.textContent = uiCopy().voiceOptionNoMatch;
+          return;
+        }
+        const selectedInput = mcOptions.querySelector(`input[name="mcOption"][value="${CSS.escape(answer)}"]`);
+        if (selectedInput) selectedInput.checked = true;
+      } else {
+        answerInput.value = rawTranscript.trim();
+      }
+      state.voice.lastSubmittedTranscript = transcript;
+      state.voice.isProcessing = true;
+      renderVoiceStatus();
+      await onSubmitAnswer(answer);
+      state.voice.isProcessing = false;
+      renderVoiceStatus();
+    }
+
+    function setupVoiceRecognition() {
+      const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognitionCtor) {
+        state.voice.supported = false;
+        renderVoiceStatus();
+        return;
+      }
+      state.voice.supported = true;
+      const recognition = new SpeechRecognitionCtor();
+      recognition.continuous = true;
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+      recognition.lang = state.language === 'no' ? 'nb-NO' : 'en-US';
+      recognition.onstart = () => {
+        state.voice.isListening = true;
+        state.voice.restartAttempts = 0;
+        renderVoiceStatus();
+      };
+      recognition.onresult = async (event) => {
+        const results = Array.from(event.results || []);
+        const finalResult = [...results].reverse().find((result) => result.isFinal);
+        const transcript = finalResult?.[0]?.transcript || '';
+        if (!transcript) return;
+        await handleVoiceTranscript(transcript);
+      };
+      recognition.onerror = (event) => {
+        state.voice.isListening = false;
+        if (event?.error === 'not-allowed' || event?.error === 'service-not-allowed') {
+          state.voice.permissionDenied = true;
+          setInputMode('text');
+          return;
+        }
+        state.voice.restartAttempts += 1;
+        renderVoiceStatus();
+      };
+      recognition.onend = () => {
+        state.voice.isListening = false;
+        renderVoiceStatus();
+        scheduleVoiceRestart(400);
+      };
+      state.voice.recognition = recognition;
+      renderVoiceStatus();
+    }
+
     function uiCopy() {
       return copy[state.language] || copy[fallbackLanguage];
     }
@@ -322,6 +607,12 @@
       introView.classList.toggle('hidden', view !== 'intro');
       questionView.classList.toggle('hidden', view !== 'question');
       resultView.classList.toggle('hidden', view !== 'result');
+      if (view !== 'question') {
+        stopVoiceListening();
+      } else if (state.inputMode === 'voice') {
+        state.voice.shouldListen = true;
+        scheduleVoiceRestart(200);
+      }
     }
 
     function setStartLoading(isLoading) {
@@ -472,6 +763,13 @@
       nextQuestionBtn.classList.add('hidden');
       abortConfirmRow.classList.add('hidden');
       submitBtn.disabled = false;
+      state.voice.isProcessing = false;
+      state.voice.lastQuestionKey = getCurrentQuestionKey();
+      state.voice.lastSubmittedTranscript = '';
+      syncInputModeUi();
+      if (state.inputMode === 'voice') {
+        startVoiceListening();
+      }
     }
 
     function moveNextQuestion() {
@@ -507,6 +805,7 @@
       state.pendingRevealAnswerEncoded = '';
       abortConfirmRow.classList.add('hidden');
       setStartLoading(false);
+      stopVoiceListening();
     }
 
     async function evaluateAnswer(question, userAnswer, retryAvailable) {
@@ -534,14 +833,16 @@
       return payload;
     }
 
-    async function onSubmitAnswer() {
+    async function onSubmitAnswer(forcedAnswer = null) {
       if (submitBtn.disabled || state.isSubmitting || state.isAdvancing) return;
 
       const question = state.questions[state.index];
       const questionType = getQuestionType(question);
       let userAnswer = '';
       let userAnswerForSummary = '';
-      if (questionType === 'multiple_choice') {
+      if (typeof forcedAnswer === 'string' && forcedAnswer.trim()) {
+        userAnswer = forcedAnswer.trim();
+      } else if (questionType === 'multiple_choice') {
         const selectedOptionId = getSelectedOptionId();
         if (!Number.isInteger(selectedOptionId)) return;
         userAnswer = String(selectedOptionId);
@@ -553,6 +854,7 @@
       }
       const submittedIndex = state.index;
       state.isSubmitting = true;
+      stopVoiceListening();
 
       let result;
       try {
@@ -561,6 +863,10 @@
         state.isSubmitting = false;
         statusText.className = 'status wrong';
         statusText.textContent = uiCopy().answerSubmitError;
+        if (state.inputMode === 'voice') {
+          state.voice.shouldListen = true;
+          scheduleVoiceRestart(300);
+        }
         return;
       }
 
@@ -598,7 +904,12 @@
         statusText.textContent = uiCopy().almostStatus;
         if (questionType === 'text') {
           answerInput.value = '';
-          answerInput.focus();
+          if (state.inputMode !== 'voice') answerInput.focus();
+        }
+        if (state.inputMode === 'voice') {
+          state.voice.lastSubmittedTranscript = '';
+          state.voice.shouldListen = true;
+          scheduleVoiceRestart(250);
         }
         return;
       }
@@ -625,6 +936,11 @@
       for (const input of mcOptions.querySelectorAll('input[name="mcOption"]')) {
         input.disabled = true;
       }
+      syncInputModeUi();
+      if (state.inputMode === 'voice') {
+        state.voice.shouldListen = true;
+        scheduleVoiceRestart(250);
+      }
     }
 
     function applyCopy() {
@@ -645,6 +961,8 @@
       questionSectionHeading.textContent = c.questionTitle;
       answerInput.placeholder = c.answerPlaceholder;
       submitBtn.textContent = c.submitAnswer;
+      textModeBtn.textContent = c.inputModeText;
+      voiceModeBtn.textContent = c.inputModeVoice;
       showAnswerBtn.textContent = c.showAnswer;
       nextQuestionBtn.textContent = c.nextQuestion;
       resultHeading.textContent = c.resultTitle;
@@ -652,6 +970,7 @@
       resultCounterItems[1].lastChild.textContent = ` ${c.wrongCount}`;
       answeredQuestionsHeading.textContent = c.answeredQuestionsHeading;
       playAgainBtn.textContent = c.playAgain;
+      renderVoiceStatus();
     }
 
     startBtn.addEventListener('click', async () => {
@@ -689,7 +1008,7 @@
 
     cancelAbortBtn.addEventListener('click', () => {
       abortConfirmRow.classList.add('hidden');
-      answerInput.focus();
+      if (state.inputMode !== 'voice') answerInput.focus();
     });
 
     answerForm.addEventListener('submit', (event) => {
@@ -726,6 +1045,18 @@
 
     syncLanguageFromStorage();
     applyCopy();
+    setupVoiceRecognition();
+    setInputMode('text');
+    textModeBtn.addEventListener('click', () => setInputMode('text'));
+    voiceModeBtn.addEventListener('click', () => setInputMode('voice'));
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        stopVoiceListening();
+      } else if (state.inputMode === 'voice') {
+        state.voice.shouldListen = true;
+        scheduleVoiceRestart(400);
+      }
+    });
   </script>
 
   <script src='https://storage.ko-fi.com/cdn/scripts/overlay-widget.js'></script>
