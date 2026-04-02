@@ -95,7 +95,7 @@ module.exports = async function handler(req, res) {
   try {
     const body = parseJsonBody(req.body);
     const { questionId: rawQuestionId, answer: rawAnswer = '' } = body;
-    const shouldPersistProgress = body.persistProgress !== false;
+    const shouldPersistProgress = body.mode === 'quest' && body.persistProgress !== false;
     const questionId = Number(rawQuestionId);
     const answer = String(rawAnswer).trim();
 
