@@ -219,6 +219,39 @@
       line-height:1;
     }
 
+    .input-mode {
+      display: inline-flex;
+      border: 1px solid var(--bd);
+      border-radius: 999px;
+      overflow: hidden;
+      margin: 4px 0 10px;
+    }
+
+    .mode-btn {
+      border: 0;
+      border-radius: 0;
+      padding: 8px 12px;
+      background: transparent;
+      color: var(--txt);
+    }
+
+    .mode-btn.is-active {
+      background: var(--accent);
+      color: #111;
+    }
+
+    .voice-status {
+      min-height: 1.25rem;
+      margin: 0 0 10px;
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .voice-status.error { color: var(--danger); }
+    .voice-status.ok { color: #80ed99; }
+    .input-disabled { opacity: 0.65; cursor: not-allowed; }
+
     .result-filter {
       margin-top: 10px;
     }
@@ -319,6 +352,11 @@
         <span id="questionCategory" class="question-meta-chip"></span>
         <span id="questionDifficulty" class="question-meta-chip hidden"></span>
       </div>
+      <div class="input-mode" role="group" aria-label="Input mode toggle">
+        <button id="textModeBtn" type="button" class="mode-btn is-active">Text</button>
+        <button id="voiceModeBtn" type="button" class="mode-btn">Voice</button>
+      </div>
+      <p id="voiceStatus" class="voice-status" aria-live="polite"></p>
       <form id="answerForm">
         <input id="answerInput" type="text" placeholder="Write your answer" autocomplete="off" />
         <div id="mcOptions" class="hidden" style="display:grid;gap:8px;margin-top:10px;"></div>
@@ -414,7 +452,14 @@
         almostStatus: 'Almost! You get one more try.',
         correctStatus: 'Correct!',
         wrongStatus: 'Not quite. You can reveal the answer and continue.',
-        noQuestions: 'No questions were returned for your selection.'
+        noQuestions: 'No questions were returned for your selection.',
+        inputModeText: 'Text',
+        inputModeVoice: 'Voice',
+        voiceListening: '🎙️ Listening…',
+        voiceProcessing: '⏳ Processing speech…',
+        voiceUnsupported: 'Voice mode is not supported in this browser.',
+        voicePermissionDenied: 'Microphone access denied. Switch to text mode or allow microphone access.',
+        voiceOptionNoMatch: 'Could not map speech to an option. Try letter, number or option text.'
       },
       no: {
         title: 'Quizkategorier',
@@ -472,7 +517,14 @@
         almostStatus: 'Nesten! Du får ett forsøk til.',
         correctStatus: 'Riktig!',
         wrongStatus: 'Ikke helt. Du kan vise fasit og gå videre.',
-        noQuestions: 'Ingen spørsmål ble returnert for valget ditt.'
+        noQuestions: 'Ingen spørsmål ble returnert for valget ditt.',
+        inputModeText: 'Tekst',
+        inputModeVoice: 'Stemmen',
+        voiceListening: '🎙️ Lytter…',
+        voiceProcessing: '⏳ Behandler tale…',
+        voiceUnsupported: 'Stemmemodus støttes ikke i denne nettleseren.',
+        voicePermissionDenied: 'Mikrofontilgang ble avslått. Bytt til tekstmodus eller tillat mikrofon.',
+        voiceOptionNoMatch: 'Klarte ikke å mappe talen til et alternativ. Prøv bokstav, tall eller alternativtekst.'
       }
     };
 
@@ -492,6 +544,9 @@
     const questionCategory = document.getElementById('questionCategory');
     const questionDifficulty = document.getElementById('questionDifficulty');
     const answerForm = document.getElementById('answerForm');
+    const textModeBtn = document.getElementById('textModeBtn');
+    const voiceModeBtn = document.getElementById('voiceModeBtn');
+    const voiceStatus = document.getElementById('voiceStatus');
     const answerInput = document.getElementById('answerInput');
     const mcOptions = document.getElementById('mcOptions');
     const submitBtn = document.getElementById('submitBtn');
@@ -533,7 +588,21 @@
       count: 0,
       answeredQuestions: [],
       resultFilter: 'all',
-      pendingRevealAnswerEncoded: ''
+      pendingRevealAnswerEncoded: '',
+      isSubmitting: false,
+      inputMode: 'text',
+      voice: {
+        supported: false,
+        recognition: null,
+        isListening: false,
+        isProcessing: false,
+        shouldListen: false,
+        restartTimer: null,
+        restartAttempts: 0,
+        permissionDenied: false,
+        lastQuestionKey: '',
+        lastSubmittedTranscript: ''
+      }
     };
 
     function uiCopy() {
@@ -564,6 +633,34 @@
     function getSelectedOptionId() {
       const selected = mcOptions.querySelector('input[name="mcOption"]:checked');
       return selected ? Number(selected.value) : null;
+    }
+
+    function normalizeVoiceText(value) {
+      return String(value || '')
+        .toLowerCase()
+        .trim()
+        .replace(/[.,/#!$%^&*;:{}=\-_`~()?"'[\]\\]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    function getCurrentQuestionKey() {
+      const question = runtimeState.questions[runtimeState.index];
+      return question ? `${question.id}:${runtimeState.index}` : '';
+    }
+
+    function isVoiceNextCommand(transcript) {
+      const normalized = normalizeVoiceText(transcript);
+      if (!normalized) return false;
+      return new Set([
+        'next',
+        'next question',
+        'continue',
+        'go next',
+        'neste',
+        'neste spørsmål',
+        'fortsett'
+      ]).has(normalized);
     }
 
     function renderMcOptions(question) {
@@ -606,6 +703,325 @@
       return match?.option_en || String(selectedOptionId || '');
     }
 
+    function renderVoiceStatus() {
+      voiceStatus.className = 'voice-status';
+      if (runtimeState.inputMode !== 'voice') {
+        voiceStatus.textContent = '';
+        return;
+      }
+      const c = uiCopy();
+      if (!runtimeState.voice.supported) {
+        voiceStatus.classList.add('error');
+        voiceStatus.textContent = c.voiceUnsupported;
+      } else if (runtimeState.voice.permissionDenied) {
+        voiceStatus.classList.add('error');
+        voiceStatus.textContent = c.voicePermissionDenied;
+      } else if (runtimeState.voice.isProcessing) {
+        voiceStatus.textContent = c.voiceProcessing;
+      } else if (runtimeState.voice.isListening) {
+        voiceStatus.classList.add('ok');
+        voiceStatus.textContent = c.voiceListening;
+      } else {
+        voiceStatus.textContent = '';
+      }
+    }
+
+    function syncInputModeUi() {
+      const question = runtimeState.questions[runtimeState.index];
+      const isVoice = runtimeState.inputMode === 'voice';
+      textModeBtn.classList.toggle('is-active', !isVoice);
+      voiceModeBtn.classList.toggle('is-active', isVoice);
+      if (!question) {
+        renderVoiceStatus();
+        return;
+      }
+
+      if (getQuestionType(question) === 'text') {
+        answerInput.disabled = isVoice || submitBtn.disabled;
+        answerInput.classList.toggle('input-disabled', isVoice);
+      }
+      if (getQuestionType(question) === 'multiple_choice') {
+        for (const input of mcOptions.querySelectorAll('input[name="mcOption"]')) {
+          if (isVoice && !submitBtn.disabled) input.disabled = true;
+        }
+      }
+      renderVoiceStatus();
+    }
+
+    function stopVoiceListening() {
+      runtimeState.voice.shouldListen = false;
+      if (runtimeState.voice.restartTimer) {
+        clearTimeout(runtimeState.voice.restartTimer);
+        runtimeState.voice.restartTimer = null;
+      }
+      if (runtimeState.voice.recognition && runtimeState.voice.isListening) {
+        runtimeState.voice.recognition.stop();
+      }
+      runtimeState.voice.isListening = false;
+      renderVoiceStatus();
+    }
+
+    function scheduleVoiceRestart(delayMs = 300) {
+      const question = runtimeState.questions[runtimeState.index];
+      if (!runtimeState.voice.supported || !runtimeState.voice.recognition) return;
+      if (!runtimeState.quizStarted || !question || runtimeState.inputMode !== 'voice') return;
+      if (!runtimeState.voice.shouldListen || runtimeState.voice.permissionDenied) return;
+      if (submitBtn.disabled && !isNextQuestionVisible()) return;
+      if (runtimeState.voice.restartTimer || runtimeState.voice.restartAttempts >= 8) return;
+      runtimeState.voice.restartTimer = setTimeout(() => {
+        runtimeState.voice.restartTimer = null;
+        startVoiceListening();
+      }, delayMs);
+    }
+
+    function startVoiceListening() {
+      const question = runtimeState.questions[runtimeState.index];
+      if (!runtimeState.voice.supported || !runtimeState.voice.recognition) return;
+      if (!runtimeState.quizStarted || !question || runtimeState.inputMode !== 'voice') return;
+      if (!runtimeState.voice.shouldListen || runtimeState.voice.permissionDenied) return;
+      if (submitBtn.disabled && !isNextQuestionVisible()) return;
+      if (runtimeState.voice.isListening) return;
+      try {
+        runtimeState.voice.recognition.start();
+      } catch (error) {
+        runtimeState.voice.restartAttempts += 1;
+        scheduleVoiceRestart(600 + (runtimeState.voice.restartAttempts * 200));
+      }
+    }
+
+    function setInputMode(mode) {
+      const nextMode = mode === 'voice' ? 'voice' : 'text';
+      if (nextMode === 'voice' && !runtimeState.voice.supported) {
+        runtimeState.inputMode = 'text';
+        renderVoiceStatus();
+        return;
+      }
+      runtimeState.inputMode = nextMode;
+      runtimeState.voice.isProcessing = false;
+      if (runtimeState.inputMode === 'voice') {
+        runtimeState.voice.shouldListen = true;
+        runtimeState.voice.restartAttempts = 0;
+        startVoiceListening();
+      } else {
+        stopVoiceListening();
+      }
+      syncInputModeUi();
+    }
+
+    function resolveSpokenMultipleChoice(transcript, question) {
+      const normalized = normalizeVoiceText(transcript);
+      if (!normalized) return null;
+      const options = Array.isArray(question?.options) ? question.options : [];
+      if (!options.length) return null;
+      const letterMap = new Map([['a', 0], ['ay', 0], ['b', 1], ['bee', 1], ['c', 2], ['see', 2], ['d', 3], ['dee', 3]]);
+      const numberMap = new Map([['1', 0], ['one', 0], ['en', 0], ['2', 1], ['two', 1], ['to', 1], ['3', 2], ['three', 2], ['tre', 2], ['4', 3], ['four', 3], ['fire', 3]]);
+      const tokens = normalized.split(' ').filter(Boolean);
+      for (const token of tokens) {
+        if (letterMap.has(token)) {
+          const idx = letterMap.get(token);
+          if (idx < options.length) return String(options[idx].option_id);
+        }
+      }
+      for (const token of tokens) {
+        if (numberMap.has(token)) {
+          const idx = numberMap.get(token);
+          if (idx < options.length) return String(options[idx].option_id);
+        }
+      }
+      const normalizedOptions = options.map((option) => ({ id: String(option.option_id), text: normalizeVoiceText(option.option_en || '') }));
+      const exactMatch = normalizedOptions.find((option) => option.text === normalized);
+      if (exactMatch) return exactMatch.id;
+      const containsMatches = normalizedOptions.filter((option) => option.text && (option.text.includes(normalized) || normalized.includes(option.text)));
+      return containsMatches.length === 1 ? containsMatches[0].id : null;
+    }
+
+    async function submitCurrentAnswer(forcedAnswer = null) {
+      if (submitBtn.disabled || runtimeState.isSubmitting) return;
+      const current = runtimeState.questions[runtimeState.index];
+      const questionType = getQuestionType(current);
+      let userAnswer = '';
+      let userAnswerForSummary = '';
+      if (typeof forcedAnswer === 'string' && forcedAnswer.trim()) {
+        userAnswer = forcedAnswer.trim();
+      } else if (questionType === 'multiple_choice') {
+        const selectedOptionId = getSelectedOptionId();
+        if (!Number.isInteger(selectedOptionId)) return;
+        userAnswer = String(selectedOptionId);
+        userAnswerForSummary = getSelectedOptionText(current, selectedOptionId);
+      } else {
+        userAnswer = answerInput.value.trim();
+        if (!userAnswer) return;
+        userAnswerForSummary = userAnswer;
+      }
+
+      stopVoiceListening();
+      runtimeState.isSubmitting = true;
+      let result;
+      try {
+        result = await evaluateAnswer(current.id, userAnswer, !runtimeState.awaitingRetry);
+      } catch (error) {
+        questionStatus.className = 'status error';
+        questionStatus.textContent = error.message;
+        runtimeState.isSubmitting = false;
+        if (runtimeState.inputMode === 'voice') {
+          runtimeState.voice.shouldListen = true;
+          scheduleVoiceRestart(300);
+        }
+        return;
+      }
+
+      if (result.status === 'correct') {
+        runtimeState.correct += 1;
+        runtimeState.answeredQuestions.push({
+          prompt: current.prompt,
+          status: 'correct',
+          userAnswer: userAnswerForSummary,
+          acceptedAnswer: getQuestionType(current) === 'multiple_choice'
+            ? getRevealAnswerText(current, current.answers?.[0] || '')
+            : decodeAnswerForReveal(current.answers?.[0] || ''),
+          category: current.category || 'General',
+          difficulty: current.difficulty ?? null
+        });
+        questionStatus.className = 'status ok';
+        questionStatus.textContent = uiCopy().correctStatus;
+        submitBtn.disabled = true;
+        answerInput.disabled = true;
+        runtimeState.isSubmitting = false;
+        setTimeout(() => moveNextQuestion(), 600);
+        return;
+      }
+
+      if (result.status === 'almost' && !runtimeState.awaitingRetry) {
+        runtimeState.awaitingRetry = true;
+        questionStatus.className = 'status almost';
+        questionStatus.textContent = uiCopy().almostStatus;
+        if (questionType === 'text') {
+          answerInput.value = '';
+          if (runtimeState.inputMode !== 'voice') answerInput.focus();
+        }
+        runtimeState.isSubmitting = false;
+        if (runtimeState.inputMode === 'voice') {
+          runtimeState.voice.lastSubmittedTranscript = '';
+          runtimeState.voice.shouldListen = true;
+          scheduleVoiceRestart(250);
+        }
+        return;
+      }
+
+      runtimeState.wrong += 1;
+      runtimeState.awaitingRetry = false;
+      runtimeState.pendingRevealAnswerEncoded = questionType === 'multiple_choice'
+        ? (current.answers?.[0] || '')
+        : encodeAnswerForReveal(result.acceptedAnswer || decodeAnswerForReveal(current.answers?.[0] || '') || '—');
+      runtimeState.answeredQuestions.push({
+        prompt: current.prompt,
+        status: 'wrong',
+        userAnswer: userAnswerForSummary,
+        acceptedAnswer: getQuestionType(current) === 'multiple_choice'
+          ? getRevealAnswerText(current, current.answers?.[0] || '')
+          : (result.acceptedAnswer || decodeAnswerForReveal(current.answers?.[0] || '') || null),
+        category: current.category || 'General',
+        difficulty: current.difficulty ?? null
+      });
+      questionStatus.className = 'status error';
+      questionStatus.textContent = uiCopy().wrongStatus;
+      showAnswerBtn.classList.remove('hidden');
+      nextQuestionBtn.classList.remove('hidden');
+      submitBtn.disabled = true;
+      answerInput.disabled = true;
+      for (const input of mcOptions.querySelectorAll('input[name="mcOption"]')) input.disabled = true;
+      runtimeState.isSubmitting = false;
+      syncInputModeUi();
+      if (runtimeState.inputMode === 'voice') {
+        runtimeState.voice.shouldListen = true;
+        scheduleVoiceRestart(250);
+      }
+    }
+
+    async function handleVoiceTranscript(rawTranscript) {
+      const transcript = normalizeVoiceText(rawTranscript);
+      const question = runtimeState.questions[runtimeState.index];
+      if (!transcript || runtimeState.inputMode !== 'voice' || !question || runtimeState.isSubmitting) return;
+      if (isNextQuestionVisible()) {
+        if (isVoiceNextCommand(transcript)) {
+          runtimeState.voice.lastSubmittedTranscript = transcript;
+          moveNextQuestion();
+        }
+        return;
+      }
+      const questionKey = getCurrentQuestionKey();
+      if (runtimeState.voice.lastQuestionKey !== questionKey) {
+        runtimeState.voice.lastQuestionKey = questionKey;
+        runtimeState.voice.lastSubmittedTranscript = '';
+      }
+      if (runtimeState.voice.lastSubmittedTranscript === transcript) return;
+
+      let answer = transcript;
+      if (getQuestionType(question) === 'multiple_choice') {
+        answer = resolveSpokenMultipleChoice(transcript, question);
+        if (!answer) {
+          questionStatus.className = 'status error';
+          questionStatus.textContent = uiCopy().voiceOptionNoMatch;
+          return;
+        }
+        const selectedInput = mcOptions.querySelector(`input[name="mcOption"][value="${CSS.escape(answer)}"]`);
+        if (selectedInput) selectedInput.checked = true;
+      } else {
+        answerInput.value = rawTranscript.trim();
+      }
+
+      runtimeState.voice.lastSubmittedTranscript = transcript;
+      runtimeState.voice.isProcessing = true;
+      renderVoiceStatus();
+      await submitCurrentAnswer(answer);
+      runtimeState.voice.isProcessing = false;
+      renderVoiceStatus();
+    }
+
+    function setupVoiceRecognition() {
+      const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognitionCtor) {
+        runtimeState.voice.supported = false;
+        renderVoiceStatus();
+        return;
+      }
+      runtimeState.voice.supported = true;
+      const recognition = new SpeechRecognitionCtor();
+      recognition.continuous = true;
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+      recognition.lang = runtimeState.activeLang === 'no' ? 'nb-NO' : 'en-US';
+      recognition.onstart = () => {
+        runtimeState.voice.isListening = true;
+        runtimeState.voice.restartAttempts = 0;
+        renderVoiceStatus();
+      };
+      recognition.onresult = async (event) => {
+        const results = Array.from(event.results || []);
+        const finalResult = [...results].reverse().find((result) => result.isFinal);
+        const transcript = finalResult?.[0]?.transcript || '';
+        if (!transcript) return;
+        await handleVoiceTranscript(transcript);
+      };
+      recognition.onerror = (event) => {
+        runtimeState.voice.isListening = false;
+        if (event?.error === 'not-allowed' || event?.error === 'service-not-allowed') {
+          runtimeState.voice.permissionDenied = true;
+          setInputMode('text');
+          return;
+        }
+        runtimeState.voice.restartAttempts += 1;
+        renderVoiceStatus();
+      };
+      recognition.onend = () => {
+        runtimeState.voice.isListening = false;
+        renderVoiceStatus();
+        scheduleVoiceRestart(400);
+      };
+      runtimeState.voice.recognition = recognition;
+      renderVoiceStatus();
+    }
+
     function syncLanguageFromStorage() {
       runtimeState.activeLang = readQuizLanguage();
     }
@@ -614,6 +1030,12 @@
       setupView.classList.toggle('hidden', name !== 'setup');
       questionView.classList.toggle('hidden', name !== 'question');
       resultView.classList.toggle('hidden', name !== 'result');
+      if (name !== 'question') {
+        stopVoiceListening();
+      } else if (runtimeState.inputMode === 'voice') {
+        runtimeState.voice.shouldListen = true;
+        scheduleVoiceRestart(200);
+      }
     }
 
     function getSelectedCategories() {
@@ -830,8 +1252,15 @@
       showAnswerBtn.textContent = uiCopy().showAnswer;
       abortConfirmRow.classList.add('hidden');
       runtimeState.awaitingRetry = false;
+      runtimeState.voice.isProcessing = false;
+      runtimeState.voice.lastQuestionKey = getCurrentQuestionKey();
+      runtimeState.voice.lastSubmittedTranscript = '';
+      syncInputModeUi();
+      if (runtimeState.inputMode === 'voice') {
+        startVoiceListening();
+      }
       if (getQuestionType(question) === 'text') {
-        answerInput.focus();
+        if (runtimeState.inputMode !== 'voice') answerInput.focus();
       }
     }
 
@@ -984,87 +1413,7 @@
 
     answerForm.addEventListener('submit', async (event) => {
       event.preventDefault();
-      if (submitBtn.disabled) return;
-
-      const current = runtimeState.questions[runtimeState.index];
-      const questionType = getQuestionType(current);
-      let userAnswer = '';
-      let userAnswerForSummary = '';
-      if (questionType === 'multiple_choice') {
-        const selectedOptionId = getSelectedOptionId();
-        if (!Number.isInteger(selectedOptionId)) return;
-        userAnswer = String(selectedOptionId);
-        userAnswerForSummary = getSelectedOptionText(current, selectedOptionId);
-      } else {
-        userAnswer = answerInput.value.trim();
-        if (!userAnswer) return;
-        userAnswerForSummary = userAnswer;
-      }
-      let result;
-
-      try {
-        result = await evaluateAnswer(current.id, userAnswer, !runtimeState.awaitingRetry);
-      } catch (error) {
-        questionStatus.className = 'status error';
-        questionStatus.textContent = error.message;
-        return;
-      }
-
-      if (result.status === 'correct') {
-        runtimeState.correct += 1;
-        runtimeState.answeredQuestions.push({
-          prompt: current.prompt,
-          status: 'correct',
-          userAnswer: userAnswerForSummary,
-          acceptedAnswer: getQuestionType(current) === 'multiple_choice'
-            ? getRevealAnswerText(current, current.answers?.[0] || '')
-            : decodeAnswerForReveal(current.answers?.[0] || ''),
-          category: current.category || 'General',
-          difficulty: current.difficulty ?? null
-        });
-        questionStatus.className = 'status ok';
-        questionStatus.textContent = uiCopy().correctStatus;
-        submitBtn.disabled = true;
-        answerInput.disabled = true;
-        setTimeout(() => moveNextQuestion(), 600);
-        return;
-      }
-
-      if (result.status === 'almost' && !runtimeState.awaitingRetry) {
-        runtimeState.awaitingRetry = true;
-        questionStatus.className = 'status almost';
-        questionStatus.textContent = uiCopy().almostStatus;
-        if (questionType === 'text') {
-          answerInput.value = '';
-          answerInput.focus();
-        }
-        return;
-      }
-
-      runtimeState.wrong += 1;
-      runtimeState.awaitingRetry = false;
-      runtimeState.pendingRevealAnswerEncoded = questionType === 'multiple_choice'
-        ? (current.answers?.[0] || '')
-        : encodeAnswerForReveal(result.acceptedAnswer || decodeAnswerForReveal(current.answers?.[0] || '') || '—');
-      runtimeState.answeredQuestions.push({
-        prompt: current.prompt,
-        status: 'wrong',
-        userAnswer: userAnswerForSummary,
-        acceptedAnswer: getQuestionType(current) === 'multiple_choice'
-          ? getRevealAnswerText(current, current.answers?.[0] || '')
-          : (result.acceptedAnswer || decodeAnswerForReveal(current.answers?.[0] || '') || null),
-        category: current.category || 'General',
-        difficulty: current.difficulty ?? null
-      });
-      questionStatus.className = 'status error';
-      questionStatus.textContent = uiCopy().wrongStatus;
-      showAnswerBtn.classList.remove('hidden');
-      nextQuestionBtn.classList.remove('hidden');
-      submitBtn.disabled = true;
-      answerInput.disabled = true;
-      for (const input of mcOptions.querySelectorAll('input[name="mcOption"]')) {
-        input.disabled = true;
-      }
+      await submitCurrentAnswer();
     });
 
     showAnswerBtn.addEventListener('click', () => {
@@ -1140,7 +1489,7 @@
 
     cancelAbortBtn.addEventListener('click', () => {
       abortConfirmRow.classList.add('hidden');
-      answerInput.focus();
+      if (runtimeState.inputMode !== 'voice') answerInput.focus();
     });
 
     function applyCopy() {
@@ -1163,6 +1512,8 @@
       questionTitle.textContent = c.questionTitle;
       answerInput.placeholder = c.answerPlaceholder;
       submitBtn.textContent = c.submitAnswer;
+      textModeBtn.textContent = c.inputModeText;
+      voiceModeBtn.textContent = c.inputModeVoice;
       showAnswerBtn.textContent = c.showAnswer;
       nextQuestionBtn.textContent = c.nextQuestion;
       resultHeading.textContent = c.quizComplete;
@@ -1173,12 +1524,25 @@
       resultCounterItems[0].lastChild.textContent = ` ${c.correctLabel}`;
       resultCounterItems[1].lastChild.textContent = ` ${c.wrongLabel}`;
       playAgainBtn.textContent = c.playAgain;
+      renderVoiceStatus();
     }
 
     syncLanguageFromStorage();
     applyCopy();
+    setupVoiceRecognition();
+    setInputMode('text');
     loadOverview();
     showView('setup');
+    textModeBtn.addEventListener('click', () => setInputMode('text'));
+    voiceModeBtn.addEventListener('click', () => setInputMode('voice'));
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        stopVoiceListening();
+      } else if (runtimeState.inputMode === 'voice') {
+        runtimeState.voice.shouldListen = true;
+        scheduleVoiceRestart(400);
+      }
+    });
     window.quizCategoriesState = runtimeState;
   </script>
 
