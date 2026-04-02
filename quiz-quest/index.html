@@ -280,9 +280,7 @@
       </div>
 
       <div class="controls">
-        <label for="resetCategorySelect" class="muted" id="resetLabel">Reset category</label>
-        <select id="resetCategorySelect"></select>
-        <button id="resetCategoryBtn" type="button">Reset category</button>
+        <button id="resetCategoryBtn" type="button">Reset selected categories</button>
       </div>
     </section>
 
@@ -334,11 +332,11 @@
         showAnswer: 'Show answer',
         hideAnswer: 'Hide answer',
         back: 'Back to sarcasm.games',
-        resetCategory: 'Reset category',
-        resetCategoryLabel: 'Reset category',
-        resetUserDone: 'Category progress reset.',
-        resetGuestDone: 'Guest progress reset for this category.',
-        resetNeedsCategory: 'Choose a category to reset.',
+        resetCategory: 'Reset selected categories',
+        resetUserDone: 'Selected category progress reset.',
+        resetGuestDone: 'Guest progress reset for selected categories.',
+        resetNeedsCategory: 'Choose at least one category to reset.',
+        resetConfirm: 'Are you sure you want to reset progress for {count} selected categories?',
         failedOverview: 'Could not load category overview.',
         failedQuestion: 'Could not load a question.',
         failedAnswer: 'Could not validate answer.',
@@ -381,11 +379,11 @@
         showAnswer: 'Vis fasit',
         hideAnswer: 'Skjul fasit',
         back: 'Tilbake til sarcasm.games',
-        resetCategory: 'Reset kategori',
-        resetCategoryLabel: 'Reset kategori',
-        resetUserDone: 'Kategorifremgang er resatt.',
-        resetGuestDone: 'Gjestefremgang for kategorien er resatt.',
-        resetNeedsCategory: 'Velg en kategori å resette.',
+        resetCategory: 'Reset valgte kategorier',
+        resetUserDone: 'Fremgang for valgte kategorier er resatt.',
+        resetGuestDone: 'Gjestefremgang for valgte kategorier er resatt.',
+        resetNeedsCategory: 'Velg minst én kategori å resette.',
+        resetConfirm: 'Er du sikker på at du vil resette fremgang for {count} valgte kategorier?',
         failedOverview: 'Kunne ikke laste kategorioversikt.',
         failedQuestion: 'Kunne ikke hente spørsmål.',
         failedAnswer: 'Kunne ikke sjekke svar.',
@@ -455,8 +453,6 @@
     const questionCountInput = document.getElementById('questionCount');
     const countMeta = document.getElementById('countMeta');
     const startQuestBtn = document.getElementById('startQuestBtn');
-    const resetLabel = document.getElementById('resetLabel');
-    const resetCategorySelect = document.getElementById('resetCategorySelect');
     const resetCategoryBtn = document.getElementById('resetCategoryBtn');
     const backLink = document.getElementById('backLink');
     const questionSection = document.getElementById('questionSection');
@@ -713,6 +709,7 @@
     function renderQuestionCountState() {
       const remaining = getSelectedRemainingCount();
       const hasPool = remaining > 0;
+      renderResetState();
 
       questionCountInput.disabled = !hasPool;
       startQuestBtn.disabled = !hasPool;
@@ -1043,28 +1040,8 @@
       setupView.classList.toggle('hidden', active);
     }
 
-    function renderResetCategories() {
-      const previous = resetCategorySelect.value;
-      resetCategorySelect.innerHTML = '';
-
-      for (const category of state.categories) {
-        const option = document.createElement('option');
-        option.value = category.name;
-        option.textContent = category.name;
-        resetCategorySelect.appendChild(option);
-      }
-
-      if (!state.categories.length) {
-        const option = document.createElement('option');
-        option.value = '';
-        option.textContent = ui().noCategories;
-        resetCategorySelect.appendChild(option);
-      }
-
-      const exists = state.categories.some((category) => category.name === previous);
-      resetCategorySelect.value = exists ? previous : (state.categories[0]?.name || '');
-      resetCategorySelect.disabled = !state.categories.length;
-      resetCategoryBtn.disabled = !state.categories.length;
+    function renderResetState() {
+      resetCategoryBtn.disabled = selectedCategories().length < 1;
     }
 
     function renderCategories() {
@@ -1080,7 +1057,7 @@
         startQuestBtn.disabled = true;
         renderPoolStatus();
         renderQuestionCountState();
-        renderResetCategories();
+        renderResetState();
         return;
       }
 
@@ -1123,7 +1100,7 @@
 
       renderPoolStatus();
       renderQuestionCountState();
-      renderResetCategories();
+      renderResetState();
     }
 
     function markGuestSolved(question) {
@@ -1409,20 +1386,27 @@
     }
 
     async function resetCategoryProgress() {
-      const category = resetCategorySelect.value;
-      if (!category) {
+      const categoriesToReset = selectedCategories();
+      if (!categoriesToReset.length) {
         setupStatus.className = 'status error';
         setupStatus.textContent = ui().resetNeedsCategory;
         return;
       }
 
+      const confirmation = ui().resetConfirm.replace('{count}', String(categoriesToReset.length));
+      if (!window.confirm(confirmation)) {
+        return;
+      }
+
       try {
         if (state.session) {
-          await questApi('reset', { category });
+          await Promise.all(categoriesToReset.map((category) => questApi('reset', { category })));
           setupStatus.className = 'status ok';
           setupStatus.textContent = ui().resetUserDone;
         } else {
-          delete state.guestProgress[category];
+          for (const category of categoriesToReset) {
+            delete state.guestProgress[category];
+          }
           state.pendingSolvedQuestionIds = [];
           writeGuestProgressToken(null);
           writeGuestProgress();
@@ -1449,7 +1433,6 @@
       submitBtn.textContent = ui().submit;
       showAnswerBtn.textContent = ui().showAnswer;
       backLink.textContent = ui().back;
-      resetLabel.textContent = ui().resetCategoryLabel;
       resetCategoryBtn.textContent = ui().resetCategory;
       answerInput.placeholder = ui().placeholder;
       textModeBtn.textContent = ui().inputModeText;
