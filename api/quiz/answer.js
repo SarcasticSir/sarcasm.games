@@ -95,6 +95,7 @@ module.exports = async function handler(req, res) {
   try {
     const body = parseJsonBody(req.body);
     const { questionId: rawQuestionId, answer: rawAnswer = '' } = body;
+    const shouldPersistProgress = body.persistProgress !== false;
     const questionId = Number(rawQuestionId);
     const answer = String(rawAnswer).trim();
 
@@ -146,7 +147,12 @@ module.exports = async function handler(req, res) {
 
     const session = await getSessionFromCookies(req, res, { allowRefresh: true });
 
-    if (session && session.id && (evaluation.status === 'correct' || evaluation.status === 'wrong')) {
+    if (
+      shouldPersistProgress
+      && session
+      && session.id
+      && (evaluation.status === 'correct' || evaluation.status === 'wrong')
+    ) {
       await persistProgress(session.id, questionId, evaluation.status === 'correct');
     }
 
