@@ -423,7 +423,7 @@
       }
       if (getQuestionType(question) === 'multiple_choice') {
         for (const input of mcOptions.querySelectorAll('input[name="mcOption"]')) {
-          if (isVoice && !submitBtn.disabled) input.disabled = true;
+          input.disabled = isVoice || submitBtn.disabled;
         }
       }
       renderVoiceStatus();
