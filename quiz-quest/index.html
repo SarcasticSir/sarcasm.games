@@ -301,6 +301,7 @@
           <button id="submitBtn" type="submit" class="btn-primary">Submit</button>
           <button id="showAnswerBtn" type="button" class="hidden">Show answer</button>
           <button id="nextBtn" type="button" class="hidden">Next question</button>
+          <button id="abortQuestBtn" type="button">Abort quest</button>
         </div>
       </form>
       <p id="questionStatus" class="status"></p>
@@ -331,6 +332,9 @@
         submit: 'Submit',
         showAnswer: 'Show answer',
         hideAnswer: 'Hide answer',
+        abortQuest: 'Abort quest',
+        abortConfirm: 'Abort the current quest and return to setup?',
+        abortDone: 'Quest aborted. You can start a new round anytime.',
         back: 'Back to sarcasm.games',
         resetCategory: 'Reset selected categories',
         resetUserDone: 'Selected category progress reset.',
@@ -354,6 +358,9 @@
         optionMissing: 'Choose an option first.',
         placeholder: 'Write your answer',
         noCategories: 'No categories available.',
+        difficultyEasy: 'Easy',
+        difficultyMedium: 'Medium',
+        difficultyHard: 'Hard',
         inputModeText: 'Text',
         inputModeVoice: 'Voice',
         voiceListening: '🎙️ Listening…',
@@ -378,6 +385,9 @@
         submit: 'Svar',
         showAnswer: 'Vis fasit',
         hideAnswer: 'Skjul fasit',
+        abortQuest: 'Avbryt quest',
+        abortConfirm: 'Avbryt gjeldende quest og gå tilbake til oppsett?',
+        abortDone: 'Quest avbrutt. Du kan starte en ny runde når som helst.',
         back: 'Tilbake til sarcasm.games',
         resetCategory: 'Reset valgte kategorier',
         resetUserDone: 'Fremgang for valgte kategorier er resatt.',
@@ -401,6 +411,9 @@
         optionMissing: 'Velg et alternativ først.',
         placeholder: 'Skriv svaret ditt',
         noCategories: 'Ingen kategorier tilgjengelig.',
+        difficultyEasy: 'Lett',
+        difficultyMedium: 'Middels',
+        difficultyHard: 'Vanskelig',
         inputModeText: 'Tekst',
         inputModeVoice: 'Stemmen',
         voiceListening: '🎙️ Lytter…',
@@ -469,6 +482,7 @@
     const submitBtn = document.getElementById('submitBtn');
     const showAnswerBtn = document.getElementById('showAnswerBtn');
     const nextBtn = document.getElementById('nextBtn');
+    const abortQuestBtn = document.getElementById('abortQuestBtn');
     const questionStatus = document.getElementById('questionStatus');
     const answerReveal = document.getElementById('answerReveal');
 
@@ -522,6 +536,21 @@
 
     function getQuestionType(question) {
       return question?.question_type === 'multiple_choice' ? 'multiple_choice' : 'text';
+    }
+
+    function getDifficultyLabel(difficulty) {
+      const parsedDifficulty = Number(difficulty);
+      if (parsedDifficulty === 1) return ui().difficultyEasy;
+      if (parsedDifficulty === 2) return ui().difficultyMedium;
+      if (parsedDifficulty === 3) return ui().difficultyHard;
+      return '';
+    }
+
+    function formatCategoryLine(question) {
+      const categoryText = ui().questionIn.replace('{category}', question?.category || '—');
+      const difficultyLabel = getDifficultyLabel(question?.difficulty);
+      if (!difficultyLabel) return categoryText;
+      return `${categoryText} · ${difficultyLabel}`;
     }
 
     function getSelectedOptionId() {
@@ -804,9 +833,7 @@
       }
 
       for (const optionInput of mcOptions.querySelectorAll('input[name="mcOption"]')) {
-        if (isVoice && !state.isSubmitting && !isNextQuestionVisible()) {
-          optionInput.disabled = true;
-        }
+        optionInput.disabled = isVoice || state.isSubmitting || isNextQuestionVisible();
       }
 
       renderVoiceStatus();
@@ -1166,7 +1193,7 @@
         progressText.textContent = ui().progress
           .replace('{current}', String(state.roundAnswered + 1))
           .replace('{total}', String(state.roundTarget));
-        questionCategory.textContent = ui().questionIn.replace('{category}', question.category);
+        questionCategory.textContent = formatCategoryLine(question);
         questionPrompt.textContent = question.prompt;
         answerInput.value = '';
         answerInput.placeholder = ui().placeholder;
@@ -1198,11 +1225,11 @@
         state.voice.lastQuestionKey = getCurrentQuestionKey();
         state.voice.lastSubmittedTranscript = '';
         state.voice.shouldListen = state.inputMode === 'voice';
+        nextBtn.classList.add('hidden');
         syncInputModeUi();
         if (state.inputMode === 'voice') {
           startVoiceListening();
         }
-        nextBtn.classList.add('hidden');
         return true;
       } catch (error) {
         setupStatus.className = 'status error';
@@ -1252,6 +1279,18 @@
       }
 
       await loadNextQuestion();
+    }
+
+    async function abortQuest() {
+      if (!state.isQuestActive) return;
+      const confirmed = window.confirm(ui().abortConfirm);
+      if (!confirmed) return;
+      stopVoiceListening();
+      clearQuestionState();
+      setQuestActive(false);
+      setupStatus.className = 'status';
+      setupStatus.textContent = ui().abortDone;
+      await refreshOverview();
     }
 
     async function submitCurrentAnswer(forcedAnswer = null) {
@@ -1432,6 +1471,7 @@
       nextBtn.textContent = ui().next;
       submitBtn.textContent = ui().submit;
       showAnswerBtn.textContent = ui().showAnswer;
+      abortQuestBtn.textContent = ui().abortQuest;
       backLink.textContent = ui().back;
       resetCategoryBtn.textContent = ui().resetCategory;
       answerInput.placeholder = ui().placeholder;
@@ -1456,6 +1496,7 @@
     startQuestBtn.addEventListener('click', startQuest);
     answerForm.addEventListener('submit', submitAnswer);
     resetCategoryBtn.addEventListener('click', resetCategoryProgress);
+    abortQuestBtn.addEventListener('click', abortQuest);
     textModeBtn.addEventListener('click', () => setInputMode('text'));
     voiceModeBtn.addEventListener('click', () => setInputMode('voice'));
 
