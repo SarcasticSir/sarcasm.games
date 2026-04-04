@@ -1226,8 +1226,25 @@
       startQuestBtn.disabled = true;
 
       try {
-        const payload = await questApi('next', { categories });
-        const question = payload.question || null;
+        const maxAttempts = 6;
+        let question = null;
+
+        for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+          const payload = await questApi('next', { categories });
+          const candidate = payload.question || null;
+          if (!candidate) {
+            question = null;
+            break;
+          }
+
+          const candidateId = Number(candidate.id);
+          if (Number.isInteger(candidateId) && candidateId > 0 && state.seenQuestionIds.includes(candidateId)) {
+            continue;
+          }
+
+          question = candidate;
+          break;
+        }
 
         if (!question) {
           clearQuestionState();

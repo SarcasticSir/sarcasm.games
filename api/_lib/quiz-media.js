@@ -1,8 +1,22 @@
 const DEFAULT_QUIZ_MEDIA_BUCKET = (process.env.QUIZ_MEDIA_BUCKET || 'quiz-media').trim() || 'quiz-media';
 
 function getSupabaseBaseUrl() {
-  const value = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-  return value.trim().replace(/\/+$/, '');
+  const explicitValue = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  const explicitUrl = explicitValue.trim().replace(/\/+$/, '');
+  if (explicitUrl) return explicitUrl;
+
+  const dbUrl = String(process.env.SUPABASE_DB_URL || process.env.DATABASE_URL || '').trim();
+  if (!dbUrl) return '';
+
+  try {
+    const parsed = new URL(dbUrl);
+    const host = String(parsed.hostname || '').trim().toLowerCase();
+    const match = host.match(/^db\.([a-z0-9-]+)\.supabase\.co$/i);
+    if (!match) return '';
+    return `https://${match[1]}.supabase.co`;
+  } catch (error) {
+    return '';
+  }
 }
 
 function encodeStoragePath(path) {
