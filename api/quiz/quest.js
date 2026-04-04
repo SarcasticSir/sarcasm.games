@@ -133,6 +133,8 @@ function randomIndex(max) {
 }
 
 async function getNextQuestionBounds({ userId, categories, solvedQuestionIds }) {
+  const seenIds = normalizeSolvedQuestionIds(solvedQuestionIds);
+
   if (userId) {
     const result = await runQuery(
       `SELECT MIN(q.id)::int AS min_id, MAX(q.id)::int AS max_id
@@ -141,8 +143,9 @@ async function getNextQuestionBounds({ userId, categories, solvedQuestionIds }) 
          ON ua.question_id = q.id
         AND ua.user_id = $2
        WHERE q.category = ANY($1)
-         AND COALESCE(ua.is_correct, FALSE) = FALSE`,
-      [categories, userId]
+         AND COALESCE(ua.is_correct, FALSE) = FALSE
+         AND NOT (q.id = ANY($3::int[]))`,
+      [categories, userId, seenIds.length ? seenIds : [0]]
     );
 
     const row = result.rows[0] || {};
@@ -152,7 +155,7 @@ async function getNextQuestionBounds({ userId, categories, solvedQuestionIds }) 
     };
   }
 
-  const excludedIds = solvedQuestionIds.length ? solvedQuestionIds : [0];
+  const excludedIds = seenIds.length ? seenIds : [0];
   const result = await runQuery(
     `SELECT MIN(q.id)::int AS min_id, MAX(q.id)::int AS max_id
      FROM quiz_questions q
@@ -169,6 +172,8 @@ async function getNextQuestionBounds({ userId, categories, solvedQuestionIds }) 
 }
 
 async function getNextQuestionCandidateFromPivot({ userId, categories, solvedQuestionIds, pivotId }) {
+  const seenIds = normalizeSolvedQuestionIds(solvedQuestionIds);
+
   if (userId) {
     const result = await runQuery(
       `WITH preferred AS (
@@ -179,6 +184,7 @@ async function getNextQuestionCandidateFromPivot({ userId, categories, solvedQue
           AND ua.user_id = $2
          WHERE q.category = ANY($1)
            AND COALESCE(ua.is_correct, FALSE) = FALSE
+           AND NOT (q.id = ANY($4::int[]))
            AND q.id >= $3
          ORDER BY q.id ASC
          LIMIT 1
@@ -190,6 +196,7 @@ async function getNextQuestionCandidateFromPivot({ userId, categories, solvedQue
           AND ua.user_id = $2
          WHERE q.category = ANY($1)
            AND COALESCE(ua.is_correct, FALSE) = FALSE
+           AND NOT (q.id = ANY($4::int[]))
            AND q.id < $3
          ORDER BY q.id ASC
          LIMIT 1
@@ -198,13 +205,13 @@ async function getNextQuestionCandidateFromPivot({ userId, categories, solvedQue
        UNION ALL
        SELECT * FROM fallback
        LIMIT 1`,
-      [categories, userId, pivotId]
+      [categories, userId, pivotId, seenIds.length ? seenIds : [0]]
     );
 
     return result.rows[0] || null;
   }
 
-  const excludedIds = solvedQuestionIds.length ? solvedQuestionIds : [0];
+  const excludedIds = seenIds.length ? seenIds : [0];
   const result = await runQuery(
     `WITH preferred AS (
        SELECT q.id, q.category, q.question_en, q.question_no, q.answers_en, q.difficulty, q.question_type, q.image_path, q.audio_path
@@ -384,10 +391,16 @@ module.exports = async function handler(req, res) {
         return;
       }
 
+      const requestSeenIds = normalizeSolvedQuestionIds(body.seenQuestionIds);
+      const excludedQuestionIds = [...new Set([
+        ...guestProgress.solvedQuestionIds,
+        ...requestSeenIds
+      ])];
+
       const bounds = await getNextQuestionBounds({
         userId,
         categories,
-        solvedQuestionIds: guestProgress.solvedQuestionIds
+        solvedQuestionIds: excludedQuestionIds
       });
 
       if (!Number.isInteger(bounds.minId) || !Number.isInteger(bounds.maxId) || bounds.minId > bounds.maxId) {
@@ -407,7 +420,7 @@ module.exports = async function handler(req, res) {
         const row = await getNextQuestionCandidateFromPivot({
           userId,
           categories,
-          solvedQuestionIds: guestProgress.solvedQuestionIds,
+          solvedQuestionIds: excludedQuestionIds,
           pivotId
         });
 
