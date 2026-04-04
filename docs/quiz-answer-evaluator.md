@@ -1,6 +1,7 @@
 # Quiz answer evaluator (shared rules)
 
-This module is meant to be reused across all quiz modes (`random10`, `categories`, `completionist`, and later Pokémon).
+This module is reused for text-answer evaluation in current quiz modes (`random10`, `categories`, `quest`).
+Multiple-choice answer validation is handled separately in `api/quiz/answer.js`.
 
 ## File
 
@@ -31,7 +32,7 @@ const { evaluateAnswer } = require('../../lib/server/quiz-answer-evaluator');
 
 const evaluation = evaluateAnswer({
   userAnswer: req.body.answer,
-  acceptedAnswers: [question.answer_en, question.answer_no],
+  acceptedAnswers: question.answers_en,
   retryAvailable: req.body.retryAvailable !== false
 });
 ```

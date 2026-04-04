@@ -5,26 +5,28 @@
 - Database: Postgres (Supabase) via the `pg` driver.
 
 ## 1) Shared state in serverless
-Status: **Partly at risk**.
+Status: **Improved, with fallback risk**.
 
-- Rate limiting currently uses in-memory maps per instance (`requestBuckets`).
-- Guest progress in quiz quest also uses in-memory maps (`guestProgressStore`).
+- Rate limiting writes to shared Postgres table `quiz_rate_limits` and only falls back to in-memory buckets if shared storage is unavailable.
+- Guest quest progress is stored in Postgres table `quiz_guest_progress`.
 
 Impact:
-- In serverless, users can hit different warm instances, causing inconsistent limits/progress.
-- Horizontal scaling does not share this state.
+- Under normal operation, multi-instance consistency is preserved through shared tables.
+- If DB access fails, in-memory rate-limit fallback can become instance-local and temporarily inconsistent.
 
 Recommendation:
-- Move rate limiting and guest progress to shared storage (Redis/KV or Postgres table).
+- Keep shared-table path as primary and monitor fallback frequency.
+- Add alerting for fallback events to detect DB/connectivity issues.
 
 ## 2) Random question selection patterns
-Status: **Needs optimization as dataset grows**.
+Status: **Partly improved, `/start` still scales with candidate count**.
 
 - `/api/quiz/start` currently fetches candidate IDs and samples in application code.
-- `/api/quiz/quest` uses `COUNT + OFFSET + LIMIT` for random candidate retrieval.
+- `/api/quiz/quest` uses random pivot within min/max id bounds and then fetches nearest eligible row.
 
 Impact:
-- These patterns can become expensive with larger tables/high offsets.
+- `/start` can become expensive as dataset grows because candidate IDs are materialized before sampling.
+- `/quest` avoids `OFFSET`, but can still degrade with sparse IDs and filter skew.
 
 Recommendation:
 - Keep sampling logic deterministic but reduce DB work:
