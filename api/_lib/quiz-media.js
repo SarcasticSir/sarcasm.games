@@ -12,15 +12,27 @@ function encodeStoragePath(path) {
     .join('/');
 }
 
+function normalizeStoragePath(path) {
+  return String(path || '')
+    .trim()
+    .replace(/\\/g, '/')
+    .replace(/^\/+/, '')
+    .replace(/\/{2,}/g, '/');
+}
+
 function toQuizMediaUrl(path) {
   if (!path || typeof path !== 'string') return null;
-  const trimmedPath = path.trim();
-  if (!trimmedPath) return null;
+  const normalizedPath = normalizeStoragePath(path);
+  if (!normalizedPath) return null;
+
+  if (/^https?:\/\//i.test(normalizedPath)) {
+    return normalizedPath;
+  }
 
   const baseUrl = getSupabaseBaseUrl();
   if (!baseUrl) return null;
 
-  return `${baseUrl}/storage/v1/object/public/${QUIZ_MEDIA_BUCKET}/${encodeStoragePath(trimmedPath)}`;
+  return `${baseUrl}/storage/v1/object/public/${QUIZ_MEDIA_BUCKET}/${encodeStoragePath(normalizedPath)}`;
 }
 
 module.exports = {
