@@ -22,6 +22,9 @@
     .status.wrong { color:var(--bad); }
     input[type="text"] { width:100%; border:1px solid var(--bd); border-radius:8px; background:var(--bg); color:var(--txt); padding:12px; font-size:16px; }
     .progress { color:var(--muted); margin-bottom:12px; }
+    .question-media { display:grid; gap:10px; margin:0 0 12px; }
+    .question-media img { display:block; max-width:100%; border-radius:8px; border:1px solid var(--bd); background:#111; }
+    .question-media audio { width:100%; }
     .result-list { margin:10px 0 0; padding-left:18px; color:var(--muted); }
     .result-list.detailed { list-style:none; padding-left:0; display:grid; gap:10px; }
     .result-item { border:1px solid var(--bd); border-radius:10px; padding:10px; background:#181920; }
@@ -67,6 +70,7 @@
       </div>
       <h2 id="questionTitle">Question</h2>
       <p id="questionCategory" class="muted"></p>
+      <div id="questionMedia" class="question-media hidden" aria-live="polite"></div>
       <div class="input-mode" role="group" aria-label="Input mode toggle">
         <button id="textModeBtn" type="button" class="mode-btn is-active">Text</button>
         <button id="voiceModeBtn" type="button" class="mode-btn">Voice</button>
@@ -228,6 +232,7 @@
     const progressText = document.getElementById('progressText');
     const questionTitle = document.getElementById('questionTitle');
     const questionCategory = document.getElementById('questionCategory');
+    const questionMedia = document.getElementById('questionMedia');
     const textModeBtn = document.getElementById('textModeBtn');
     const voiceModeBtn = document.getElementById('voiceModeBtn');
     const voiceStatus = document.getElementById('voiceStatus');
@@ -692,8 +697,35 @@
         prompt: raw.prompt || raw.question || raw.question_en || raw.question_no || 'Missing question text',
         answers,
         question_type: raw.question_type === 'multiple_choice' ? 'multiple_choice' : 'text',
-        options: Array.isArray(raw.options) ? raw.options : []
+        options: Array.isArray(raw.options) ? raw.options : [],
+        image_url: typeof raw.image_url === 'string' && raw.image_url.trim() ? raw.image_url.trim() : null,
+        audio_url: typeof raw.audio_url === 'string' && raw.audio_url.trim() ? raw.audio_url.trim() : null
       };
+    }
+
+    function renderQuestionMedia(question) {
+      questionMedia.innerHTML = '';
+
+      const imageUrl = typeof question?.image_url === 'string' ? question.image_url.trim() : '';
+      const audioUrl = typeof question?.audio_url === 'string' ? question.audio_url.trim() : '';
+
+      if (imageUrl) {
+        const image = document.createElement('img');
+        image.src = imageUrl;
+        image.alt = 'Question image';
+        image.loading = 'lazy';
+        questionMedia.appendChild(image);
+      }
+
+      if (audioUrl) {
+        const audio = document.createElement('audio');
+        audio.src = audioUrl;
+        audio.controls = true;
+        audio.preload = 'none';
+        questionMedia.appendChild(audio);
+      }
+
+      questionMedia.classList.toggle('hidden', !questionMedia.childElementCount);
     }
 
     function getDifficultyLabel(difficulty) {
@@ -752,6 +784,7 @@
         .replace('{total}', String(state.questions.length));
       questionTitle.textContent = q.prompt;
       questionCategory.textContent = formatCategoryLine(q);
+      renderQuestionMedia(q);
       answerInput.value = '';
       if (getQuestionType(q) === 'multiple_choice') {
         answerInput.classList.add('hidden');
@@ -819,6 +852,7 @@
       statusText.textContent = '';
       answerReveal.classList.add('hidden');
       answerReveal.textContent = '';
+      renderQuestionMedia(null);
       state.pendingRevealAnswerEncoded = '';
       abortConfirmRow.classList.add('hidden');
       setStartLoading(false);

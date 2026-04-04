@@ -208,6 +208,24 @@
       margin-top: 14px;
     }
 
+    .question-media {
+      display: grid;
+      gap: 10px;
+      margin: 0 0 10px;
+    }
+
+    .question-media img {
+      display: block;
+      max-width: 100%;
+      border-radius: 8px;
+      border: 1px solid var(--bd);
+      background: #111;
+    }
+
+    .question-media audio {
+      width: 100%;
+    }
+
     .input-mode {
       display: inline-flex;
       border: 1px solid var(--bd);
@@ -288,6 +306,7 @@
       <p id="progressText" class="muted"></p>
       <p id="questionCategory" class="muted"></p>
       <h2 id="questionPrompt">Question</h2>
+      <div id="questionMedia" class="question-media hidden" aria-live="polite"></div>
       <div class="input-mode" role="group" aria-label="Input mode toggle">
         <button id="textModeBtn" type="button" class="mode-btn is-active">Text</button>
         <button id="voiceModeBtn" type="button" class="mode-btn">Voice</button>
@@ -472,6 +491,7 @@
     const progressText = document.getElementById('progressText');
     const questionCategory = document.getElementById('questionCategory');
     const questionPrompt = document.getElementById('questionPrompt');
+    const questionMedia = document.getElementById('questionMedia');
     const textModeBtn = document.getElementById('textModeBtn');
     const voiceModeBtn = document.getElementById('voiceModeBtn');
     const voiceStatus = document.getElementById('voiceStatus');
@@ -600,6 +620,31 @@
         label.append(input, text);
         mcOptions.appendChild(label);
       }
+    }
+
+    function renderQuestionMedia(question) {
+      questionMedia.innerHTML = '';
+
+      const imageUrl = typeof question?.image_url === 'string' ? question.image_url.trim() : '';
+      const audioUrl = typeof question?.audio_url === 'string' ? question.audio_url.trim() : '';
+
+      if (imageUrl) {
+        const image = document.createElement('img');
+        image.src = imageUrl;
+        image.alt = 'Question image';
+        image.loading = 'lazy';
+        questionMedia.appendChild(image);
+      }
+
+      if (audioUrl) {
+        const audio = document.createElement('audio');
+        audio.src = audioUrl;
+        audio.controls = true;
+        audio.preload = 'none';
+        questionMedia.appendChild(audio);
+      }
+
+      questionMedia.classList.toggle('hidden', !questionMedia.childElementCount);
     }
 
     function readGuestProgress() {
@@ -760,6 +805,7 @@
     function clearQuestionState() {
       state.currentQuestion = null;
       questionSection.classList.add('hidden');
+      renderQuestionMedia(null);
       questionStatus.textContent = '';
       questionStatus.className = 'status';
       answerReveal.classList.add('hidden');
@@ -1195,6 +1241,7 @@
           .replace('{total}', String(state.roundTarget));
         questionCategory.textContent = formatCategoryLine(question);
         questionPrompt.textContent = question.prompt;
+        renderQuestionMedia(question);
         answerInput.value = '';
         answerInput.placeholder = ui().placeholder;
         if (getQuestionType(question) === 'multiple_choice') {

@@ -5,6 +5,7 @@ const { isRateLimited } = require('../_lib/rate-limit');
 const { sendQuizRateLimited } = require('../_lib/quiz-rate-limit-response');
 const { createEndpointMetric } = require('../_lib/observability');
 const { parseJsonBody } = require('../_lib/parse-body');
+const { toQuizMediaUrl } = require('../_lib/quiz-media');
 const {
   getGuestProgress,
   saveGuestProgress,
@@ -87,7 +88,9 @@ function mapQuestion(row, lang, options = []) {
     category: row.category || 'General',
     prompt,
     difficulty: Number(row.difficulty) || null,
-    question_type: questionType
+    question_type: questionType,
+    image_url: toQuizMediaUrl(row.image_path),
+    audio_url: toQuizMediaUrl(row.audio_path)
   };
 
   if (questionType === 'multiple_choice') {
@@ -169,7 +172,7 @@ async function getNextQuestionCandidateFromPivot({ userId, categories, solvedQue
   if (userId) {
     const result = await runQuery(
       `WITH preferred AS (
-         SELECT q.id, q.category, q.question_en, q.question_no, q.answers_en, q.difficulty, q.question_type
+         SELECT q.id, q.category, q.question_en, q.question_no, q.answers_en, q.difficulty, q.question_type, q.image_path, q.audio_path
          FROM quiz_questions q
          LEFT JOIN user_answers ua
            ON ua.question_id = q.id
@@ -180,7 +183,7 @@ async function getNextQuestionCandidateFromPivot({ userId, categories, solvedQue
          ORDER BY q.id ASC
          LIMIT 1
        ), fallback AS (
-         SELECT q.id, q.category, q.question_en, q.question_no, q.answers_en, q.difficulty, q.question_type
+         SELECT q.id, q.category, q.question_en, q.question_no, q.answers_en, q.difficulty, q.question_type, q.image_path, q.audio_path
          FROM quiz_questions q
          LEFT JOIN user_answers ua
            ON ua.question_id = q.id
@@ -204,7 +207,7 @@ async function getNextQuestionCandidateFromPivot({ userId, categories, solvedQue
   const excludedIds = solvedQuestionIds.length ? solvedQuestionIds : [0];
   const result = await runQuery(
     `WITH preferred AS (
-       SELECT q.id, q.category, q.question_en, q.question_no, q.answers_en, q.difficulty, q.question_type
+       SELECT q.id, q.category, q.question_en, q.question_no, q.answers_en, q.difficulty, q.question_type, q.image_path, q.audio_path
        FROM quiz_questions q
        WHERE q.category = ANY($1)
          AND NOT (q.id = ANY($2::int[]))
@@ -212,7 +215,7 @@ async function getNextQuestionCandidateFromPivot({ userId, categories, solvedQue
        ORDER BY q.id ASC
        LIMIT 1
      ), fallback AS (
-       SELECT q.id, q.category, q.question_en, q.question_no, q.answers_en, q.difficulty, q.question_type
+       SELECT q.id, q.category, q.question_en, q.question_no, q.answers_en, q.difficulty, q.question_type, q.image_path, q.audio_path
        FROM quiz_questions q
        WHERE q.category = ANY($1)
          AND NOT (q.id = ANY($2::int[]))
