@@ -453,6 +453,7 @@
       guestProgress: readGuestProgress(),
       guestProgressToken: readGuestProgressToken(),
       pendingSolvedQuestionIds: [],
+      seenQuestionIds: [],
       roundTarget: 0,
       roundAnswered: 0,
       isQuestActive: false,
@@ -732,6 +733,10 @@
         if (!requestPayload.solvedQuestionIdDeltas) {
           requestPayload.solvedQuestionIds = getGuestSolvedQuestionIds();
         }
+      }
+
+      if (action === 'next' && state.seenQuestionIds.length) {
+        requestPayload.seenQuestionIds = [...new Set(state.seenQuestionIds)];
       }
 
       const response = await fetch('/api/quiz/quest', {
@@ -1221,8 +1226,25 @@
       startQuestBtn.disabled = true;
 
       try {
-        const payload = await questApi('next', { categories });
-        const question = payload.question || null;
+        const maxAttempts = 6;
+        let question = null;
+
+        for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+          const payload = await questApi('next', { categories });
+          const candidate = payload.question || null;
+          if (!candidate) {
+            question = null;
+            break;
+          }
+
+          const candidateId = Number(candidate.id);
+          if (Number.isInteger(candidateId) && candidateId > 0 && state.seenQuestionIds.includes(candidateId)) {
+            continue;
+          }
+
+          question = candidate;
+          break;
+        }
 
         if (!question) {
           clearQuestionState();
@@ -1233,6 +1255,9 @@
         }
 
         state.currentQuestion = question;
+        if (Number.isInteger(question.id) && question.id > 0 && !state.seenQuestionIds.includes(question.id)) {
+          state.seenQuestionIds.push(question.id);
+        }
         setupStatus.className = 'status';
         setupStatus.textContent = '';
         questionSection.classList.remove('hidden');
@@ -1306,6 +1331,7 @@
       const requested = Number(questionCountInput.value);
       state.roundTarget = Math.max(1, Math.min(Number.isInteger(requested) ? requested : 1, available));
       state.roundAnswered = 0;
+      state.seenQuestionIds = [];
       questionCountInput.value = String(state.roundTarget);
       setQuestActive(true);
 
@@ -1335,6 +1361,7 @@
       stopVoiceListening();
       clearQuestionState();
       setQuestActive(false);
+      state.seenQuestionIds = [];
       setupStatus.className = 'status';
       setupStatus.textContent = ui().abortDone;
       await refreshOverview();
