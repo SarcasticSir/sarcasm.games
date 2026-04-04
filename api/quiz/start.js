@@ -3,6 +3,7 @@ const { isRateLimited } = require('../_lib/rate-limit');
 const { sendQuizRateLimited } = require('../_lib/quiz-rate-limit-response');
 const { createEndpointMetric } = require('../_lib/observability');
 const { parseJsonBody } = require('../_lib/parse-body');
+const { toQuizMediaUrl } = require('../_lib/quiz-media');
 
 function normalizeAnswerValues(value) {
   if (!value) return [];
@@ -46,7 +47,9 @@ function mapQuestion(row, lang, optionsByQuestionId = new Map()) {
     category: row.category || 'General',
     prompt,
     difficulty: Number(row.difficulty) || null,
-    question_type: questionType
+    question_type: questionType,
+    image_url: toQuizMediaUrl(row.image_path),
+    audio_url: toQuizMediaUrl(row.audio_path)
   };
 
   if (questionType === 'multiple_choice') {
@@ -337,7 +340,7 @@ module.exports = async function handler(req, res) {
 
       const query = selectedIds.length
         ? await runQuery(
-          `SELECT id, category, question_en, question_no, answers_en, difficulty, question_type
+          `SELECT id, category, question_en, question_no, answers_en, difficulty, question_type, image_path, audio_path
            FROM quiz_questions
            WHERE id = ANY($1::int[])`,
           [selectedIds]
@@ -380,7 +383,7 @@ module.exports = async function handler(req, res) {
 
     const query = selectedIds.length
       ? await runQuery(
-        `SELECT id, category, question_en, question_no, answers_en, difficulty, question_type
+        `SELECT id, category, question_en, question_no, answers_en, difficulty, question_type, image_path, audio_path
          FROM quiz_questions
          WHERE id = ANY($1::int[])`,
         [selectedIds]

@@ -219,6 +219,24 @@
       line-height:1;
     }
 
+    .question-media {
+      display:grid;
+      gap:10px;
+      margin:0 0 12px;
+    }
+
+    .question-media img {
+      display:block;
+      max-width:100%;
+      border-radius:8px;
+      border:1px solid var(--bd);
+      background:#111;
+    }
+
+    .question-media audio {
+      width:100%;
+    }
+
     .input-mode {
       display: inline-flex;
       border: 1px solid var(--bd);
@@ -352,6 +370,7 @@
         <span id="questionCategory" class="question-meta-chip"></span>
         <span id="questionDifficulty" class="question-meta-chip hidden"></span>
       </div>
+      <div id="questionMedia" class="question-media hidden" aria-live="polite"></div>
       <div class="input-mode" role="group" aria-label="Input mode toggle">
         <button id="textModeBtn" type="button" class="mode-btn is-active">Text</button>
         <button id="voiceModeBtn" type="button" class="mode-btn">Voice</button>
@@ -548,6 +567,7 @@
     const questionTitle = document.getElementById('questionTitle');
     const questionCategory = document.getElementById('questionCategory');
     const questionDifficulty = document.getElementById('questionDifficulty');
+    const questionMedia = document.getElementById('questionMedia');
     const answerForm = document.getElementById('answerForm');
     const textModeBtn = document.getElementById('textModeBtn');
     const voiceModeBtn = document.getElementById('voiceModeBtn');
@@ -707,6 +727,31 @@
       const match = (question?.options || [])
         .find((option) => Number(option.option_id) === Number(selectedOptionId));
       return match?.option_en || String(selectedOptionId || '');
+    }
+
+    function renderQuestionMedia(question) {
+      questionMedia.innerHTML = '';
+
+      const imageUrl = typeof question?.image_url === 'string' ? question.image_url.trim() : '';
+      const audioUrl = typeof question?.audio_url === 'string' ? question.audio_url.trim() : '';
+
+      if (imageUrl) {
+        const image = document.createElement('img');
+        image.src = imageUrl;
+        image.alt = 'Question image';
+        image.loading = 'lazy';
+        questionMedia.appendChild(image);
+      }
+
+      if (audioUrl) {
+        const audio = document.createElement('audio');
+        audio.src = audioUrl;
+        audio.controls = true;
+        audio.preload = 'none';
+        questionMedia.appendChild(audio);
+      }
+
+      questionMedia.classList.toggle('hidden', !questionMedia.childElementCount);
     }
 
     function renderVoiceStatus() {
@@ -1246,6 +1291,7 @@
         .replace('{total}', String(runtimeState.questions.length));
       questionTitle.textContent = question.prompt;
       questionCategory.textContent = uiCopy().category.replace('{category}', question.category || 'General');
+      renderQuestionMedia(question);
 
       const difficultyText = uiCopy().difficulty.replace('{difficulty}', getDifficultyLabel(question.difficulty));
       questionDifficulty.textContent = difficultyText;
@@ -1492,6 +1538,7 @@
       runtimeState.awaitingRetry = false;
       runtimeState.answeredQuestions = [];
       runtimeState.resultFilter = 'all';
+      renderQuestionMedia(null);
       showView('setup');
       renderCountState();
     });
@@ -1509,6 +1556,7 @@
       runtimeState.awaitingRetry = false;
       runtimeState.answeredQuestions = [];
       runtimeState.resultFilter = 'all';
+      renderQuestionMedia(null);
       showView('setup');
       renderCountState();
     });
