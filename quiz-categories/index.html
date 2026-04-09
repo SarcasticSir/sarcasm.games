@@ -553,6 +553,8 @@
     };
 
     const activeLang = readQuizLanguage();
+    const queryParams = new URLSearchParams(window.location.search);
+    const lockedCategoryName = (queryParams.get('onlyCategory') || '').trim();
     const categoryGrid = document.getElementById('categoryGrid');
     const selectAllBtn = document.getElementById('selectAllBtn');
     const deselectAllBtn = document.getElementById('deselectAllBtn');
@@ -633,6 +635,19 @@
 
     function uiCopy() {
       return copy[runtimeState.activeLang] || copy[fallbackLanguage];
+    }
+
+    function normalizeCategoryName(value) {
+      return String(value || '').trim().toLowerCase();
+    }
+
+    function hasLockedCategory() {
+      return Boolean(lockedCategoryName);
+    }
+
+    function isLockedCategory(name) {
+      if (!hasLockedCategory()) return false;
+      return normalizeCategoryName(name) === normalizeCategoryName(lockedCategoryName);
     }
 
     function encodeAnswerForReveal(answer) {
@@ -1160,10 +1175,14 @@
         return;
       }
 
-      selectAllBtn.disabled = false;
-      deselectAllBtn.disabled = false;
+      selectAllBtn.disabled = hasLockedCategory();
+      deselectAllBtn.disabled = hasLockedCategory();
 
       runtimeState.categories.forEach((category, index) => {
+        if (hasLockedCategory() && !isLockedCategory(category.name)) {
+          return;
+        }
+
         const wrapper = document.createElement('article');
         wrapper.className = 'cat';
         if (category.selected) {
@@ -1175,6 +1194,7 @@
         checkbox.type = 'checkbox';
         checkbox.checked = category.selected;
         checkbox.setAttribute('aria-label', `Select ${category.name}`);
+        checkbox.disabled = hasLockedCategory();
 
         checkbox.addEventListener('change', () => {
           runtimeState.categories[index].selected = checkbox.checked;
@@ -1399,13 +1419,29 @@
         runtimeState.categories = categories.map((category) => ({
           name: category.name,
           questionCount: Number(category.questionCount) || 0,
-          selected: false
+          selected: hasLockedCategory() ? isLockedCategory(category.name) : false
         }));
+
+        if (hasLockedCategory() && !runtimeState.categories.some((category) => category.selected)) {
+          runtimeState.categories = [];
+          statusEl.classList.add('error');
+          statusEl.textContent = `Could not find category "${lockedCategoryName}".`;
+          renderCategories();
+          return;
+        }
+
+        const visibleCategories = hasLockedCategory()
+          ? runtimeState.categories.filter((category) => isLockedCategory(category.name))
+          : runtimeState.categories;
+        const visibleQuestionTotal = visibleCategories.reduce(
+          (sum, category) => sum + (Number(category.questionCount) || 0),
+          0
+        );
 
         statusEl.classList.remove('error');
         statusEl.textContent = uiCopy().loadedCategories
-          .replace('{categories}', String(runtimeState.categories.length))
-          .replace('{questions}', String(payload.totalQuestions));
+          .replace('{categories}', String(visibleCategories.length))
+          .replace('{questions}', String(visibleQuestionTotal));
         renderCategories();
       } catch (error) {
         runtimeState.categories = [];
@@ -1568,9 +1604,12 @@
 
     function applyCopy() {
       const c = uiCopy();
-      document.title = c.title;
-      setupHeading.textContent = c.title;
-      setupLead.textContent = c.setupLead;
+      const pageTitle = hasLockedCategory() ? `${lockedCategoryName} quiz` : c.title;
+      document.title = pageTitle;
+      setupHeading.textContent = pageTitle;
+      setupLead.textContent = hasLockedCategory()
+        ? `Only ${lockedCategoryName} questions are shown in this mode.`
+        : c.setupLead;
       statusEl.textContent = c.loadingCategories;
       questionCountLabel.firstChild.textContent = `${c.questionCount} `;
       selectAllBtn.textContent = c.selectAll;
