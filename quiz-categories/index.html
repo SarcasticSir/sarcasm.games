@@ -1430,10 +1430,18 @@
           return;
         }
 
+        const visibleCategories = hasLockedCategory()
+          ? runtimeState.categories.filter((category) => isLockedCategory(category.name))
+          : runtimeState.categories;
+        const visibleQuestionTotal = visibleCategories.reduce(
+          (sum, category) => sum + (Number(category.questionCount) || 0),
+          0
+        );
+
         statusEl.classList.remove('error');
         statusEl.textContent = uiCopy().loadedCategories
-          .replace('{categories}', String(runtimeState.categories.length))
-          .replace('{questions}', String(payload.totalQuestions));
+          .replace('{categories}', String(visibleCategories.length))
+          .replace('{questions}', String(visibleQuestionTotal));
         renderCategories();
       } catch (error) {
         runtimeState.categories = [];
