@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Daily Click</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="container">
+      <header class="header">
+        <h1>Daily Click Challenge</h1>
+        <p id="status" class="status"></p>
+      </header>
+
+      <section id="buttons" class="button-grid" aria-live="polite"></section>
+
+      <p id="message" class="message" aria-live="polite"></p>
+
+      <div class="controls">
+        <button id="new-day" class="control-button">Start ny dag</button>
+        <button id="debug-streak" class="control-button debug-button">Debug streak</button>
+        <button id="reset" class="control-button">Reset progress</button>
+      </div>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
