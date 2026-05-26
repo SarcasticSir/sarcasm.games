@@ -4,7 +4,8 @@ const STORAGE_KEY = 'daily-click-state-v2';
 const CHUNK_SIZE = 30;
 const MAX_DEBUG_LEVEL = 200;
 const MILESTONE_STEP = 10;
-const APP_BUILD_ID = 'dailyclick-2026-05-26-c';
+const APP_BUILD_ID = 'dailyclick-2026-05-26-d';
+const CELEBRATION_TIMEOUT_MS = 2400;
 
 const BUTTON_COLORS = [
   'linear-gradient(145deg, #ef4444, #b91c1c)',
@@ -19,9 +20,14 @@ const BUTTON_COLORS = [
 
 const I18N = {
   en: {
-    title: 'Daily Click Challenge', reset: 'Reset progress', debugAdvance: 'Debug: force next day', debugStreak: 'Debug streak',
-    progressReset: 'Progress reset to day 1.', invalidDebug: `Invalid value. Choose a number between 1 and ${MAX_DEBUG_LEVEL}.`,
-    debugSet: (day) => `Debug: set to day ${day}.`, debugPrompt: `Set streak/day (1-${MAX_DEBUG_LEVEL}):`,
+    title: 'Daily Click Challenge',
+    reset: 'Reset progress',
+    debugAdvance: 'Debug: force next day',
+    debugStreak: 'Debug streak',
+    progressReset: 'Progress reset to day 1.',
+    invalidDebug: `Invalid value. Choose a number between 1 and ${MAX_DEBUG_LEVEL}.`,
+    debugSet: (day) => `Debug: set to day ${day}.`,
+    debugPrompt: `Set streak/day (1-${MAX_DEBUG_LEVEL}):`,
     statusDone: (day) => `Day ${day} is complete. Come back tomorrow for the next day.`,
     statusPlay: (day) => `Day ${day}: complete ${day} button${day > 1 ? 's' : ''}.`,
     buttonTitle: (buttonNo, remaining) => `Button ${buttonNo}: ${remaining} remaining`,
@@ -40,9 +46,14 @@ const I18N = {
     celebrationDaySubtitle: 'You crushed this challenge. Come back tomorrow!'
   },
   no: {
-    title: 'Daglig Klikk-utfordring', reset: 'Nullstill fremgang', debugAdvance: 'Debug: tving ny dag', debugStreak: 'Debug streak',
-    progressReset: 'Fremgang nullstilt til dag 1.', invalidDebug: `Ugyldig verdi. Velg et tall mellom 1 og ${MAX_DEBUG_LEVEL}.`,
-    debugSet: (day) => `Debug: satt til dag ${day}.`, debugPrompt: `Sett streak/dag (1-${MAX_DEBUG_LEVEL}):`,
+    title: 'Daglig Klikk-utfordring',
+    reset: 'Nullstill fremgang',
+    debugAdvance: 'Debug: tving ny dag',
+    debugStreak: 'Debug streak',
+    progressReset: 'Fremgang nullstilt til dag 1.',
+    invalidDebug: `Ugyldig verdi. Velg et tall mellom 1 og ${MAX_DEBUG_LEVEL}.`,
+    debugSet: (day) => `Debug: satt til dag ${day}.`,
+    debugPrompt: `Sett streak/dag (1-${MAX_DEBUG_LEVEL}):`,
     statusDone: (day) => `Dag ${day} er fullført. Kom tilbake i morgen for neste dag.`,
     statusPlay: (day) => `Dag ${day}: fullfør ${day} knapp${day > 1 ? 'er' : ''}.`,
     buttonTitle: (buttonNo, remaining) => `Knapp ${buttonNo}: ${remaining} igjen`,
@@ -62,6 +73,16 @@ const I18N = {
   }
 };
 
+let celebrationTimer = null;
+
+function t(state) {
+  return I18N[state.language] || I18N.en;
+}
+
+function getTodayStamp() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 const CELEBRATION_TIMEOUT_MS = 2400;
 let celebrationTimer = null;
 
@@ -75,29 +96,54 @@ function newBaseState(language) {
   return { language, level: 1, clicks: [0], dayFinished: false, openArchiveGroup: null, lastDayStamp: getTodayStamp() };
 }
 
+function buttonColor(index) {
+  return BUTTON_COLORS[index % BUTTON_COLORS.length];
+}
+
+function updateMessage(text) {
+  document.getElementById('message').textContent = text;
+}
+
+function newBaseState(language) {
+  return {
+    language,
+    level: 1,
+    clicks: [0],
+    dayFinished: false,
+    openArchiveGroup: null,
+    lastDayStamp: getTodayStamp()
+  };
+}
+
 function hydrateState(language) {
   const raw = localStorage.getItem(STORAGE_KEY);
   if (!raw) return newBaseState(language);
+
   try {
     const parsed = JSON.parse(raw);
-    if (!parsed || !Number.isInteger(parsed.level) || parsed.level < 1 || !Array.isArray(parsed.clicks)) return newBaseState(language);
+    if (!parsed || !Number.isInteger(parsed.level) || parsed.level < 1 || !Array.isArray(parsed.clicks)) {
+      return newBaseState(language);
+    }
+
     const level = parsed.level;
     const clicks = parsed.clicks.slice(0, level);
     while (clicks.length < level) clicks.push(0);
-    return { language, level, clicks, dayFinished: isFinished({ level, clicks }), openArchiveGroup: null, lastDayStamp: typeof parsed.lastDayStamp === 'string' ? parsed.lastDayStamp : getTodayStamp() };
-  } catch { return newBaseState(language); }
+
+    return {
+      language,
+      level,
+      clicks,
+      dayFinished: isFinished({ level, clicks }),
+      openArchiveGroup: null,
+      lastDayStamp: typeof parsed.lastDayStamp === 'string' ? parsed.lastDayStamp : getTodayStamp()
+    };
+  } catch {
+    return newBaseState(language);
+  }
 }
 
-function saveState(state) { localStorage.setItem(STORAGE_KEY, JSON.stringify({ level: state.level, clicks: state.clicks, lastDayStamp: state.lastDayStamp })); }
-
-function isArchiveGroupComplete(state, group) {
-  const start = group * CHUNK_SIZE;
-  const end = start + CHUNK_SIZE;
-  for (let i = start; i < end; i += 1) {
-    const needed = i + 1;
-    if ((state.clicks[i] ?? 0) < needed) return false;
-  }
-  return true;
+function saveState(state) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ level: state.level, clicks: state.clicks, lastDayStamp: state.lastDayStamp }));
 }
 function setMessage(text) { document.getElementById('message').textContent = text; }
 function buttonColor(index) { return BUTTON_COLORS[index % BUTTON_COLORS.length]; }
@@ -117,6 +163,15 @@ function showCelebration(title, subtitle) {
   const titleEl = document.getElementById('celebration-title');
   const subEl = document.getElementById('celebration-subtitle');
   const layer = document.getElementById('confetti-layer');
+
+function isArchiveGroupComplete(state, group) {
+  const start = group * CHUNK_SIZE;
+  const end = start + CHUNK_SIZE;
+  for (let i = start; i < end; i += 1) {
+    if ((state.clicks[i] ?? 0) < i + 1) return false;
+  }
+  return true;
+}
 
 function showCelebration(title, subtitle) {
   const wrap = document.getElementById('celebration');
@@ -141,16 +196,18 @@ function showCelebration(title, subtitle) {
 
   wrap.classList.add('show');
   if (celebrationTimer) clearTimeout(celebrationTimer);
-  celebrationTimer = setTimeout(() => { wrap.classList.remove('show'); }, CELEBRATION_TIMEOUT_MS);
+  celebrationTimer = setTimeout(() => {
+    wrap.classList.remove('show');
+  }, CELEBRATION_TIMEOUT_MS);
 }
 
 function maybeCelebrateDay(state) {
   const texts = t(state);
   if (state.level % MILESTONE_STEP === 0) {
     showCelebration(texts.celebrationMilestoneTitle(state.level), texts.celebrationMilestoneSubtitle);
-  } else {
-    showCelebration(texts.celebrationDayTitle(state.level), texts.celebrationDaySubtitle);
+    return;
   }
+  showCelebration(texts.celebrationDayTitle(state.level), texts.celebrationDaySubtitle);
 }
 
 function startNewCalendarDay(state) {
@@ -164,17 +221,17 @@ function startNewCalendarDay(state) {
     state.clicks = [0];
     updateMessage(texts.rolloverLose);
   }
+
   state.dayFinished = false;
   state.openArchiveGroup = null;
 }
 
 function applyDailyRollover(state) {
   const today = getTodayStamp();
-  if (state.lastDayStamp !== today) {
-    startNewCalendarDay(state);
-    state.lastDayStamp = today;
-    saveState(state);
-  }
+  if (state.lastDayStamp === today) return;
+  startNewCalendarDay(state);
+  state.lastDayStamp = today;
+  saveState(state);
 }
 
 function createGameButton(state, index) {
@@ -226,27 +283,32 @@ function renderArchiveStars(state, container) {
     const star = document.createElement('button');
     const isOpen = state.openArchiveGroup === group;
     const isDone = isArchiveGroupComplete(state, group);
+
     star.className = `archive-button${isOpen ? ' active' : ''}${isDone ? ' done' : ''}`;
     star.textContent = isDone ? `✅⭐${group + 1}` : `⭐${group + 1}`;
     star.title = isDone ? t(state).archiveDone(group + 1) : t(state).archiveTitle(group + 1, from, to);
+
     star.addEventListener('click', () => {
       state.openArchiveGroup = isOpen ? null : group;
       if (state.openArchiveGroup !== null) updateMessage(t(state).archiveNudge);
       render(state);
     });
+
     starsRow.appendChild(star);
   }
 
   container.appendChild(starsRow);
 
-  if (state.openArchiveGroup !== null) {
-    const archiveGrid = document.createElement('div');
-    archiveGrid.className = 'archive-grid';
-    const start = state.openArchiveGroup * CHUNK_SIZE;
-    const end = start + CHUNK_SIZE;
-    for (let i = start; i < end; i += 1) archiveGrid.appendChild(createGameButton(state, i));
-    container.appendChild(archiveGrid);
+  if (state.openArchiveGroup === null) return;
+
+  const archiveGrid = document.createElement('div');
+  archiveGrid.className = 'archive-grid';
+  const start = state.openArchiveGroup * CHUNK_SIZE;
+  const end = start + CHUNK_SIZE;
+  for (let i = start; i < end; i += 1) {
+    archiveGrid.appendChild(createGameButton(state, i));
   }
+  container.appendChild(archiveGrid);
 }
 
 function render(state) {
@@ -262,24 +324,25 @@ function render(state) {
 
   const buttonsContainer = document.getElementById('buttons');
   buttonsContainer.innerHTML = '';
-
   renderArchiveStars(state, buttonsContainer);
 
-  if (state.openArchiveGroup === null) {
-    const currentChunkStart = Math.floor((state.level - 1) / CHUNK_SIZE) * CHUNK_SIZE;
-    const currentChunkEnd = state.level;
-    const currentGrid = document.createElement('div');
-    currentGrid.className = 'current-grid';
-    for (let i = currentChunkStart; i < currentChunkEnd; i += 1) currentGrid.appendChild(createGameButton(state, i));
-    buttonsContainer.appendChild(currentGrid);
+  if (state.openArchiveGroup !== null) return;
+
+  const currentChunkStart = Math.floor((state.level - 1) / CHUNK_SIZE) * CHUNK_SIZE;
+  const currentChunkEnd = state.level;
+  const currentGrid = document.createElement('div');
+  currentGrid.className = 'current-grid';
+
+  for (let i = currentChunkStart; i < currentChunkEnd; i += 1) {
+    currentGrid.appendChild(createGameButton(state, i));
   }
 
-  renderArchiveStars(state, buttonsContainer);
   buttonsContainer.appendChild(currentGrid);
 }
 
 function main() {
   console.info('[dailyclick] build', APP_BUILD_ID);
+
   const language = getQuizLanguage();
   const state = hydrateState(language);
   applyDailyRollover(state);
@@ -303,6 +366,7 @@ function main() {
   document.getElementById('debug-streak').addEventListener('click', () => {
     const input = prompt(t(state).debugPrompt, `${state.level}`);
     if (!input) return;
+
     const wanted = Number.parseInt(input, 10);
     if (!Number.isInteger(wanted) || wanted < 1 || wanted > MAX_DEBUG_LEVEL) {
       updateMessage(t(state).invalidDebug);
