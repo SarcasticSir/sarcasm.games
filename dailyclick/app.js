@@ -4,6 +4,7 @@ const STORAGE_KEY = 'daily-click-state-v2';
 const CHUNK_SIZE = 30;
 const MAX_DEBUG_LEVEL = 200;
 const MILESTONE_STEP = 10;
+const APP_BUILD_ID = 'dailyclick-2026-05-26-c';
 
 const BUTTON_COLORS = [
   'linear-gradient(145deg, #ef4444, #b91c1c)',
@@ -110,6 +111,12 @@ function showCelebration(title, subtitle) {
   titleEl.textContent = title;
   subEl.textContent = subtitle;
   layer.innerHTML = '';
+
+function showCelebration(title, subtitle) {
+  const wrap = document.getElementById('celebration');
+  const titleEl = document.getElementById('celebration-title');
+  const subEl = document.getElementById('celebration-subtitle');
+  const layer = document.getElementById('confetti-layer');
 
 function showCelebration(title, subtitle) {
   const wrap = document.getElementById('celebration');
@@ -272,6 +279,7 @@ function render(state) {
 }
 
 function main() {
+  console.info('[dailyclick] build', APP_BUILD_ID);
   const language = getQuizLanguage();
   const state = hydrateState(language);
   applyDailyRollover(state);
