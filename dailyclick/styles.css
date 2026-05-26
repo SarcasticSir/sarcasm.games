@@ -14,66 +14,55 @@ body { margin: 0; min-height: 100vh; }
   gap: 0.75rem;
   padding: clamp(0.75rem, 1.5vw, 1.25rem);
 }
-.header {
-  background: white;
-  border-radius: 14px;
-  padding: 0.75rem 1rem;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
-}
-h1 { margin: 0 0 0.25rem; font-size: clamp(1.1rem, 2.4vw, 1.6rem); }
-.status { margin: 0; font-size: 0.95rem; }
-.button-grid { display: grid; gap: 0.75rem; align-content: start; }
-.current-grid, .archive-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(54px, 78px));
-  gap: 0.55rem;
-}
-.stars-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-.daily-button {
-  border: none;
-  width: 100%;
-  max-width: 78px;
-  aspect-ratio: 1 / 1;
-  border-radius: 999px;
-  color: white;
-  font-size: 0.95rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: transform 0.12s ease, filter 0.2s ease, opacity 0.2s ease, box-shadow 0.25s ease;
-  box-shadow: 0 8px 14px rgba(0, 0, 0, 0.18);
-}
+.header { background: white; border-radius: 14px; padding: 0.75rem 1rem; box-shadow: 0 8px 20px rgba(0,0,0,.08); }
+h1 { margin: 0 0 .25rem; font-size: clamp(1.1rem, 2.4vw, 1.6rem); }
+.status { margin: 0; font-size: .95rem; }
+.button-grid { display: grid; gap: .75rem; align-content: start; }
+.current-grid, .archive-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(54px, 78px)); gap: .55rem; }
+.stars-row { display: flex; flex-wrap: wrap; gap: .5rem; }
+.daily-button { border:none; width:100%; max-width:78px; aspect-ratio:1/1; border-radius:999px; color:#fff; font-size:.95rem; font-weight:700; cursor:pointer; transition: transform .12s ease, filter .2s ease, opacity .2s ease, box-shadow .25s ease; box-shadow:0 8px 14px rgba(0,0,0,.18); }
 .daily-button:hover:enabled { filter: brightness(1.08); }
 .daily-button:active:enabled { transform: translateY(2px) scale(0.98); }
-.daily-button:disabled { opacity: 0.45; cursor: not-allowed; }
-.message { margin: 0; min-height: 1.5rem; font-weight: 700; color: #065f46; }
-.controls { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-.control-button {
-  border: 1px solid #9ca3af;
-  background: white;
-  color: #374151;
-  padding: 0.45rem 0.7rem;
-  border-radius: 10px;
-  cursor: pointer;
-  font-size: 0.82rem;
+.daily-button:disabled { opacity: .45; cursor: not-allowed; }
+.message { margin:0; min-height:1.5rem; font-weight:700; color:#065f46; }
+.controls { display:flex; flex-wrap:wrap; gap:.5rem; }
+.control-button { border:1px solid #9ca3af; background:#fff; color:#374151; padding:.45rem .7rem; border-radius:10px; cursor:pointer; font-size:.82rem; }
+.debug-button { border-color:#7c3aed; color:#5b21b6; }
+.archive-button { border:none; border-radius:999px; min-width:70px; height:40px; padding:0 .6rem; font-size:.95rem; cursor:pointer; background:linear-gradient(145deg,#111827,#374151); color:#fff; box-shadow:0 8px 14px rgba(0,0,0,.22); }
+.archive-button.active { outline:2px solid #f59e0b; outline-offset:2px; }
+.archive-button.done { background: linear-gradient(145deg, #15803d, #065f46); }
+
+.celebration {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
 }
-.debug-button { border-color: #7c3aed; color: #5b21b6; }
-.archive-button {
-  border: none;
-  border-radius: 999px;
-  min-width: 62px;
-  height: 40px;
-  padding: 0 0.6rem;
-  font-size: 0.95rem;
-  cursor: pointer;
-  background: linear-gradient(145deg, #111827, #374151);
-  color: white;
-  box-shadow: 0 8px 14px rgba(0, 0, 0, 0.22);
+.celebration.show { opacity: 1; }
+.celebration-content {
+  text-align: center;
+  padding: 1rem 1.25rem;
+  background: rgba(17, 24, 39, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 14px;
+  color: #fff;
+  max-width: min(92vw, 700px);
+  animation: pop-in .35s ease;
 }
-.archive-button.active {
-  outline: 2px solid #f59e0b;
-  outline-offset: 2px;
+.celebration-title { margin: 0; font-size: clamp(1.2rem, 4vw, 2.4rem); font-weight: 800; letter-spacing: .03em; text-shadow: 0 0 12px rgba(245, 158, 11, .75); }
+.celebration-subtitle { margin: .4rem 0 0; font-size: clamp(.9rem, 2vw, 1.25rem); color: #fde68a; }
+.confetti-layer { position:absolute; inset:0; overflow:hidden; }
+.confetti-piece {
+  position: absolute;
+  top: -20px;
+  width: 10px;
+  height: 16px;
+  border-radius: 2px;
+  animation: fall linear forwards;
 }
+@keyframes fall { to { transform: translateY(110vh) rotate(900deg); opacity: .9; } }
+@keyframes pop-in { from { transform: scale(.88); opacity: 0; } to { transform: scale(1); opacity: 1; } }
