@@ -68,7 +68,7 @@ function t(state) { return I18N[state.language] || I18N.en; }
 function getTodayStamp() { return new Date().toISOString().slice(0, 10); }
 function isFinished(state) { return Array.from({ length: state.level }, (_, i) => i + 1).every((required, i) => (state.clicks[i] ?? 0) >= required); }
 function buttonColor(index) { return BUTTON_COLORS[index % BUTTON_COLORS.length]; }
-function setMessage(text) { document.getElementById('message').textContent = text; }
+function updateMessage(text) { document.getElementById('message').textContent = text; }
 
 function newBaseState(language) {
   return { language, level: 1, clicks: [0], dayFinished: false, openArchiveGroup: null, lastDayStamp: getTodayStamp() };
@@ -111,6 +111,16 @@ function showCelebration(title, subtitle) {
   subEl.textContent = subtitle;
   layer.innerHTML = '';
 
+function showCelebration(title, subtitle) {
+  const wrap = document.getElementById('celebration');
+  const titleEl = document.getElementById('celebration-title');
+  const subEl = document.getElementById('celebration-subtitle');
+  const layer = document.getElementById('confetti-layer');
+
+  titleEl.textContent = title;
+  subEl.textContent = subtitle;
+  layer.innerHTML = '';
+
   const colors = ['#f43f5e', '#f59e0b', '#22c55e', '#06b6d4', '#3b82f6', '#a855f7'];
   for (let i = 0; i < 90; i += 1) {
     const piece = document.createElement('span');
@@ -141,11 +151,11 @@ function startNewCalendarDay(state) {
   if (isFinished(state)) {
     state.level += 1;
     state.clicks = Array.from({ length: state.level }, () => 0);
-    setMessage(texts.rolloverWin(state.level));
+    updateMessage(texts.rolloverWin(state.level));
   } else {
     state.level = 1;
     state.clicks = [0];
-    setMessage(texts.rolloverLose);
+    updateMessage(texts.rolloverLose);
   }
   state.dayFinished = false;
   state.openArchiveGroup = null;
@@ -177,16 +187,16 @@ function createGameButton(state, index) {
     if (state.dayFinished || (state.clicks[index] ?? 0) >= requiredClicks) return;
     state.clicks[index] += 1;
     const left = Math.max(requiredClicks - state.clicks[index], 0);
-    setMessage(left === 0 ? texts.buttonDone(requiredClicks) : texts.buttonRemaining(requiredClicks, left));
+    updateMessage(left === 0 ? texts.buttonDone(requiredClicks) : texts.buttonRemaining(requiredClicks, left));
 
     if (state.openArchiveGroup !== null && isArchiveGroupComplete(state, state.openArchiveGroup)) {
-      setMessage(texts.archiveCompleted(state.openArchiveGroup + 1));
+      updateMessage(texts.archiveCompleted(state.openArchiveGroup + 1));
       state.openArchiveGroup = null;
     }
 
     state.dayFinished = isFinished(state);
     if (state.dayFinished) {
-      setMessage(texts.dayDone(state.level));
+      updateMessage(texts.dayDone(state.level));
       maybeCelebrateDay(state);
     }
 
@@ -214,7 +224,7 @@ function renderArchiveStars(state, container) {
     star.title = isDone ? t(state).archiveDone(group + 1) : t(state).archiveTitle(group + 1, from, to);
     star.addEventListener('click', () => {
       state.openArchiveGroup = isOpen ? null : group;
-      if (state.openArchiveGroup !== null) setMessage(t(state).archiveNudge);
+      if (state.openArchiveGroup !== null) updateMessage(t(state).archiveNudge);
       render(state);
     });
     starsRow.appendChild(star);
@@ -271,7 +281,7 @@ function main() {
   document.getElementById('reset').addEventListener('click', () => {
     const fresh = newBaseState(state.language);
     saveState(fresh);
-    setMessage(t(state).progressReset);
+    updateMessage(t(state).progressReset);
     render(fresh);
   });
 
@@ -287,7 +297,7 @@ function main() {
     if (!input) return;
     const wanted = Number.parseInt(input, 10);
     if (!Number.isInteger(wanted) || wanted < 1 || wanted > MAX_DEBUG_LEVEL) {
-      setMessage(t(state).invalidDebug);
+      updateMessage(t(state).invalidDebug);
       return;
     }
     state.level = wanted;
@@ -295,7 +305,7 @@ function main() {
     state.dayFinished = false;
     state.openArchiveGroup = null;
     saveState(state);
-    setMessage(t(state).debugSet(wanted));
+    updateMessage(t(state).debugSet(wanted));
     render(state);
   });
 }
