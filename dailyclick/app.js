@@ -8,14 +8,18 @@ const CELEBRATION_TIMEOUT_MS = 2400;
 const APP_BUILD_ID = 'dailyclick-2026-05-26-fixed';
 
 const BUTTON_COLORS = [
-  'linear-gradient(145deg, #ef4444, #b91c1c)',
-  'linear-gradient(145deg, #f97316, #c2410c)',
-  'linear-gradient(145deg, #f59e0b, #b45309)',
-  'linear-gradient(145deg, #10b981, #047857)',
-  'linear-gradient(145deg, #06b6d4, #0e7490)',
-  'linear-gradient(145deg, #3b82f6, #1d4ed8)',
-  'linear-gradient(145deg, #8b5cf6, #6d28d9)',
-  'linear-gradient(145deg, #ec4899, #be185d)'
+  'linear-gradient(145deg, #ff4d6d, #c9184a)',
+  'linear-gradient(145deg, #ff7b00, #e85d04)',
+  'linear-gradient(145deg, #ffbe0b, #fb8500)',
+  'linear-gradient(145deg, #06d6a0, #118ab2)',
+  'linear-gradient(145deg, #00b4d8, #0077b6)',
+  'linear-gradient(145deg, #4361ee, #3a0ca3)',
+  'linear-gradient(145deg, #8338ec, #5a189a)',
+  'linear-gradient(145deg, #ff006e, #b5179e)',
+  'linear-gradient(145deg, #38b000, #008000)',
+  'linear-gradient(145deg, #ff595e, #d00000)',
+  'linear-gradient(145deg, #3a86ff, #264653)',
+  'linear-gradient(145deg, #f72585, #7209b7)'
 ];
 
 const I18N = {
