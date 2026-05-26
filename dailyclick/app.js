@@ -5,7 +5,7 @@ const CHUNK_SIZE = 30;
 const MAX_DEBUG_LEVEL = 200;
 const MILESTONE_STEP = 10;
 const CELEBRATION_TIMEOUT_MS = 2400;
-const APP_BUILD_ID = 'dailyclick-2026-05-26-clean';
+const APP_BUILD_ID = 'dailyclick-2026-05-26-fixed';
 
 const BUTTON_COLORS = [
   'linear-gradient(145deg, #ef4444, #b91c1c)',
@@ -84,7 +84,10 @@ function getTodayStamp() {
 }
 
 function isFinished(state) {
-  return Array.from({ length: state.level }, (_, i) => i + 1).every((required, i) => (state.clicks[i] ?? 0) >= required);
+  return Array.from({ length: state.level }, (_, index) => {
+    const requiredClicks = index + 1;
+    return (state.clicks[index] ?? 0) >= requiredClicks;
+  }).every(Boolean);
 }
 
 function buttonColor(index) {
@@ -92,7 +95,8 @@ function buttonColor(index) {
 }
 
 function updateMessage(text) {
-  document.getElementById('message').textContent = text;
+  const message = document.getElementById('message');
+  if (message) message.textContent = text;
 }
 
 function newBaseState(language) {
@@ -112,13 +116,17 @@ function hydrateState(language) {
 
   try {
     const parsed = JSON.parse(raw);
+
     if (!parsed || !Number.isInteger(parsed.level) || parsed.level < 1 || !Array.isArray(parsed.clicks)) {
       return newBaseState(language);
     }
 
     const level = parsed.level;
     const clicks = parsed.clicks.slice(0, level);
-    while (clicks.length < level) clicks.push(0);
+
+    while (clicks.length < level) {
+      clicks.push(0);
+    }
 
     return {
       language,
@@ -148,8 +156,9 @@ function isArchiveGroupComplete(state, group) {
   const start = group * CHUNK_SIZE;
   const end = start + CHUNK_SIZE;
 
-  for (let i = start; i < end; i += 1) {
-    if ((state.clicks[i] ?? 0) < i + 1) return false;
+  for (let index = start; index < end; index += 1) {
+    const requiredClicks = index + 1;
+    if ((state.clicks[index] ?? 0) < requiredClicks) return false;
   }
 
   return true;
@@ -161,11 +170,14 @@ function showCelebration(title, subtitle) {
   const subtitleEl = document.getElementById('celebration-subtitle');
   const layer = document.getElementById('confetti-layer');
 
+  if (!wrap || !titleEl || !subtitleEl || !layer) return;
+
   titleEl.textContent = title;
   subtitleEl.textContent = subtitle;
   layer.innerHTML = '';
 
   const colors = ['#f43f5e', '#f59e0b', '#22c55e', '#06b6d4', '#3b82f6', '#a855f7'];
+
   for (let i = 0; i < 90; i += 1) {
     const piece = document.createElement('span');
     piece.className = 'confetti-piece';
@@ -177,7 +189,9 @@ function showCelebration(title, subtitle) {
   }
 
   wrap.classList.add('show');
+
   if (celebrationTimer) clearTimeout(celebrationTimer);
+
   celebrationTimer = setTimeout(() => {
     wrap.classList.remove('show');
   }, CELEBRATION_TIMEOUT_MS);
@@ -185,11 +199,13 @@ function showCelebration(title, subtitle) {
 
 function maybeCelebrateDay(state) {
   const texts = t(state);
+
   if (state.level % MILESTONE_STEP === 0) {
     showCelebration(texts.celebrationMilestoneTitle(state.level), texts.celebrationMilestoneSubtitle);
-  } else {
-    showCelebration(texts.celebrationDayTitle(state.level), texts.celebrationDaySubtitle);
+    return;
   }
+
+  showCelebration(texts.celebrationDayTitle(state.level), texts.celebrationDaySubtitle);
 }
 
 function startNewCalendarDay(state) {
@@ -211,6 +227,7 @@ function startNewCalendarDay(state) {
 
 function applyDailyRollover(state) {
   const today = getTodayStamp();
+
   if (state.lastDayStamp === today) return;
 
   startNewCalendarDay(state);
@@ -235,6 +252,7 @@ function createGameButton(state, index) {
     if (state.dayFinished || (state.clicks[index] ?? 0) >= requiredClicks) return;
 
     state.clicks[index] += 1;
+
     const left = Math.max(requiredClicks - state.clicks[index], 0);
     updateMessage(left === 0 ? texts.buttonDone(requiredClicks) : texts.buttonRemaining(requiredClicks, left));
 
@@ -244,6 +262,7 @@ function createGameButton(state, index) {
     }
 
     state.dayFinished = isFinished(state);
+
     if (state.dayFinished) {
       updateMessage(texts.dayDone(state.level));
       maybeCelebrateDay(state);
@@ -258,6 +277,7 @@ function createGameButton(state, index) {
 
 function renderArchiveStars(state, container) {
   const fullGroupsBeforeCurrent = Math.floor((state.level - 1) / CHUNK_SIZE);
+
   if (fullGroupsBeforeCurrent <= 0) return;
 
   const starsRow = document.createElement('div');
@@ -276,7 +296,11 @@ function renderArchiveStars(state, container) {
 
     star.addEventListener('click', () => {
       state.openArchiveGroup = isOpen ? null : group;
-      if (state.openArchiveGroup !== null) updateMessage(t(state).archiveNudge);
+
+      if (state.openArchiveGroup !== null) {
+        updateMessage(t(state).archiveNudge);
+      }
+
       render(state);
     });
 
@@ -289,11 +313,12 @@ function renderArchiveStars(state, container) {
 
   const archiveGrid = document.createElement('div');
   archiveGrid.className = 'archive-grid';
+
   const start = state.openArchiveGroup * CHUNK_SIZE;
   const end = start + CHUNK_SIZE;
 
-  for (let i = start; i < end; i += 1) {
-    archiveGrid.appendChild(createGameButton(state, i));
+  for (let index = start; index < end; index += 1) {
+    archiveGrid.appendChild(createGameButton(state, index));
   }
 
   container.appendChild(archiveGrid);
@@ -301,14 +326,19 @@ function renderArchiveStars(state, container) {
 
 function render(state) {
   const texts = t(state);
+
   document.documentElement.lang = state.language === 'no' ? 'no' : 'en';
+
   document.getElementById('title').textContent = texts.title;
   document.getElementById('reset').textContent = texts.reset;
   document.getElementById('new-day').textContent = texts.debugAdvance;
   document.getElementById('debug-streak').textContent = texts.debugStreak;
 
   state.dayFinished = isFinished(state);
-  document.getElementById('status').textContent = state.dayFinished ? texts.statusDone(state.level) : texts.statusPlay(state.level);
+
+  document.getElementById('status').textContent = state.dayFinished
+    ? texts.statusDone(state.level)
+    : texts.statusPlay(state.level);
 
   const buttonsContainer = document.getElementById('buttons');
   buttonsContainer.innerHTML = '';
@@ -320,10 +350,11 @@ function render(state) {
   const currentChunkStart = Math.floor((state.level - 1) / CHUNK_SIZE) * CHUNK_SIZE;
   const currentChunkEnd = state.level;
   const currentGrid = document.createElement('div');
+
   currentGrid.className = 'current-grid';
 
-  for (let i = currentChunkStart; i < currentChunkEnd; i += 1) {
-    currentGrid.appendChild(createGameButton(state, i));
+  for (let index = currentChunkStart; index < currentChunkEnd; index += 1) {
+    currentGrid.appendChild(createGameButton(state, index));
   }
 
   buttonsContainer.appendChild(currentGrid);
@@ -334,6 +365,7 @@ function main() {
 
   const language = getQuizLanguage();
   const state = hydrateState(language);
+
   applyDailyRollover(state);
   saveState(state);
   render(state);
@@ -341,7 +373,7 @@ function main() {
   document.getElementById('reset').addEventListener('click', () => {
     const fresh = newBaseState(state.language);
     saveState(fresh);
-    updateMessage(t(state).progressReset);
+    updateMessage(t(fresh).progressReset);
     render(fresh);
   });
 
@@ -357,6 +389,7 @@ function main() {
     if (!input) return;
 
     const wanted = Number.parseInt(input, 10);
+
     if (!Number.isInteger(wanted) || wanted < 1 || wanted > MAX_DEBUG_LEVEL) {
       updateMessage(t(state).invalidDebug);
       return;
@@ -366,6 +399,8 @@ function main() {
     state.clicks = Array.from({ length: wanted }, () => 0);
     state.dayFinished = false;
     state.openArchiveGroup = null;
+    state.lastDayStamp = getTodayStamp();
+
     saveState(state);
     updateMessage(t(state).debugSet(wanted));
     render(state);
