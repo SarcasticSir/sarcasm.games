@@ -99,6 +99,24 @@ function isArchiveGroupComplete(state, group) {
   }
   return true;
 }
+function setMessage(text) { document.getElementById('message').textContent = text; }
+function buttonColor(index) { return BUTTON_COLORS[index % BUTTON_COLORS.length]; }
+
+function showCelebration(title, subtitle) {
+  const wrap = document.getElementById('celebration');
+  const titleEl = document.getElementById('celebration-title');
+  const subEl = document.getElementById('celebration-subtitle');
+  const layer = document.getElementById('confetti-layer');
+
+  titleEl.textContent = title;
+  subEl.textContent = subtitle;
+  layer.innerHTML = '';
+
+function showCelebration(title, subtitle) {
+  const wrap = document.getElementById('celebration');
+  const titleEl = document.getElementById('celebration-title');
+  const subEl = document.getElementById('celebration-subtitle');
+  const layer = document.getElementById('confetti-layer');
 
 function showCelebration(title, subtitle) {
   const wrap = document.getElementById('celebration');
@@ -192,7 +210,6 @@ function createGameButton(state, index) {
     saveState(state);
     render(state);
   });
-
   return button;
 }
 
@@ -256,6 +273,9 @@ function render(state) {
     for (let i = currentChunkStart; i < currentChunkEnd; i += 1) currentGrid.appendChild(createGameButton(state, i));
     buttonsContainer.appendChild(currentGrid);
   }
+
+  renderArchiveStars(state, buttonsContainer);
+  buttonsContainer.appendChild(currentGrid);
 }
 
 function main() {
