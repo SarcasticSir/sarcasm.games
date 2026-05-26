@@ -14,11 +14,10 @@ body {
 }
 
 .container {
-  min-height: 100vh;
   width: min(1500px, 100vw);
   margin-inline: auto;
-  display: grid;
-  grid-template-rows: auto auto 1fr auto;
+  display: flex;
+  flex-direction: column;
   gap: 0.65rem;
   padding: clamp(0.5rem, 1vw, 1rem);
 }
@@ -41,17 +40,18 @@ h1 {
 }
 
 .button-grid {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: .55rem;
-  align-content: start;
+  align-content: flex-start;
 }
 
 .current-grid,
 .archive-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(46px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: .5rem;
-  align-items: start;
+  align-items: flex-start;
 }
 
 .stars-row {
@@ -62,12 +62,12 @@ h1 {
 
 .daily-button {
   border: 2px solid rgba(255, 255, 255, .45);
-  width: 100%;
-  aspect-ratio: 1 / 1;
+  width: clamp(48px, 3.7vw, 68px);
+  height: clamp(48px, 3.7vw, 68px);
   border-radius: 16px;
 
   color: #fff;
-  font-size: .9rem;
+  font-size: clamp(.78rem, .9vw, .95rem);
   font-weight: 800;
   cursor: pointer;
 
@@ -105,6 +105,7 @@ h1 {
   transform: translateY(-2px) scale(1.04);
   filter: brightness(1.08) saturate(1.08);
   border-color: rgba(255, 255, 255, .75);
+
   box-shadow:
     0 12px 20px rgba(0, 0, 0, .26),
     inset 0 2px 0 rgba(255, 255, 255, .34),
@@ -113,6 +114,7 @@ h1 {
 
 .daily-button:active:enabled {
   transform: translateY(3px) scale(.97);
+
   box-shadow:
     0 4px 8px rgba(0, 0, 0, .22),
     inset 0 3px 6px rgba(0, 0, 0, .24);
@@ -125,7 +127,7 @@ h1 {
 }
 
 .message {
-  margin: 0;
+  margin: .1rem 0 0;
   min-height: 1.3rem;
   font-weight: 700;
   color: #065f46;
@@ -135,6 +137,7 @@ h1 {
   display: flex;
   flex-wrap: wrap;
   gap: .45rem;
+  margin-top: .2rem;
 }
 
 .control-button {
@@ -166,8 +169,10 @@ h1 {
   font-size: .88rem;
   font-weight: 800;
   cursor: pointer;
+
   background: linear-gradient(145deg, #111827, #374151);
   color: #fff;
+
   box-shadow:
     0 7px 12px rgba(0, 0, 0, .22),
     inset 0 1px 0 rgba(255, 255, 255, .18);
@@ -235,28 +240,6 @@ h1 {
   height: 16px;
   border-radius: 2px;
   animation: fall linear forwards;
-}
-
-@media (min-width: 900px) {
-  .current-grid,
-  .archive-grid {
-    grid-template-columns: repeat(auto-fill, minmax(54px, 1fr));
-  }
-
-  .daily-button {
-    max-width: 62px;
-  }
-}
-
-@media (min-width: 1300px) {
-  .current-grid,
-  .archive-grid {
-    grid-template-columns: repeat(auto-fill, minmax(58px, 1fr));
-  }
-
-  .daily-button {
-    max-width: 68px;
-  }
 }
 
 @keyframes fall {
