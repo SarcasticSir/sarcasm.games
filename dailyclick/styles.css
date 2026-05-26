@@ -3,11 +3,8 @@
   color: #1f2937;
   background: radial-gradient(circle at top, #f8fafc, #e5e7eb);
 }
-
 * { box-sizing: border-box; }
-
 body { margin: 0; min-height: 100vh; }
-
 .container {
   min-height: 100vh;
   width: min(1200px, 100vw);
@@ -17,40 +14,43 @@ body { margin: 0; min-height: 100vh; }
   gap: 0.75rem;
   padding: clamp(0.75rem, 1.5vw, 1.25rem);
 }
-
 .header {
   background: white;
   border-radius: 14px;
   padding: 0.75rem 1rem;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
 }
-
 h1 { margin: 0 0 0.25rem; font-size: clamp(1.1rem, 2.4vw, 1.6rem); }
 .status { margin: 0; font-size: 0.95rem; }
-
 .button-grid { display: grid; gap: 0.75rem; align-content: start; }
-
+.current-grid, .archive-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(54px, 78px));
+  gap: 0.55rem;
+}
+.stars-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
 .daily-button {
   border: none;
   width: 100%;
+  max-width: 78px;
   aspect-ratio: 1 / 1;
   border-radius: 999px;
   color: white;
-  font-size: clamp(0.9rem, 1.7vw, 1.15rem);
+  font-size: 0.95rem;
   font-weight: 700;
   cursor: pointer;
   transition: transform 0.12s ease, filter 0.2s ease, opacity 0.2s ease, box-shadow 0.25s ease;
   box-shadow: 0 8px 14px rgba(0, 0, 0, 0.18);
 }
-
 .daily-button:hover:enabled { filter: brightness(1.08); }
 .daily-button:active:enabled { transform: translateY(2px) scale(0.98); }
 .daily-button:disabled { opacity: 0.45; cursor: not-allowed; }
-
 .message { margin: 0; min-height: 1.5rem; font-weight: 700; color: #065f46; }
-
 .controls { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-
 .control-button {
   border: 1px solid #9ca3af;
   background: white;
@@ -60,33 +60,20 @@ h1 { margin: 0 0 0.25rem; font-size: clamp(1.1rem, 2.4vw, 1.6rem); }
   cursor: pointer;
   font-size: 0.82rem;
 }
-
 .debug-button { border-color: #7c3aed; color: #5b21b6; }
-
-.overflow-row {
-  display: grid;
-  grid-template-columns: minmax(60px, 90px) minmax(80px, 140px);
-  gap: 0.75rem;
-  align-items: start;
-}
-
 .archive-button {
   border: none;
   border-radius: 999px;
-  aspect-ratio: 1 / 1;
-  font-size: 1.4rem;
+  min-width: 62px;
+  height: 40px;
+  padding: 0 0.6rem;
+  font-size: 0.95rem;
   cursor: pointer;
   background: linear-gradient(145deg, #111827, #374151);
   color: white;
   box-shadow: 0 8px 14px rgba(0, 0, 0, 0.22);
 }
-
-.archive-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(54px, 1fr));
-  gap: 0.55rem;
-}
-
-@media (min-height: 540px) {
-  .button-grid { grid-template-columns: repeat(auto-fit, minmax(70px, 1fr)); }
+.archive-button.active {
+  outline: 2px solid #f59e0b;
+  outline-offset: 2px;
 }
