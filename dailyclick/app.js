@@ -83,8 +83,17 @@ function getTodayStamp() {
   return new Date().toISOString().slice(0, 10);
 }
 
-function isFinished(state) {
-  return Array.from({ length: state.level }, (_, i) => i + 1).every((required, i) => (state.clicks[i] ?? 0) >= required);
+const CELEBRATION_TIMEOUT_MS = 2400;
+let celebrationTimer = null;
+
+function t(state) { return I18N[state.language] || I18N.en; }
+function getTodayStamp() { return new Date().toISOString().slice(0, 10); }
+function isFinished(state) { return Array.from({ length: state.level }, (_, i) => i + 1).every((required, i) => (state.clicks[i] ?? 0) >= required); }
+function buttonColor(index) { return BUTTON_COLORS[index % BUTTON_COLORS.length]; }
+function updateMessage(text) { document.getElementById('message').textContent = text; }
+
+function newBaseState(language) {
+  return { language, level: 1, clicks: [0], dayFinished: false, openArchiveGroup: null, lastDayStamp: getTodayStamp() };
 }
 
 function buttonColor(index) {
@@ -136,6 +145,24 @@ function hydrateState(language) {
 function saveState(state) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify({ level: state.level, clicks: state.clicks, lastDayStamp: state.lastDayStamp }));
 }
+function setMessage(text) { document.getElementById('message').textContent = text; }
+function buttonColor(index) { return BUTTON_COLORS[index % BUTTON_COLORS.length]; }
+
+function showCelebration(title, subtitle) {
+  const wrap = document.getElementById('celebration');
+  const titleEl = document.getElementById('celebration-title');
+  const subEl = document.getElementById('celebration-subtitle');
+  const layer = document.getElementById('confetti-layer');
+
+  titleEl.textContent = title;
+  subEl.textContent = subtitle;
+  layer.innerHTML = '';
+
+function showCelebration(title, subtitle) {
+  const wrap = document.getElementById('celebration');
+  const titleEl = document.getElementById('celebration-title');
+  const subEl = document.getElementById('celebration-subtitle');
+  const layer = document.getElementById('confetti-layer');
 
 function isArchiveGroupComplete(state, group) {
   const start = group * CHUNK_SIZE;
@@ -222,7 +249,6 @@ function createGameButton(state, index) {
 
   button.addEventListener('click', () => {
     if (state.dayFinished || (state.clicks[index] ?? 0) >= requiredClicks) return;
-
     state.clicks[index] += 1;
     const left = Math.max(requiredClicks - state.clicks[index], 0);
     updateMessage(left === 0 ? texts.buttonDone(requiredClicks) : texts.buttonRemaining(requiredClicks, left));
@@ -241,7 +267,6 @@ function createGameButton(state, index) {
     saveState(state);
     render(state);
   });
-
   return button;
 }
 
@@ -347,7 +372,6 @@ function main() {
       updateMessage(t(state).invalidDebug);
       return;
     }
-
     state.level = wanted;
     state.clicks = Array.from({ length: wanted }, () => 0);
     state.dayFinished = false;
