@@ -68,7 +68,7 @@
       width: 100vw;
       height: 100vh;
       display: grid;
-      grid-template-columns: minmax(220px, 320px) 1fr minmax(220px, 320px);
+      grid-template-columns: minmax(260px, 360px) minmax(360px, 1fr) minmax(260px, 360px);
       gap: 16px;
       padding: 16px;
     }
@@ -82,7 +82,6 @@
       border-radius: 22px;
       background: linear-gradient(180deg, rgba(35, 16, 55, 0.78), rgba(7, 4, 11, 0.72));
       box-shadow: 0 20px 55px var(--shadow), inset 0 0 32px rgba(246, 211, 107, 0.05);
-      backdrop-filter: blur(10px);
     }
 
     .left,
@@ -91,6 +90,25 @@
       flex-direction: column;
       gap: 14px;
       overflow: hidden;
+    }
+
+    .left .panel,
+    .right .panel {
+      flex: 0 0 auto;
+    }
+
+    .left .omens-panel,
+    .right .relics-panel {
+      flex: 1 1 0;
+      display: flex;
+      flex-direction: column;
+      min-height: 150px;
+    }
+
+    .left .omens-panel .log-list,
+    .right .relics-panel .upgrade-list {
+      flex: 1 1 auto;
+      min-height: 0;
     }
 
     .game-wrap {
@@ -206,6 +224,12 @@
       overflow: auto;
       scrollbar-width: thin;
       padding-right: 2px;
+    }
+
+    .right .upgrade-list {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      align-content: start;
     }
 
     .upgrade,
@@ -423,7 +447,7 @@
       }
 
       .right .panel:nth-child(n+3),
-      .left .panel:nth-child(n+3) {
+      .left .panel:nth-child(n+5) {
         display: none;
       }
 
@@ -464,6 +488,10 @@
       .right .panel:nth-child(n+2) {
         display: none;
       }
+
+      .right .upgrade-list {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
@@ -491,6 +519,22 @@
         <div class="meter" style="margin-top: 12px;"><div id="doomMeter"></div></div>
         <p class="subtitle">Rows that reach the paddle awaken the Grave King.</p>
       </section>
+
+      <section class="panel">
+        <h2>Controls</h2>
+        <p class="controls" style="margin-top: 8px;">
+          <kbd>A</kbd><kbd>D</kbd>/<kbd>←</kbd><kbd>→</kbd> move<br/>
+          <kbd>Space</kbd> launch / restart<br/>
+          <kbd>X</kbd> cast spell<br/>
+          <kbd>P</kbd> pause<br/>
+          Mouse/touch drag also controls the paddle.
+        </p>
+      </section>
+
+      <section class="panel omens-panel">
+        <h2>Omens</h2>
+        <div class="log-list" id="logList" style="margin-top: 10px;"></div>
+      </section>
     </aside>
 
     <main class="game-wrap" id="gameWrap">
@@ -510,7 +554,7 @@
     </main>
 
     <aside class="right">
-      <section class="panel">
+      <section class="panel relics-panel">
         <h2>Relics</h2>
         <div class="upgrade-list" id="upgradeList" style="margin-top: 10px;"></div>
       </section>
@@ -520,21 +564,6 @@
         <div class="spell" id="spellStatus" style="margin-top: 10px;"><strong>Blood Nova</strong><br/>Charge by breaking stones. Destroys a cross-shaped curse wave.</div>
       </section>
 
-      <section class="panel">
-        <h2>Controls</h2>
-        <p class="controls" style="margin-top: 8px;">
-          <kbd>A</kbd><kbd>D</kbd>/<kbd>←</kbd><kbd>→</kbd> move<br/>
-          <kbd>Space</kbd> launch / restart<br/>
-          <kbd>X</kbd> cast spell<br/>
-          <kbd>P</kbd> pause<br/>
-          Mouse/touch drag also controls the paddle.
-        </p>
-      </section>
-
-      <section class="panel">
-        <h2>Omens</h2>
-        <div class="log-list" id="logList" style="margin-top: 10px;"></div>
-      </section>
     </aside>
   </div>
 
@@ -573,7 +602,7 @@
       const BASE_ROWS = 12;
       const BRICK_GAP = 5;
       const MAX_LOGS = 7;
-      const PARTICLE_LIMIT = 420;
+      const PARTICLE_LIMIT = 220;
       const POWER_TYPES = ['widen', 'split', 'pierce', 'slow', 'ember', 'ward'];
       const BRICK_THEMES = [
         { name: 'Bone', hp: 1, color: '#d9caa7', glow: '#f4e6c7', score: 40 },
@@ -618,7 +647,10 @@
         toastTimer: 0,
         pointerDown: false,
         mobileMove: 0,
-        spawnBag: []
+        spawnBag: [],
+        uiTimer: 0,
+        uiCache: {},
+        frameTime: 0
       };
 
       const upgrades = [
@@ -644,7 +676,7 @@
 
       function resize() {
         const rect = gameWrap.getBoundingClientRect();
-        state.dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+        state.dpr = Math.max(1, Math.min(1.45, window.devicePixelRatio || 1));
         state.width = Math.max(320, rect.width);
         state.height = Math.max(360, rect.height);
         canvas.width = Math.floor(state.width * state.dpr);
@@ -927,7 +959,7 @@
         updateParticles(dt);
         updateFloatingTexts(dt);
         checkDoom();
-        updateUI();
+        updateUI(dt, false);
       }
 
       function updateEffects(dt) {
@@ -1085,22 +1117,24 @@
       }
 
       function updateParticles(dt) {
-        for (const p of state.particles) {
+        for (let i = state.particles.length - 1; i >= 0; i -= 1) {
+          const p = state.particles[i];
           p.x += p.vx * dt;
           p.y += p.vy * dt;
           p.vy += p.gravity * dt;
           p.life -= dt;
           p.rot += p.spin * dt;
+          if (p.life <= 0) state.particles.splice(i, 1);
         }
-        state.particles = state.particles.filter(p => p.life > 0);
       }
 
       function updateFloatingTexts(dt) {
-        for (const text of state.floatingTexts) {
+        for (let i = state.floatingTexts.length - 1; i >= 0; i -= 1) {
+          const text = state.floatingTexts[i];
           text.y -= 42 * dt;
           text.life -= dt;
+          if (text.life <= 0) state.floatingTexts.splice(i, 1);
         }
-        state.floatingTexts = state.floatingTexts.filter(t => t.life > 0);
       }
 
       function checkDoom() {
@@ -1203,7 +1237,7 @@
           const hpRatio = clamp(brick.hp / brick.maxHp, 0, 1);
           ctx.save();
           ctx.translate(rect.x, rect.y);
-          const wob = Math.sin(performance.now() / 450 + brick.wobble) * 0.8;
+          const wob = Math.sin(state.frameTime / 450 + brick.wobble) * 0.8;
           ctx.translate(0, wob);
           roundRect(0, 0, rect.w, rect.h, 9);
           const grad = ctx.createLinearGradient(0, 0, rect.w, rect.h);
@@ -1256,7 +1290,7 @@
         ctx.strokeStyle = 'rgba(255,255,255,0.42)';
         ctx.stroke();
         if (p.ward > 0) {
-          ctx.globalAlpha = 0.42 + Math.sin(performance.now() / 120) * 0.13;
+          ctx.globalAlpha = 0.42 + Math.sin(state.frameTime / 120) * 0.13;
           ctx.strokeStyle = '#62ff9a';
           ctx.lineWidth = 3;
           roundRect(-p.w / 2 - 8, -p.h / 2 - 8, p.w + 16, p.h + 16, 999);
@@ -1396,14 +1430,33 @@
         state.toastTimer = 2.6;
       }
 
-      function updateUI() {
-        scoreEl.textContent = String(Math.floor(state.score));
-        rowsEl.textContent = String(state.rowsCleared);
-        ballsEl.textContent = String(state.balls.length);
-        depthEl.textContent = String(state.depth);
+      function setCachedText(element, key, value) {
+        if (state.uiCache[key] === value) return;
+        state.uiCache[key] = value;
+        element.textContent = value;
+      }
+
+      function updateUI(dt = 0, force = true) {
+        if (!force) {
+          state.uiTimer += dt;
+          if (state.uiTimer < 0.12) return;
+        }
+        state.uiTimer = 0;
+        setCachedText(scoreEl, 'score', String(Math.floor(state.score)));
+        setCachedText(rowsEl, 'rows', String(state.rowsCleared));
+        setCachedText(ballsEl, 'balls', String(state.balls.length));
+        setCachedText(depthEl, 'depth', String(state.depth));
         const chargePct = Math.round((state.charge / state.maxCharge) * 100);
-        spellStatus.classList.toggle('ready', state.charge >= state.maxCharge);
-        spellStatus.innerHTML = `<strong>Blood Nova</strong><br/>${state.charge >= state.maxCharge ? 'Ready. Press X or Cast Spell.' : `Charging: ${chargePct}%`}`;
+        const spellReady = state.charge >= state.maxCharge;
+        const spellHtml = `<strong>Blood Nova</strong><br/>${spellReady ? 'Ready. Press X or Cast Spell.' : `Charging: ${chargePct}%`}`;
+        if (state.uiCache.spellHtml !== spellHtml) {
+          state.uiCache.spellHtml = spellHtml;
+          spellStatus.innerHTML = spellHtml;
+        }
+        if (state.uiCache.spellReady !== spellReady) {
+          state.uiCache.spellReady = spellReady;
+          spellStatus.classList.toggle('ready', spellReady);
+        }
         renderUpgrades();
       }
 
@@ -1414,6 +1467,8 @@
           const count = upgrade.key === 'ward' && state.paddle.ward > 0 ? ` ×${state.paddle.ward}` : '';
           return `<div class="upgrade ${active ? 'active' : ''}"><strong>${upgrade.title}${timer}${count}</strong><br>${upgrade.text}</div>`;
         }).join('');
+        if (state.uiCache.upgradesHtml === rows) return;
+        state.uiCache.upgradesHtml = rows;
         upgradeList.innerHTML = rows;
       }
 
@@ -1473,6 +1528,7 @@
       function loop(now) {
         const dt = Math.min(0.033, (now - state.lastTime) / 1000 || 0);
         state.lastTime = now;
+        state.frameTime = now;
         update(dt);
         render();
         requestAnimationFrame(loop);
