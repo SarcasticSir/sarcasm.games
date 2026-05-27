@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>CYBER ORBIT PONG</title>
+  <style>
+    :root {
+      --bg:        #020610;
+      --grid:      rgba(0, 255, 255, 0.04);
+      --cyan:      #00f5ff;
+      --magenta:   #ff00c8;
+      --yellow:    #f5ff00;
+      --white:     #e8f4ff;
+      --danger:    #ff3355;
+      --glow-c:    0 0 8px #00f5ff, 0 0 20px #00f5ff, 0 0 40px #00f5ff44;
+      --glow-m:    0 0 8px #ff00c8, 0 0 20px #ff00c8, 0 0 40px #ff00c844;
+      --glow-y:    0 0 8px #f5ff00, 0 0 20px #f5ff00;
+      --font-hud:  'Courier New', monospace;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100dvh;
+      overflow: hidden;
+      font-family: var(--font-hud);
+      color: var(--white);
+      background-image:
+        repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 2px,
+          rgba(0,0,0,0.18) 2px,
+          rgba(0,0,0,0.18) 4px
+        );
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(var(--grid) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    #title {
+      position: relative;
+      z-index: 2;
+      font-size: clamp(1.15rem, 4vw, 2.1rem);
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--cyan);
+      text-shadow: var(--glow-c);
+      margin-bottom: 8px;
+      animation: flicker 6s infinite;
+      text-align: center;
+    }
+
+    #scoreboard {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      gap: clamp(20px, 6vw, 60px);
+      margin-bottom: 10px;
+    }
+
+    .score-col { display: flex; flex-direction: column; align-items: center; }
+    .score {
+      font-size: clamp(1.8rem, 6vw, 3.6rem);
+      font-weight: 700;
+      letter-spacing: 0.05em;
+    }
+    #score-left  { color: var(--cyan); text-shadow: var(--glow-c); }
+    #score-right { color: var(--magenta); text-shadow: var(--glow-m); }
+    .score-label {
+      font-size: clamp(0.55rem, 1.5vw, 0.75rem);
+      letter-spacing: 0.16em;
+      opacity: 0.65;
+      text-align: center;
+    }
+    .divider {
+      font-size: clamp(1.5rem, 5vw, 3rem);
+      opacity: 0.3;
+      color: var(--white);
+    }
+
+    #top-actions {
+      position: relative;
+      z-index: 2;
+      min-height: 34px;
+      margin-bottom: 8px;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #canvas-wrap {
+      position: relative;
+      z-index: 2;
+      border: 1px solid rgba(0,245,255,0.25);
+      box-shadow: 0 0 0 1px rgba(255,0,200,0.15),
+                  0 0 30px rgba(0,245,255,0.12),
+                  inset 0 0 60px rgba(0,0,0,0.6);
+      border-radius: 6px;
+      overflow: hidden;
+      background: rgba(0,0,0,0.22);
+    }
+
+    canvas { display: block; image-rendering: pixelated; }
+
+    #overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(2,6,16,0.86);
+      z-index: 10;
+      gap: 14px;
+      text-align: center;
+      padding: 18px;
+    }
+    #overlay.hidden { display: none; }
+
+    #overlay h2 {
+      font-size: clamp(1.25rem, 4.7vw, 2.3rem);
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--cyan);
+      text-shadow: var(--glow-c);
+    }
+
+    #overlay p {
+      font-size: clamp(0.7rem, 2.1vw, 0.92rem);
+      letter-spacing: 0.12em;
+      opacity: 0.78;
+      max-width: 420px;
+      line-height: 1.55;
+    }
+
+    .menu-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
+      max-width: 440px;
+    }
+
+    .setting-card {
+      border: 1px solid rgba(0,245,255,0.2);
+      background: rgba(0,245,255,0.04);
+      padding: 10px;
+      min-width: 170px;
+      border-radius: 4px;
+    }
+    .setting-card label {
+      display: block;
+      font-size: 0.68rem;
+      letter-spacing: 0.14em;
+      opacity: 0.7;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+    }
+    select {
+      width: 100%;
+      background: #020610;
+      color: var(--white);
+      border: 1px solid rgba(0,245,255,0.35);
+      padding: 8px;
+      font-family: var(--font-hud);
+      letter-spacing: 0.1em;
+      border-radius: 3px;
+      outline: none;
+    }
+
+    .neon-btn {
+      padding: 9px 18px;
+      border: 1px solid var(--cyan);
+      background: transparent;
+      color: var(--cyan);
+      font-family: var(--font-hud);
+      font-size: clamp(0.72rem, 2vw, 0.9rem);
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      cursor: pointer;
+      box-shadow: var(--glow-c);
+      transition: background 0.2s, color 0.2s, border-color 0.2s;
+      border-radius: 2px;
+    }
+    .neon-btn:hover, .neon-btn:focus, .neon-btn.active {
+      background: var(--cyan);
+      color: var(--bg);
+      outline: none;
+    }
+    .neon-btn.magenta {
+      border-color: var(--magenta);
+      color: var(--magenta);
+      box-shadow: var(--glow-m);
+    }
+    .neon-btn.magenta:hover, .neon-btn.magenta:focus, .neon-btn.magenta.active {
+      background: var(--magenta);
+      color: var(--bg);
+    }
+    .neon-btn.danger {
+      border-color: var(--danger);
+      color: var(--danger);
+      box-shadow: 0 0 8px #ff3355, 0 0 16px #ff335566;
+    }
+    .neon-btn.danger:hover, .neon-btn.danger:focus {
+      background: var(--danger);
+      color: var(--bg);
+    }
+    .neon-btn.small {
+      padding: 7px 12px;
+      font-size: 0.68rem;
+      box-shadow: none;
+      opacity: 0.85;
+    }
+    .hidden { display: none !important; }
+
+    #controls {
+      position: relative;
+      z-index: 2;
+      margin-top: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: clamp(12px, 4vw, 36px);
+      font-size: clamp(0.55rem, 1.5vw, 0.72rem);
+      letter-spacing: 0.1em;
+      opacity: 0.48;
+      text-align: center;
+      padding: 0 8px;
+    }
+
+    #touch-controls {
+      position: relative;
+      z-index: 2;
+      display: none;
+      width: 100%;
+      max-width: 620px;
+      margin-top: 10px;
+      justify-content: space-between;
+      padding: 0 12px;
+    }
+    .touch-side { display: flex; gap: 6px; }
+    .touch-btn {
+      width: clamp(50px, 14vw, 70px);
+      height: clamp(40px, 10vw, 52px);
+      border: 1px solid rgba(0,245,255,0.4);
+      background: rgba(0,245,255,0.07);
+      color: var(--cyan);
+      font-size: 1rem;
+      border-radius: 4px;
+      cursor: pointer;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      touch-action: none;
+      font-family: var(--font-hud);
+    }
+    .touch-btn.right-btn {
+      border-color: rgba(255,0,200,0.4);
+      background: rgba(255,0,200,0.07);
+      color: var(--magenta);
+    }
+    .touch-btn.pressed { background: rgba(0,245,255,0.24); }
+    .touch-btn.right-btn.pressed { background: rgba(255,0,200,0.24); }
+
+    @keyframes flicker { 0%,94%,96%,100% { opacity: 1; } 95% { opacity: 0.58; } }
+    @keyframes score-pop { 0%{transform:scale(1)} 40%{transform:scale(1.35)} 100%{transform:scale(1)} }
+    .pop { animation: score-pop 0.35s ease-out; }
+  </style>
+</head>
+<body>
+  <div id="title">⬡ CYBER ORBIT PONG ⬡</div>
+
+  <div id="scoreboard">
+    <div class="score-col">
+      <span class="score-label" id="left-label">P1 · A/D</span>
+      <span class="score" id="score-left">0</span>
+    </div>
+    <span class="divider">:</span>
+    <div class="score-col">
+      <span class="score" id="score-right">0</span>
+      <span class="score-label" id="right-label">ARROWS · P2</span>
+    </div>
+  </div>
+
+  <div id="top-actions">
+    <button class="neon-btn danger small hidden" id="abort-btn">ABORT</button>
+  </div>
+
+  <div id="canvas-wrap">
+    <canvas id="orbit"></canvas>
+
+    <div id="overlay">
+      <h2 id="overlay-title">CYBER ORBIT</h2>
+      <p id="overlay-msg">Circular Pong. Rotate smaller curved paddles around the arena. If a serve escapes untouched, nobody scores. After a hit, last touch scores if the ball escapes.</p>
+
+      <div class="menu-row" id="mode-row">
+        <button class="neon-btn active" id="mode-pvp">P1 vs P2</button>
+        <button class="neon-btn magenta" id="mode-cpu">VS COMPUTER</button>
+      </div>
+
+      <div class="menu-row" id="settings-row">
+        <div class="setting-card">
+          <label for="points-select">Play to</label>
+          <select id="points-select">
+            <option value="3">3 points</option>
+            <option value="5">5 points</option>
+            <option value="7" selected>7 points</option>
+            <option value="10">10 points</option>
+            <option value="15">15 points</option>
+          </select>
+        </div>
+        <div class="setting-card" id="difficulty-card">
+          <label for="difficulty-select">Computer</label>
+          <select id="difficulty-select">
+            <option value="easy">Easy</option>
+            <option value="medium" selected>Medium</option>
+            <option value="hard">Hard</option>
+          </select>
+        </div>
+      </div>
+
+      <button class="neon-btn" id="overlay-btn">START GAME</button>
+    </div>
+  </div>
+
+  <div id="touch-controls">
+    <div class="touch-side">
+      <button class="touch-btn" id="btn-a">⟲</button>
+      <button class="touch-btn" id="btn-d">⟳</button>
+    </div>
+    <div class="touch-side">
+      <button class="touch-btn right-btn" id="btn-left">⟲</button>
+      <button class="touch-btn right-btn" id="btn-right">⟳</button>
+    </div>
+  </div>
+
+  <div id="controls">
+    <span>A/D — CYAN PADDLE</span>
+    <span>←/→ — MAGENTA PADDLE</span>
+    <span>ESC — ABORT</span>
+  </div>
+
+<script>
+/* ============================================================
+   CYBER ORBIT PONG — circular standalone variant
+   ============================================================ */
+const canvas = document.getElementById('orbit');
+const ctx = canvas.getContext('2d');
+
+const BASE = 620;
+let scale = 1;
+let cx = BASE / 2;
+let cy = BASE / 2;
+
+function resizeCanvas() {
+  const maxSize = Math.min(window.innerWidth - 20, window.innerHeight - 230, 680);
+  const safeSize = Math.max(320, maxSize);
+  scale = safeSize / BASE;
+  canvas.width = Math.floor(BASE * scale);
+  canvas.height = Math.floor(BASE * scale);
+}
+resizeCanvas();
+window.addEventListener('resize', () => { resizeCanvas(); drawFrame(); });
+
+const px = v => v * scale;
+
+const C = {
+  bg: '#020610',
+  cyan: '#00f5ff',
+  magenta: '#ff00c8',
+  yellow: '#f5ff00',
+  white: '#e8f4ff',
+  dim: 'rgba(232,244,255,0.12)',
+  danger: '#ff3355',
+};
+
+const ARENA_R = 250;
+const INNER_GUIDE_R = 72;
+const BALL_R = 8;
+const PADDLE_R = ARENA_R - 5;
+const PADDLE_WIDTH = 18;
+const PADDLE_ARC = Math.PI / 6.85; // ~26.3 degrees, about 70% of the original paddle length
+const PADDLE_SPEED = 0.046;
+const INIT_BALL_SPEED = 4.3;
+const MAX_BALL_SPEED = 11.5;
+const SPEED_INCREMENT = 0.18;
+
+const DIFFICULTY = {
+  easy:   { speed: 0.026, reaction: 0.055, error: 0.34, prediction: 0.30 },
+  medium: { speed: 0.037, reaction: 0.095, error: 0.20, prediction: 0.55 },
+  hard:   { speed: 0.048, reaction: 0.145, error: 0.105, prediction: 0.78 },
+};
+
+let state = 'idle';
+let mode = 'pvp';
+let winScore = 7;
+let difficulty = 'medium';
+let leftScore = 0;
+let rightScore = 0;
+let lastTime = performance.now();
+let aiTargetAngle = 0;
+let aiNoise = 0;
+let aiNoiseTimer = 0;
+let paddleContactFlash = 0;
+let lastTouch = null; // 'left' | 'right' | null. Null means no score if the ball escapes before first hit.
+
+const p1 = {
+  angle: Math.PI,
+  color: C.cyan,
+  spin: 0,
+};
+
+const p2 = {
+  angle: 0,
+  color: C.magenta,
+  spin: 0,
+};
+
+const ball = {
+  x: cx,
+  y: cy,
+  vx: 0,
+  vy: 0,
+  r: BALL_R,
+};
+
+const keys = new Set();
+
+document.addEventListener('keydown', e => {
+  keys.add(e.key);
+  if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' ', 'Escape'].includes(e.key)) e.preventDefault();
+
+  if ((e.key === ' ' || e.key === 'Enter') && state !== 'playing') startGame();
+  if (e.key === 'Escape' && state === 'playing') abortGame();
+});
+document.addEventListener('keyup', e => keys.delete(e.key));
+
+const touchMap = {
+  'btn-a': 'a',
+  'btn-d': 'd',
+  'btn-left': 'ArrowLeft',
+  'btn-right': 'ArrowRight',
+};
+
+function setupTouchBtn(id) {
+  const el = document.getElementById(id);
+  const key = touchMap[id];
+  el.addEventListener('touchstart', e => { e.preventDefault(); keys.add(key); el.classList.add('pressed'); }, { passive: false });
+  el.addEventListener('touchend', e => { e.preventDefault(); keys.delete(key); el.classList.remove('pressed'); }, { passive: false });
+  el.addEventListener('mousedown', () => { keys.add(key); el.classList.add('pressed'); });
+  el.addEventListener('mouseup', () => { keys.delete(key); el.classList.remove('pressed'); });
+  el.addEventListener('mouseleave', () => { keys.delete(key); el.classList.remove('pressed'); });
+}
+Object.keys(touchMap).forEach(setupTouchBtn);
+window.addEventListener('touchstart', () => {
+  document.getElementById('touch-controls').style.display = 'flex';
+}, { once: true });
+
+function normAngle(a) {
+  while (a <= -Math.PI) a += Math.PI * 2;
+  while (a > Math.PI) a -= Math.PI * 2;
+  return a;
+}
+
+function angleDiff(a, b) {
+  return normAngle(a - b);
+}
+
+function clamp(v, min, max) {
+  return Math.max(min, Math.min(max, v));
+}
+
+function vectorLength(x, y) {
+  return Math.sqrt(x * x + y * y);
+}
+
+function setGlow(color, blur = 12) {
+  ctx.shadowColor = color;
+  ctx.shadowBlur = blur * scale;
+}
+
+function clearGlow() {
+  ctx.shadowColor = 'transparent';
+  ctx.shadowBlur = 0;
+}
+
+function launchBall(towardRight) {
+  ball.x = cx;
+  ball.y = cy;
+  const baseAngle = towardRight ? 0 : Math.PI;
+  const spread = (Math.random() * 70 - 35) * Math.PI / 180;
+  const a = baseAngle + spread;
+  ball.vx = Math.cos(a) * INIT_BALL_SPEED;
+  ball.vy = Math.sin(a) * INIT_BALL_SPEED;
+}
+
+function resetRound(towardRight) {
+  p1.angle = Math.PI;
+  p2.angle = 0;
+  p1.spin = 0;
+  p2.spin = 0;
+  aiTargetAngle = p2.angle;
+  aiNoise = 0;
+  lastTouch = null;
+  launchBall(towardRight);
+}
+
+function addScore(side) {
+  const elId = side === 'left' ? 'score-left' : 'score-right';
+  const el = document.getElementById(elId);
+
+  if (side === 'left') leftScore++;
+  else rightScore++;
+
+  el.textContent = side === 'left' ? leftScore : rightScore;
+  el.classList.remove('pop');
+  void el.offsetWidth;
+  el.classList.add('pop');
+
+  if (leftScore >= winScore || rightScore >= winScore) {
+    endGame();
+    return;
+  }
+
+  // Serve toward the player who lost the point.
+  resetRound(side === 'right');
+}
+
+function updatePaddles(dt) {
+  const prevP1Angle = p1.angle;
+  const prevP2Angle = p2.angle;
+
+  p1.spin = 0;
+  p2.spin = 0;
+
+  if (keys.has('a') || keys.has('A')) p1.spin = -PADDLE_SPEED;
+  if (keys.has('d') || keys.has('D')) p1.spin = PADDLE_SPEED;
+
+  p1.angle = normAngle(p1.angle + p1.spin * dt);
+
+  if (mode === 'cpu') {
+    updateComputer(dt);
+  } else {
+    if (keys.has('ArrowLeft')) p2.spin = -PADDLE_SPEED;
+    if (keys.has('ArrowRight')) p2.spin = PADDLE_SPEED;
+    p2.angle = normAngle(p2.angle + p2.spin * dt);
+  }
+
+  applyPaddleOverlapBlock(prevP1Angle, prevP2Angle);
+}
+
+function applyPaddleOverlapBlock(prevP1Angle, prevP2Angle) {
+  // Soft overlap block: paddles may touch edge-to-edge, but cannot pass through each other.
+  // There is no artificial safety gap, so one player cannot block another with invisible space.
+  const minSeparation = PADDLE_ARC;
+  const diff = angleDiff(p2.angle, p1.angle);
+  const absDiff = Math.abs(diff);
+
+  if (absDiff >= minSeparation) return;
+
+  const prevDiff = angleDiff(prevP2Angle, prevP1Angle);
+  const side = Math.abs(diff) > 0.0001
+    ? Math.sign(diff)
+    : (Math.abs(prevDiff) > 0.0001 ? Math.sign(prevDiff) : 1);
+
+  const correction = minSeparation - absDiff;
+  const p1Moved = Math.abs(angleDiff(p1.angle, prevP1Angle)) > 0.0001;
+  const p2Moved = Math.abs(angleDiff(p2.angle, prevP2Angle)) > 0.0001;
+
+  if (p1Moved && p2Moved) {
+    p1.angle = normAngle(p1.angle - side * correction / 2);
+    p2.angle = normAngle(p2.angle + side * correction / 2);
+    p1.spin = 0;
+    p2.spin = 0;
+  } else if (p1Moved) {
+    p1.angle = normAngle(p1.angle - side * correction);
+    p1.spin = 0;
+  } else {
+    p2.angle = normAngle(p2.angle + side * correction);
+    p2.spin = 0;
+  }
+
+  paddleContactFlash = 1;
+}
+
+function predictBallExitAngle() {
+  // Lightweight prediction: simulate current path with wall reflection ignored until arena edge.
+  // This is intentionally imperfect and bounded by difficulty settings.
+  const cfg = DIFFICULTY[difficulty];
+  const dx = ball.x - cx;
+  const dy = ball.y - cy;
+  const vx = ball.vx;
+  const vy = ball.vy;
+
+  const a = vx * vx + vy * vy;
+  const b = 2 * (dx * vx + dy * vy);
+  const c = dx * dx + dy * dy - (ARENA_R - BALL_R) * (ARENA_R - BALL_R);
+  const disc = b * b - 4 * a * c;
+
+  if (disc <= 0 || a === 0) return Math.atan2(ball.y - cy, ball.x - cx);
+
+  const t1 = (-b + Math.sqrt(disc)) / (2 * a);
+  const t2 = (-b - Math.sqrt(disc)) / (2 * a);
+  const t = Math.max(t1, t2, 0);
+  const futureX = ball.x + vx * t * cfg.prediction;
+  const futureY = ball.y + vy * t * cfg.prediction;
+  return Math.atan2(futureY - cy, futureX - cx);
+}
+
+function updateComputer(dt) {
+  const cfg = DIFFICULTY[difficulty];
+  aiNoiseTimer -= dt;
+  if (aiNoiseTimer <= 0) {
+    aiNoise = (Math.random() * 2 - 1) * cfg.error;
+    aiNoiseTimer = 18 + Math.random() * 34;
+  }
+
+  const ballAngle = Math.atan2(ball.y - cy, ball.x - cx);
+  const predicted = predictBallExitAngle();
+  const blended = normAngle(ballAngle * (1 - cfg.reaction) + predicted * cfg.reaction);
+  aiTargetAngle = normAngle(blended + aiNoise);
+
+  const delta = angleDiff(aiTargetAngle, p2.angle);
+  const step = clamp(delta, -cfg.speed * dt, cfg.speed * dt);
+  p2.spin = step;
+  p2.angle = normAngle(p2.angle + step);
+}
+
+function updateBall(dt) {
+  ball.x += ball.vx * dt;
+  ball.y += ball.vy * dt;
+
+  const dx = ball.x - cx;
+  const dy = ball.y - cy;
+  const dist = vectorLength(dx, dy);
+
+  if (dist + ball.r >= ARENA_R) {
+    const hitAngle = Math.atan2(dy, dx);
+    const hitP1 = Math.abs(angleDiff(hitAngle, p1.angle)) <= PADDLE_ARC / 2;
+    const hitP2 = Math.abs(angleDiff(hitAngle, p2.angle)) <= PADDLE_ARC / 2;
+
+    if (hitP1 || hitP2) {
+      const paddle = hitP1 ? p1 : p2;
+      lastTouch = hitP1 ? 'left' : 'right';
+      const nx = dx / dist;
+      const ny = dy / dist;
+      const dot = ball.vx * nx + ball.vy * ny;
+
+      // Reflect velocity across circular normal.
+      ball.vx = ball.vx - 2 * dot * nx;
+      ball.vy = ball.vy - 2 * dot * ny;
+
+      // Add paddle spin influence so curved paddle movement matters.
+      const tangentX = -ny;
+      const tangentY = nx;
+      const spinBoost = paddle.spin * 70;
+      ball.vx += tangentX * spinBoost;
+      ball.vy += tangentY * spinBoost;
+
+      const speed = Math.min(vectorLength(ball.vx, ball.vy) + SPEED_INCREMENT, MAX_BALL_SPEED);
+      const vLen = vectorLength(ball.vx, ball.vy) || 1;
+      ball.vx = ball.vx / vLen * speed;
+      ball.vy = ball.vy / vLen * speed;
+
+      // Move ball just inside arena to avoid repeated collision lock.
+      ball.x = cx + nx * (ARENA_R - ball.r - 1);
+      ball.y = cy + ny * (ARENA_R - ball.r - 1);
+    } else {
+      // Last-touch scoring:
+      // - If nobody touched the serve, no point is awarded.
+      // - Otherwise, the last player to hit the ball scores when the ball escapes.
+      if (!lastTouch) {
+        resetRound(Math.random() > 0.5);
+      } else {
+        addScore(lastTouch);
+      }
+    }
+  }
+}
+
+function update() {
+  if (state !== 'playing') return;
+
+  const now = performance.now();
+  const rawDt = (now - lastTime) / 16.6667;
+  const dt = Math.min(rawDt, 2.2);
+  lastTime = now;
+
+  paddleContactFlash = Math.max(0, paddleContactFlash - dt * 0.08);
+  updatePaddles(dt);
+  updateBall(dt);
+}
+
+function drawArena() {
+  const X = px(cx);
+  const Y = px(cy);
+
+  ctx.save();
+  ctx.strokeStyle = 'rgba(0,245,255,0.12)';
+  ctx.lineWidth = px(1);
+  for (let r = INNER_GUIDE_R; r < ARENA_R; r += 44) {
+    ctx.beginPath();
+    ctx.arc(X, Y, px(r), 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  ctx.strokeStyle = 'rgba(232,244,255,0.16)';
+  ctx.lineWidth = px(1);
+  for (let i = 0; i < 16; i++) {
+    const a = i * Math.PI * 2 / 16;
+    ctx.beginPath();
+    ctx.moveTo(X + Math.cos(a) * px(INNER_GUIDE_R), Y + Math.sin(a) * px(INNER_GUIDE_R));
+    ctx.lineTo(X + Math.cos(a) * px(ARENA_R), Y + Math.sin(a) * px(ARENA_R));
+    ctx.stroke();
+  }
+
+  setGlow(C.cyan, 10);
+  ctx.strokeStyle = 'rgba(0,245,255,0.65)';
+  ctx.lineWidth = px(2);
+  ctx.beginPath();
+  ctx.arc(X, Y, px(ARENA_R), 0, Math.PI * 2);
+  ctx.stroke();
+  clearGlow();
+
+  ctx.restore();
+}
+
+function drawPaddle(pad) {
+  ctx.save();
+  const start = pad.angle - PADDLE_ARC / 2;
+  const end = pad.angle + PADDLE_ARC / 2;
+  setGlow(pad.color, 16);
+  ctx.strokeStyle = pad.color;
+  ctx.lineWidth = px(PADDLE_WIDTH);
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.arc(px(cx), px(cy), px(PADDLE_R), start, end);
+  ctx.stroke();
+
+  // Small center marker for readability.
+  ctx.fillStyle = pad.color;
+  ctx.beginPath();
+  ctx.arc(
+    px(cx + Math.cos(pad.angle) * PADDLE_R),
+    px(cy + Math.sin(pad.angle) * PADDLE_R),
+    px(4.2),
+    0,
+    Math.PI * 2
+  );
+  ctx.fill();
+  ctx.restore();
+}
+
+
+function drawPaddleContactEffect() {
+  if (paddleContactFlash <= 0) return;
+
+  const diff = angleDiff(p2.angle, p1.angle);
+  const contactAngle = normAngle(p1.angle + Math.sign(diff || 1) * PADDLE_ARC / 2);
+  const alpha = paddleContactFlash;
+
+  ctx.save();
+  ctx.globalAlpha = 0.25 + alpha * 0.55;
+  setGlow(C.white, 14 + alpha * 14);
+  ctx.strokeStyle = C.white;
+  ctx.lineWidth = px(2 + alpha * 2);
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.arc(
+    px(cx),
+    px(cy),
+    px(PADDLE_R),
+    contactAngle - 0.035,
+    contactAngle + 0.035
+  );
+  ctx.stroke();
+
+  ctx.fillStyle = C.white;
+  ctx.beginPath();
+  ctx.arc(
+    px(cx + Math.cos(contactAngle) * PADDLE_R),
+    px(cy + Math.sin(contactAngle) * PADDLE_R),
+    px(3 + alpha * 2.5),
+    0,
+    Math.PI * 2
+  );
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawBall() {
+  if (state !== 'playing') return;
+
+  ctx.save();
+  setGlow(C.yellow, 18);
+  ctx.fillStyle = C.yellow;
+  ctx.beginPath();
+  ctx.arc(px(ball.x), px(ball.y), px(ball.r), 0, Math.PI * 2);
+  ctx.fill();
+
+  setGlow(C.white, 8);
+  ctx.fillStyle = C.white;
+  ctx.beginPath();
+  ctx.arc(px(ball.x), px(ball.y), px(ball.r * 0.45), 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawFrame() {
+  const W = canvas.width;
+  const H = canvas.height;
+  ctx.fillStyle = C.bg;
+  ctx.fillRect(0, 0, W, H);
+
+  drawArena();
+  drawPaddle(p1);
+  drawPaddle(p2);
+  drawPaddleContactEffect();
+  drawBall();
+}
+
+function loop() {
+  update();
+  drawFrame();
+  requestAnimationFrame(loop);
+}
+
+function setMode(nextMode) {
+  mode = nextMode;
+  document.getElementById('mode-pvp').classList.toggle('active', mode === 'pvp');
+  document.getElementById('mode-cpu').classList.toggle('active', mode === 'cpu');
+  document.getElementById('difficulty-card').classList.toggle('hidden', mode !== 'cpu');
+  document.getElementById('right-label').textContent = mode === 'cpu' ? 'COMPUTER' : 'ARROWS · P2';
+}
+
+function startGame() {
+  winScore = Number(document.getElementById('points-select').value) || 7;
+  difficulty = document.getElementById('difficulty-select').value;
+  leftScore = 0;
+  rightScore = 0;
+  document.getElementById('score-left').textContent = '0';
+  document.getElementById('score-right').textContent = '0';
+  document.getElementById('overlay').classList.add('hidden');
+  document.getElementById('abort-btn').classList.remove('hidden');
+  state = 'playing';
+  lastTime = performance.now();
+  resetRound(Math.random() > 0.5);
+}
+
+function showMenu(title, msg, buttonText = 'START GAME') {
+  const ov = document.getElementById('overlay');
+  const ovT = document.getElementById('overlay-title');
+  const ovM = document.getElementById('overlay-msg');
+  const ovB = document.getElementById('overlay-btn');
+  ovT.textContent = title;
+  ovT.style.color = C.cyan;
+  ovT.style.textShadow = '0 0 8px #00f5ff,0 0 20px #00f5ff';
+  ovM.innerHTML = msg;
+  ovB.textContent = buttonText;
+  ov.classList.remove('hidden');
+  document.getElementById('abort-btn').classList.add('hidden');
+}
+
+function abortGame() {
+  state = 'idle';
+  showMenu('CYBER ORBIT', 'Game aborted.<br>Change settings or start a new round.', 'START GAME');
+}
+
+function endGame() {
+  state = 'over';
+  const leftWon = leftScore >= winScore;
+  const winner = leftWon ? 'PLAYER 1' : (mode === 'cpu' ? 'COMPUTER' : 'PLAYER 2');
+  const color = leftWon ? C.cyan : C.magenta;
+  const glow = leftWon ? '0 0 8px #00f5ff,0 0 20px #00f5ff' : '0 0 8px #ff00c8,0 0 20px #ff00c8';
+
+  const ov = document.getElementById('overlay');
+  const ovT = document.getElementById('overlay-title');
+  const ovM = document.getElementById('overlay-msg');
+  const ovB = document.getElementById('overlay-btn');
+
+  ovT.textContent = `${winner} WINS`;
+  ovT.style.color = color;
+  ovT.style.textShadow = glow;
+  ovM.innerHTML = `Final Score: ${leftScore} – ${rightScore}<br>Ready for another orbit?`;
+  ovB.textContent = 'PLAY AGAIN';
+  ov.classList.remove('hidden');
+  document.getElementById('abort-btn').classList.add('hidden');
+}
+
+document.getElementById('mode-pvp').addEventListener('click', () => setMode('pvp'));
+document.getElementById('mode-cpu').addEventListener('click', () => setMode('cpu'));
+document.getElementById('overlay-btn').addEventListener('click', startGame);
+document.getElementById('abort-btn').addEventListener('click', abortGame);
+
+setMode('pvp');
+loop();
+</script>
+</body>
+</html>
