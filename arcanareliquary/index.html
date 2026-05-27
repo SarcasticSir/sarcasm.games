@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>Arcana Reliquary</title>
+    <style>
+        :root {
+            --text: #fff7df;
+            --muted: #cbbce9;
+            --gold: #ffd36a;
+            --mana: #85e9ff;
+            --common: #b9c0c7;
+            --rare: #54adff;
+            --epic: #bf71ff;
+            --legendary: #ffad37;
+            --mythic: #ff4f81;
+            --divine: #fff3a6;
+            --rainbow: linear-gradient(135deg, #ff4f81, #ffad37, #fff36d, #8dffbd, #54adff, #bf71ff);
+            --prism: conic-gradient(from 90deg, #fff, #85e9ff, #bf71ff, #fff3a6, #ff4f81, #fff)
+        }
+
+        * {
+            box-sizing: border-box
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            color: var(--text);
+            font-family: system-ui, -apple-system, Segoe UI, sans-serif;
+            background: radial-gradient(circle at 10% 10%, rgba(133, 233, 255, .16), transparent 30%), radial-gradient(circle at 90% 5%, rgba(191, 113, 255, .18), transparent 35%), linear-gradient(145deg, #070411, #120a27 55%, #25104a)
+        }
+
+        button,
+        select {
+            font: inherit
+        }
+
+        button {
+            border: 0;
+            color: var(--text);
+            cursor: pointer;
+            touch-action: manipulation;
+            transition: .15s transform, .15s filter
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+            filter: brightness(1.08)
+        }
+
+        button:active {
+            transform: scale(.98)
+        }
+
+        button:disabled {
+            opacity: .45;
+            cursor: not-allowed;
+            transform: none
+        }
+
+        .app {
+            width: min(1480px, calc(100% - 28px));
+            margin: auto;
+            padding: 26px 0 42px
+        }
+
+        .hero,
+        .main {
+            display: grid;
+            gap: 18px
+        }
+
+        .hero {
+            grid-template-columns: 1.4fr .6fr;
+            margin-bottom: 18px
+        }
+
+        .hero-card,
+        .panel {
+            background: linear-gradient(145deg, rgba(255, 255, 255, .09), rgba(255, 255, 255, .035)), rgba(21, 13, 45, .9);
+            border: 1px solid rgba(255, 255, 255, .14);
+            border-radius: 24px;
+            box-shadow: 0 22px 60px rgba(0, 0, 0, .45);
+            backdrop-filter: blur(16px)
+        }
+
+        .hero-card {
+            padding: clamp(18px, 4vw, 34px)
+        }
+
+        .eyebrow {
+            margin: 0 0 8px;
+            color: var(--mana);
+            letter-spacing: .18em;
+            text-transform: uppercase;
+            font-size: .78rem;
+            font-weight: 800
+        }
+
+        h1 {
+            margin: 0;
+            font-size: clamp(2.3rem, 8vw, 5.2rem);
+            line-height: .9;
+            letter-spacing: -.07em
+        }
+
+        .subtitle {
+            color: var(--muted);
+            line-height: 1.6;
+            max-width: 850px
+        }
+
+        .home-link {
+            display: inline-flex;
+            align-items: center;
+            width: fit-content;
+            margin-top: 18px;
+            padding: 10px 14px;
+            border-radius: 999px;
+            color: var(--text);
+            text-decoration: none;
+            font-weight: 900;
+            background: rgba(133, 233, 255, .14);
+            border: 1px solid rgba(133, 233, 255, .28);
+            transition: .15s transform, .15s filter
+        }
+
+        .home-link:hover,
+        .home-link:focus-visible {
+            transform: translateY(-1px);
+            filter: brightness(1.08);
+            outline: none
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px
+        }
+
+        .stat {
+            padding: 18px;
+            border-radius: 22px;
+            background: rgba(255, 255, 255, .07);
+            border: 1px solid rgba(255, 255, 255, .12);
+            min-height: 112px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between
+        }
+
+        .stat span {
+            color: var(--muted);
+            font-size: .84rem
+        }
+
+        .stat strong {
+            font-size: clamp(1.5rem, 4vw, 2.2rem);
+            color: var(--gold)
+        }
+
+        .main {
+            grid-template-columns: 390px 1fr;
+            align-items: start
+        }
+
+        .panel {
+            padding: 18px
+        }
+
+        .panel+.panel {
+            margin-top: 18px
+        }
+
+        .panel h2 {
+            margin: 0 0 14px
+        }
+
+        .clicker {
+            min-height: 230px;
+            width: 100%;
+            border-radius: 28px;
+            background: radial-gradient(circle at 50% 35%, rgba(255, 255, 255, .32), transparent 18%), radial-gradient(circle at 50% 52%, rgba(133, 233, 255, .32), transparent 28%), linear-gradient(145deg, #36186c, #101a43 55%, #5c2f91);
+            border: 1px solid rgba(255, 255, 255, .18);
+            display: grid;
+            place-items: center;
+            text-align: center;
+            position: relative;
+            overflow: hidden
+        }
+
+        .clicker:before {
+            content: "";
+            position: absolute;
+            inset: 20px;
+            border-radius: 50%;
+            border: 2px dashed rgba(255, 255, 255, .18);
+            animation: spin 18s linear infinite
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg)
+            }
+        }
+
+        .clicker-content {
+            position: relative
+        }
+
+        .clicker-icon {
+            font-size: 4rem
+        }
+
+        .clicker-title {
+            font-weight: 900;
+            font-size: 1.4rem;
+            display: block
+        }
+
+        .clicker-sub {
+            color: var(--muted)
+        }
+
+        .stack {
+            display: grid;
+            gap: 10px
+        }
+
+        .row {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 10px;
+            align-items: center;
+            padding: 12px;
+            border-radius: 16px;
+            background: rgba(255, 255, 255, .06);
+            border: 1px solid rgba(255, 255, 255, .11)
+        }
+
+        small {
+            color: var(--muted);
+            display: block;
+            margin-top: 3px;
+            line-height: 1.35
+        }
+
+        .btns {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: flex-end
+        }
+
+        .btn {
+            border-radius: 999px;
+            padding: 10px 13px;
+            font-weight: 900;
+            white-space: nowrap;
+            background: rgba(133, 233, 255, .16);
+            border: 1px solid rgba(133, 233, 255, .25)
+        }
+
+        .primary {
+            background: linear-gradient(135deg, #ffe28a, #ff9c37 55%, #ff5f9a);
+            color: #211025
+        }
+
+        .trade-choice {
+            display: flex;
+            flex-direction: column;
+            min-width: 0
+        }
+
+        .trade-choice .btn {
+            width: 100%;
+            white-space: normal;
+            line-height: 1.15;
+            min-height: 48px;
+            padding: 10px 8px;
+            overflow-wrap: anywhere
+        }
+
+        .trade-choice .card {
+            width: 100%;
+            min-width: 0
+        }
+
+        .danger {
+            background: rgba(255, 107, 139, .14);
+            border: 1px solid rgba(255, 107, 139, .32)
+        }
+
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 14px
+        }
+
+        .filters {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap
+        }
+
+        select {
+            color: var(--text);
+            background: rgba(255, 255, 255, .08);
+            border: 1px solid rgba(255, 255, 255, .16);
+            border-radius: 999px;
+            padding: 10px 12px
+        }
+
+        option {
+            color: #171023
+        }
+
+        .collection,
+        .pulls {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(176px, 1fr));
+            gap: 14px
+        }
+
+        .card {
+            min-height: 270px;
+            border-radius: 20px;
+            padding: 10px;
+            box-shadow: 0 18px 38px rgba(0, 0, 0, .34);
+            animation: cardIn .25s ease both
+        }
+
+        @keyframes cardIn {
+            from {
+                opacity: 0;
+                transform: translateY(14px) scale(.96)
+            }
+        }
+
+        .card-inner {
+            height: 100%;
+            border-radius: 15px;
+            background: radial-gradient(circle at 50% 18%, rgba(255, 255, 255, .18), transparent 20%), linear-gradient(160deg, rgba(255, 255, 255, .12), rgba(0, 0, 0, .18)), #17102e;
+            border: 1px solid rgba(255, 255, 255, .18);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden
+        }
+
+        .frame-bronze {
+            background: linear-gradient(145deg, #5e351a, #b87333, #2d170c)
+        }
+
+        .frame-silver {
+            background: linear-gradient(145deg, #6d7b88, #d7e3ef, #38424d)
+        }
+
+        .frame-gold {
+            background: linear-gradient(145deg, #8a5d00, #ffd85b, #4f2e00)
+        }
+
+        .frame-rainbow {
+            background: var(--rainbow);
+            background-size: 220% 220%;
+            animation: rainbow 3s linear infinite
+        }
+
+        .frame-prism {
+            background: var(--prism);
+            animation: prism 3.6s linear infinite
+        }
+
+        @keyframes rainbow {
+            to {
+                background-position: 220% 50%
+            }
+        }
+
+        @keyframes prism {
+            to {
+                filter: hue-rotate(360deg)
+            }
+        }
+
+        .art {
+            min-height: 124px;
+            display: grid;
+            place-items: center;
+            font-size: 4.2rem;
+            background: radial-gradient(circle at 50% 45%, rgba(255, 255, 255, .16), transparent 34%), linear-gradient(145deg, rgba(133, 233, 255, .10), rgba(191, 113, 255, .16));
+            border-bottom: 1px solid rgba(255, 255, 255, .15)
+        }
+
+        .card-body {
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            flex: 1
+        }
+
+        .card-name {
+            font-weight: 950;
+            line-height: 1.08;
+            font-size: clamp(.82rem, 1.8vw, 1rem);
+            overflow-wrap: anywhere;
+            hyphens: auto
+        }
+
+        .card-desc {
+            color: var(--muted);
+            font-size: .78rem;
+            line-height: 1.35;
+            flex: 1
+        }
+
+        .badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px
+        }
+
+        .badge {
+            font-size: .68rem;
+            font-weight: 950;
+            padding: 5px 7px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, .1);
+            border: 1px solid rgba(255, 255, 255, .16);
+            text-transform: uppercase
+        }
+
+        .rarity-common {
+            color: var(--common)
+        }
+
+        .rarity-rare {
+            color: var(--rare)
+        }
+
+        .rarity-epic {
+            color: var(--epic)
+        }
+
+        .rarity-legendary {
+            color: var(--legendary)
+        }
+
+        .rarity-mythic {
+            color: var(--mythic)
+        }
+
+        .rarity-divine {
+            color: var(--divine)
+        }
+
+        .empty {
+            grid-column: 1/-1;
+            padding: 28px 16px;
+            text-align: center;
+            color: var(--muted);
+            border: 1px dashed rgba(255, 255, 255, .18);
+            border-radius: 22px;
+            background: rgba(255, 255, 255, .04)
+        }
+
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(2, 1, 8, .82);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            z-index: 10
+        }
+
+        .modal-backdrop.show {
+            display: flex
+        }
+
+        .modal {
+            width: min(1060px, 100%);
+            max-height: 92vh;
+            overflow: auto;
+            border-radius: 28px;
+            background: radial-gradient(circle at 50% 0, rgba(133, 233, 255, .12), transparent 35%), #130b28;
+            border: 1px solid rgba(255, 255, 255, .16);
+            box-shadow: 0 34px 100px rgba(0, 0, 0, .62);
+            padding: 20px;
+            position: relative
+        }
+
+        .modal-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 14px
+        }
+
+        .pack-stage {
+            display: none;
+            min-height: 360px;
+            place-items: center;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            border-radius: 24px;
+            background: radial-gradient(circle, rgba(255, 211, 106, .12), transparent 55%), rgba(255, 255, 255, .04);
+            border: 1px solid rgba(255, 255, 255, .12)
+        }
+
+        .pack-stage.show {
+            display: grid !important
+        }
+
+        .big-pack {
+            font-size: 7rem;
+            filter: drop-shadow(0 20px 40px #000);
+            animation: packShake .95s ease-in-out infinite
+        }
+
+        .burst {
+            position: absolute;
+            inset: 0;
+            opacity: .75;
+            background: radial-gradient(circle, rgba(255, 255, 255, .45), transparent 15%), conic-gradient(from 0deg, transparent, rgba(255, 211, 106, .28), transparent, rgba(133, 233, 255, .25), transparent);
+            animation: burstSpin 1.2s linear infinite
+        }
+
+        .pack-stage.mythic .burst {
+            background: radial-gradient(circle, rgba(255, 79, 129, .55), transparent 18%), conic-gradient(from 0deg, rgba(255, 79, 129, .35), transparent, rgba(191, 113, 255, .45), transparent)
+        }
+
+        .pack-stage.divine .burst {
+            background: radial-gradient(circle, rgba(255, 255, 255, .75), transparent 20%), conic-gradient(from 0deg, #fff3a688, transparent, #85e9ff77, transparent, #ff4f8177, transparent);
+            animation: burstSpin .55s linear infinite
+        }
+
+        .pack-stage.divine .big-pack {
+            animation: divinePulse .55s ease-in-out infinite alternate
+        }
+
+        .pack-stage.mythic .big-pack {
+            animation: mythicPulse .75s ease-in-out infinite alternate
+        }
+
+        .stage-copy {
+            position: relative;
+            z-index: 2
+        }
+
+        .stage-copy strong {
+            display: block;
+            font-size: clamp(1.4rem, 4vw, 2.4rem)
+        }
+
+        @keyframes packShake {
+
+            0%,
+            100% {
+                transform: rotate(-2deg) scale(1)
+            }
+
+            50% {
+                transform: rotate(3deg) scale(1.07)
+            }
+        }
+
+        @keyframes burstSpin {
+            to {
+                transform: rotate(360deg)
+            }
+        }
+
+        @keyframes mythicPulse {
+            to {
+                transform: scale(1.14) rotate(-4deg);
+                filter: drop-shadow(0 0 36px var(--mythic))
+            }
+        }
+
+        @keyframes divinePulse {
+            to {
+                transform: scale(1.2) rotate(4deg);
+                filter: drop-shadow(0 0 54px white)
+            }
+        }
+
+        .toast-stack {
+            position: fixed;
+            right: 16px;
+            bottom: 16px;
+            display: grid;
+            gap: 10px;
+            z-index: 20;
+            width: min(380px, calc(100vw - 32px))
+        }
+
+        .toast {
+            background: rgba(17, 10, 34, .94);
+            border: 1px solid rgba(255, 255, 255, .16);
+            border-radius: 16px;
+            padding: 12px 14px;
+            box-shadow: 0 18px 40px rgba(0, 0, 0, .45)
+        }
+
+        .sparkle {
+            position: fixed;
+            pointer-events: none;
+            color: var(--gold);
+            font-weight: 950;
+            z-index: 30;
+            animation: floatUp .8s ease-out forwards
+        }
+
+        @keyframes floatUp {
+            to {
+                opacity: 0;
+                transform: translateY(-58px) scale(1.22)
+            }
+        }
+
+        @media(max-width:1040px) {
+
+            .hero,
+            .main {
+                grid-template-columns: 1fr
+            }
+
+            .stats {
+                grid-template-columns: repeat(4, 1fr)
+            }
+        }
+
+        @media(max-width:700px) {
+            .app {
+                width: min(100% - 18px, 1480px);
+                padding-top: 10px
+            }
+
+            .hero-card,
+            .panel {
+                border-radius: 18px;
+                padding: 14px
+            }
+
+            .stats {
+                grid-template-columns: repeat(2, 1fr)
+            }
+
+            .stat {
+                min-height: 94px;
+                padding: 13px
+            }
+
+            .collection,
+            .pulls {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 10px
+            }
+
+            .card {
+                min-height: 250px;
+                border-radius: 16px;
+                padding: 8px
+            }
+
+            .art {
+                min-height: 106px;
+                font-size: 3.3rem
+            }
+
+            .row {
+                grid-template-columns: 1fr
+            }
+
+            .btns {
+                justify-content: stretch
+            }
+
+            .btn {
+                flex: 1
+            }
+
+            .pack-stage {
+                min-height: 300px
+            }
+        }
+
+        \n
+    </style>
+</head>
+
+<body>
+    <div class="app">
+        <header class="hero">
+            <section class="hero-card">
+                <p class="eyebrow">High Fantasy Collector</p>
+                <h1>Arcana Reliquary</h1>
+                <p class="subtitle">Buy packs into your inventory, open them in batches with animated reveals, collect
+                    duplicates, awaken Prism frames, then trade Prism sets for a chosen next-rarity card.</p>
+                <a class="home-link" href="/">Back to sarcasm.games</a>
+            </section>
+            <section class="stats">
+                <div class="stat"><span>Moonshards</span><strong id="currency">0</strong></div>
+                <div class="stat"><span>Per Click</span><strong id="perClick">1</strong></div>
+                <div class="stat"><span>Per Second</span><strong id="idleRate">0</strong></div>
+                <div class="stat"><span>Cards Owned</span><strong id="totalCards">0</strong></div>
+                <div class="stat"><span>Unique Found</span><strong id="uniqueCards">0/71</strong></div>
+            </section>
+        </header>
+        <main class="main">
+            <aside>
+                <section class="panel">
+                    <h2>Crystal Font</h2><button id="clicker" class="clicker" type="button"><span
+                            class="clicker-content"><span class="clicker-icon">🔮</span><span
+                                class="clicker-title">Channel Moonshards</span><span class="clicker-sub">Tap, click, or
+                                press Space</span></span></button>
+                </section>
+                <section class="panel">
+                    <h2>Pack Bazaar</h2>
+                    <div class="stack" id="packList"></div>
+                </section>
+                <section class="panel">
+                    <h2>Pack Inventory</h2>
+                    <div class="stack" id="packInventoryList"></div>
+                </section>
+                <section class="panel">
+                    <h2>Guild Training</h2>
+                    <div class="stack" id="upgradeList"></div>
+                </section>
+                <section class="panel">
+                    <h2>Learned Upgrades</h2>
+                    <div class="stack" id="learnedUpgradeList"></div>
+                </section>
+                <section class="panel">
+                    <h2>Moonshard Conduits</h2>
+                    <div class="stack" id="idleList"></div>
+                </section>
+                <section class="panel">
+                    <h2>Fortune Blessings</h2>
+                    <div class="stack" id="luckList"></div>
+                </section>
+                <section class="panel">
+                    <h2>Offline Attunement</h2>
+                    <div class="stack" id="offlineList"></div>
+                </section>
+                <section class="panel">
+                    <h2>Achievements</h2>
+                    <div class="stack" id="achievementList"></div>
+                </section>
+                <section class="panel">
+                    <h2>Draw Rates</h2>
+                    <div class="stack" id="rateList"></div>
+                </section>
+                <section class="panel">
+                    <h2>Save Crystal</h2>
+                    <div class="stack"><button class="btn" id="saveBtn" type="button">Save Game</button><button
+                            class="btn danger" id="resetBtn" type="button">Reset Save</button></div>
+                </section>
+            </aside>
+            <section class="panel">
+                <div class="toolbar">
+                    <h2>Reliquary Collection</h2>
+                    <div class="filters"><select id="rarityFilter">
+                            <option value="all">All Rarities</option>
+                            <option>Common</option>
+                            <option>Rare</option>
+                            <option>Epic</option>
+                            <option>Legendary</option>
+                            <option>Mythic</option>
+                            <option>Divine</option>
+                        </select><select id="sortMode">
+                            <option value="rarity">Sort: Rarity</option>
+                            <option value="copies">Sort: Copies</option>
+                            <option value="name">Sort: Name</option>
+                            <option value="frame">Sort: Frame</option>
+                        </select></div>
+                </div>
+                <div class="collection" id="collection"></div>
+            </section>
+        </main>
+    </div>
+    <div class="modal-backdrop" id="modalBackdrop">
+        <div class="modal">
+            <div class="modal-head">
+                <h2 id="modalTitle">Opening Packs</h2><button class="btn" id="closeModal" type="button">Close</button>
+            </div>
+            <div class="pack-stage" id="packStage">
+                <div class="burst"></div>
+                <div class="stage-copy">
+                    <div class="big-pack">🎁</div><strong id="stageTitle">Opening...</strong>
+                    <p class="subtitle" id="stageText"></p>
+                </div>
+            </div>
+            <div class="pulls" id="pulls"></div>
+        </div>
+    </div>
+    <div class="modal-backdrop" id="tradeModalBackdrop">
+        <div class="modal">
+            <div class="modal-head">
+                <h2 id="tradeModalTitle">Prism Exchange</h2><button class="btn" id="closeTradeModal"
+                    type="button">Close</button>
+            </div>
+            <p class="subtitle" id="tradeModalText" style="margin-top:0"></p>
+            <div class="pulls" id="tradeChoices"></div>
+        </div>
+    </div>
+    <div class="toast-stack" id="toastStack"></div>
+    <script>
+        const SAVE_KEY = "arcanaReliquarySaveV3";
+        const rarityWeights = [{ name: "Common", weight: 85, color: "common" }, { name: "Rare", weight: 8, color: "rare" }, { name: "Epic", weight: 4, color: "epic" }, { name: "Legendary", weight: 2, color: "legendary" }, { name: "Mythic", weight: .8, color: "mythic" }, { name: "Divine", weight: .2, color: "divine" }];
+        const rarityRank = { Common: 1, Rare: 2, Epic: 3, Legendary: 4, Mythic: 5, Divine: 6 };
+        const nextRarity = { Common: "Rare", Rare: "Epic", Epic: "Legendary", Legendary: "Mythic", Mythic: "Divine" };
+        const packs = [{ id: "novice", name: "Novice Pouch", cost: 50, cards: 3, description: "Three random cards." }, { id: "arcane", name: "Arcane Pack", cost: 300, cards: 5, description: "Five cards. One guaranteed Rare or better.", guaranteed: "Rare" }, { id: "royal", name: "Royal Reliquary", cost: 1000, cards: 8, description: "Eight cards. One guaranteed Epic or better.", guaranteed: "Epic" }];
+        const upgrades = [{ id: "apprentice", name: "Apprentice Focus", cost: 140, gain: 1, description: "+1 moonshard per click" }, { id: "gloves", name: "Runic Gloves", cost: 620, gain: 3, description: "+3 moonshards per click" }, { id: "lens", name: "Dragon Lens", cost: 1900, gain: 10, description: "+10 moonshards per click" }, { id: "oath", name: "Archmage Oath", cost: 7000, gain: 35, description: "+35 moonshards per click" }];
+        const idleUpgrades = [{ id: "wisp", name: "Moon Wisp Familiar", baseCost: 250, baseGain: 1, scale: 1.75, maxLevel: 20, description: "A tiny spirit gathers moonshards while you rest." }, { id: "sigil", name: "Runic Siphon Sigil", baseCost: 1250, baseGain: 5, scale: 1.82, maxLevel: 15, description: "A glowing sigil slowly drains starlight into currency." }, { id: "spire", name: "Crystal Spire", baseCost: 6000, baseGain: 22, scale: 1.9, maxLevel: 12, description: "A tower of crystal hums with idle moonshard power." }];
+        const luckUpgrades = [{ id: "omen", name: "Omen Dice", cost: 2500, bonus: 1, description: "Slightly bends fate away from Common cards." }, { id: "starMap", name: "Starseer Map", cost: 9000, bonus: 2, description: "Guides packs toward Rare and Epic cards." }, { id: "dragonScale", name: "Dragon Scale Lens", cost: 28000, bonus: 3, description: "Improves the chance of Legendary sparks." }, { id: "oracleCrown", name: "Oracle Crown", cost: 85000, bonus: 4, description: "Greatly improves higher-rarity draw odds." }, { id: "divineCompass", name: "Divine Compass", cost: 250000, bonus: 5, description: "Adds the strongest blessing to Mythic and Divine odds." }];
+        const offlineUpgrades = [{ id: "satchel", name: "Moonlit Satchel", cost: 3500, bonus: .25, description: "Store more idle moonshards while away." }, { id: "vault", name: "Astral Vault", cost: 14000, bonus: .35, description: "Preserve a larger share of offline earnings." }, { id: "hourglass", name: "Sleepless Hourglass", cost: 52000, bonus: .40, description: "Turns closed time into stronger moonshard echoes." }, { id: "beacon", name: "Everburning Beacon", cost: 160000, bonus: .50, description: "Raises offline earnings to the 150% maximum." }];
+        const achievements = [{ id: "firstPack", name: "First Seal Broken", description: "Open your first pack.", reward: 100 }, { id: "packHundred", name: "Hundred Seals", description: "Open 100 total packs.", reward: 2500 }, { id: "firstDivine", name: "Touched by Creation", description: "Collect your first Divine card.", reward: 5000 }, { id: "firstPrism", name: "Prism Awakening", description: "Upgrade any card to Prism.", reward: 7500 }, { id: "commonAlbum", name: "Common Codex Complete", description: "Collect every Common card.", reward: 3000, rarity: "Common" }, { id: "rareAlbum", name: "Rare Codex Complete", description: "Collect every Rare card.", reward: 7000, rarity: "Rare" }, { id: "epicAlbum", name: "Epic Codex Complete", description: "Collect every Epic card.", reward: 14000, rarity: "Epic" }, { id: "fullAlbum", name: "Reliquary Master", description: "Collect all 71 unique cards.", reward: 50000 }];
+        // Card definitions are standalone and id-stable because saves store owned counts by card id.
+        const cards = [
+            {"id":"c01","name":"Squire of Dawn","rarity":"Common","icon":"🛡️","desc":"A humble relic from the borderlands, loved by apprentices and lucky fools."},
+            {"id":"c02","name":"Herbal Familiar","rarity":"Common","icon":"🌿","desc":"A humble relic from the borderlands, loved by apprentices and lucky fools."},
+            {"id":"c03","name":"Candle Imp","rarity":"Common","icon":"🕯️","desc":"A humble relic from the borderlands, loved by apprentices and lucky fools."},
+            {"id":"c04","name":"Copper Griffin","rarity":"Common","icon":"🦅","desc":"A humble relic from the borderlands, loved by apprentices and lucky fools."},
+            {"id":"c05","name":"River Rune","rarity":"Common","icon":"💧","desc":"A humble relic from the borderlands, loved by apprentices and lucky fools."},
+            {"id":"c06","name":"Goblin Cartographer","rarity":"Common","icon":"🗺️","desc":"A humble relic from the borderlands, loved by apprentices and lucky fools."},
+            {"id":"c07","name":"Lantern Page","rarity":"Common","icon":"🏮","desc":"A humble relic from the borderlands, loved by apprentices and lucky fools."},
+            {"id":"c08","name":"Mosscloak Scout","rarity":"Common","icon":"🍃","desc":"A humble relic from the borderlands, loved by apprentices and lucky fools."},
+            {"id":"c09","name":"Turnip Alchemist","rarity":"Common","icon":"⚗️","desc":"A humble relic from the borderlands, loved by apprentices and lucky fools."},
+            {"id":"c10","name":"Oaken Buckler","rarity":"Common","icon":"🪵","desc":"A humble relic from the borderlands, loved by apprentices and lucky fools."},
+            {"id":"c11","name":"Rookery Messenger","rarity":"Common","icon":"✉️","desc":"A humble relic from the borderlands, loved by apprentices and lucky fools."},
+            {"id":"c12","name":"Hearth Pixie","rarity":"Common","icon":"🧚","desc":"A humble relic from the borderlands, loved by apprentices and lucky fools."},
+            {"id":"c13","name":"Breadloaf Golem","rarity":"Common","icon":"🍞","desc":"A humble relic from the borderlands, loved by apprentices and lucky fools."},
+            {"id":"c14","name":"Dewdrop Sprite","rarity":"Common","icon":"💦","desc":"A humble relic from the borderlands, loved by apprentices and lucky fools."},
+            {"id":"c15","name":"Ironwood Sapling","rarity":"Common","icon":"🌱","desc":"A humble relic from the borderlands, loved by apprentices and lucky fools."},
+            {"id":"c16","name":"Tin Helm Recruit","rarity":"Common","icon":"🪖","desc":"A humble relic from the borderlands, loved by apprentices and lucky fools."},
+            {"id":"c17","name":"Chalk Circle Mage","rarity":"Common","icon":"⭕","desc":"A humble relic from the borderlands, loved by apprentices and lucky fools."},
+            {"id":"c18","name":"Amberfield Hare","rarity":"Common","icon":"🐇","desc":"A humble relic from the borderlands, loved by apprentices and lucky fools."},
+            {"id":"c19","name":"Fogbell Watcher","rarity":"Common","icon":"🔔","desc":"A humble relic from the borderlands, loved by apprentices and lucky fools."},
+            {"id":"c20","name":"Root Cellar Kobold","rarity":"Common","icon":"👺","desc":"A humble relic from the borderlands, loved by apprentices and lucky fools."},
+            {"id":"c21","name":"Silverleaf Moth","rarity":"Common","icon":"🦋","desc":"A humble relic from the borderlands, loved by apprentices and lucky fools."},
+            {"id":"c22","name":"Brookstone Talisman","rarity":"Common","icon":"🪨","desc":"A humble relic from the borderlands, loved by apprentices and lucky fools."},
+            {"id":"c23","name":"Penny Dragonling","rarity":"Common","icon":"🐉","desc":"A humble relic from the borderlands, loved by apprentices and lucky fools."},
+            {"id":"c24","name":"Briar Broom","rarity":"Common","icon":"🧹","desc":"A humble relic from the borderlands, loved by apprentices and lucky fools."},
+            {"id":"c25","name":"Whispering Acorn","rarity":"Common","icon":"🌰","desc":"A humble relic from the borderlands, loved by apprentices and lucky fools."},
+            {"id":"c26","name":"Common Star Shard","rarity":"Common","icon":"⭐","desc":"A humble relic from the borderlands, loved by apprentices and lucky fools."},
+            {"id":"c27","name":"Militia Spearman","rarity":"Common","icon":"🗡️","desc":"A humble relic from the borderlands, loved by apprentices and lucky fools."},
+            {"id":"c28","name":"Mudboot Ranger","rarity":"Common","icon":"🥾","desc":"A humble relic from the borderlands, loved by apprentices and lucky fools."},
+            {"id":"c29","name":"Singing Kettle","rarity":"Common","icon":"🍵","desc":"A humble relic from the borderlands, loved by apprentices and lucky fools."},
+            {"id":"c30","name":"Stable Gryphlet","rarity":"Common","icon":"🐣","desc":"A humble relic from the borderlands, loved by apprentices and lucky fools."},
+            {"id":"r01","name":"Knight of Bramble","rarity":"Rare","icon":"🌹","desc":"A prized wonder whispered about in taverns and armories."},
+            {"id":"r02","name":"Sapphire Wyvern","rarity":"Rare","icon":"🐉","desc":"A prized wonder whispered about in taverns and armories."},
+            {"id":"r03","name":"Moonlit Archer","rarity":"Rare","icon":"🏹","desc":"A prized wonder whispered about in taverns and armories."},
+            {"id":"r04","name":"Oracle's Mirror","rarity":"Rare","icon":"🪞","desc":"A prized wonder whispered about in taverns and armories."},
+            {"id":"r05","name":"Tome Beetle","rarity":"Rare","icon":"📚","desc":"A prized wonder whispered about in taverns and armories."},
+            {"id":"r06","name":"Frost Minstrel","rarity":"Rare","icon":"🎻","desc":"A prized wonder whispered about in taverns and armories."},
+            {"id":"r07","name":"Crimson Hedgewitch","rarity":"Rare","icon":"🧙","desc":"A prized wonder whispered about in taverns and armories."},
+            {"id":"r08","name":"Gilded Gargoyle","rarity":"Rare","icon":"🗿","desc":"A prized wonder whispered about in taverns and armories."},
+            {"id":"r09","name":"Rune-Forged Lantern","rarity":"Rare","icon":"🏮","desc":"A prized wonder whispered about in taverns and armories."},
+            {"id":"r10","name":"Ivory Stag Rider","rarity":"Rare","icon":"🦌","desc":"A prized wonder whispered about in taverns and armories."},
+            {"id":"r11","name":"Saltwater Djinn","rarity":"Rare","icon":"🌊","desc":"A prized wonder whispered about in taverns and armories."},
+            {"id":"r12","name":"Velvet Manticore","rarity":"Rare","icon":"🦂","desc":"A prized wonder whispered about in taverns and armories."},
+            {"id":"r13","name":"Glass Tower Scribe","rarity":"Rare","icon":"✒️","desc":"A prized wonder whispered about in taverns and armories."},
+            {"id":"r14","name":"Stormcap Duelist","rarity":"Rare","icon":"⚔️","desc":"A prized wonder whispered about in taverns and armories."},
+            {"id":"r15","name":"Basilisk Scale Charm","rarity":"Rare","icon":"🐍","desc":"A prized wonder whispered about in taverns and armories."},
+            {"id":"r16","name":"Opal Merrow","rarity":"Rare","icon":"🧜","desc":"A prized wonder whispered about in taverns and armories."},
+            {"id":"r17","name":"Clockwork Drake","rarity":"Rare","icon":"🤖","desc":"A prized wonder whispered about in taverns and armories."},
+            {"id":"r18","name":"Nightmarket Seer","rarity":"Rare","icon":"👁️","desc":"A prized wonder whispered about in taverns and armories."},
+            {"id":"r19","name":"Sunken Abbey Key","rarity":"Rare","icon":"🗝️","desc":"A prized wonder whispered about in taverns and armories."},
+            {"id":"r20","name":"Wolf of the Violet Moon","rarity":"Rare","icon":"🐺","desc":"A prized wonder whispered about in taverns and armories."},
+            {"id":"e01","name":"Phoenix Acolyte","rarity":"Epic","icon":"🔥","desc":"A saga-worthy treasure humming with ancient, dangerous magic."},
+            {"id":"e02","name":"Astral Paladin","rarity":"Epic","icon":"✨","desc":"A saga-worthy treasure humming with ancient, dangerous magic."},
+            {"id":"e03","name":"Witch Queen's Chalice","rarity":"Epic","icon":"🏺","desc":"A saga-worthy treasure humming with ancient, dangerous magic."},
+            {"id":"e04","name":"Thunder Roc","rarity":"Epic","icon":"⛈️","desc":"A saga-worthy treasure humming with ancient, dangerous magic."},
+            {"id":"e05","name":"Emerald Lich","rarity":"Epic","icon":"💀","desc":"A saga-worthy treasure humming with ancient, dangerous magic."},
+            {"id":"e06","name":"Starlace Mantle","rarity":"Epic","icon":"🧥","desc":"A saga-worthy treasure humming with ancient, dangerous magic."},
+            {"id":"e07","name":"Inferno Basilica","rarity":"Epic","icon":"⛪","desc":"A saga-worthy treasure humming with ancient, dangerous magic."},
+            {"id":"e08","name":"Dream-Eating Sphinx","rarity":"Epic","icon":"🦁","desc":"A saga-worthy treasure humming with ancient, dangerous magic."},
+            {"id":"e09","name":"Celestine Duelist","rarity":"Epic","icon":"🌟","desc":"A saga-worthy treasure humming with ancient, dangerous magic."},
+            {"id":"e10","name":"Eclipse Warlock","rarity":"Epic","icon":"🌘","desc":"A saga-worthy treasure humming with ancient, dangerous magic."},
+            {"id":"l01","name":"Dragon King Aurex","rarity":"Legendary","icon":"👑","desc":"A realm-shaking artifact known to kings, dragons, and doomed prophets."},
+            {"id":"l02","name":"Blade of Seven Suns","rarity":"Legendary","icon":"⚔️","desc":"A realm-shaking artifact known to kings, dragons, and doomed prophets."},
+            {"id":"l03","name":"The Last Unicorn","rarity":"Legendary","icon":"🦄","desc":"A realm-shaking artifact known to kings, dragons, and doomed prophets."},
+            {"id":"l04","name":"Titan's Gate","rarity":"Legendary","icon":"🗿","desc":"A realm-shaking artifact known to kings, dragons, and doomed prophets."},
+            {"id":"l05","name":"Crown of Storms","rarity":"Legendary","icon":"🌩️","desc":"A realm-shaking artifact known to kings, dragons, and doomed prophets."},
+            {"id":"m01","name":"Worldroot Colossus","rarity":"Mythic","icon":"🌳","desc":"A reality-bending miracle from an age older than the gods."},
+            {"id":"m02","name":"Void Seraph","rarity":"Mythic","icon":"🖤","desc":"A reality-bending miracle from an age older than the gods."},
+            {"id":"m03","name":"Chronomancer Elyndra","rarity":"Mythic","icon":"⏳","desc":"A reality-bending miracle from an age older than the gods."},
+            {"id":"d01","name":"Divine Wyrm Solanar","rarity":"Divine","icon":"☀️","desc":"A sacred impossibility touched by the first light of creation."},
+            {"id":"d02","name":"The Prism Grail","rarity":"Divine","icon":"🏆","desc":"A sacred impossibility touched by the first light of creation."},
+            {"id":"d03","name":"Celestial Empress","rarity":"Divine","icon":"🌠","desc":"A sacred impossibility touched by the first light of creation."}
+        ];
+        function cardId(card) { return card && card.id ? card.id : "" }
+        function cardName(card) { return card && card.name ? card.name : "Unknown Relic" }
+        function cardRarity(card) { return card && rarityRank[card.rarity] ? card.rarity : "Common" }
+        function cardIcon(card) { return card && card.icon ? card.icon : "✦" }
+        function cardDesc(card) { return card && card.desc ? card.desc : "No reliquary inscription has been recovered." }
+        function cardCatalog() { return cards.filter(c => cardId(c)) }
+        const state = loadState();
+        const $ = id => document.getElementById(id);
+        const els = { currency: $("currency"), perClick: $("perClick"), idleRate: $("idleRate"), totalCards: $("totalCards"), uniqueCards: $("uniqueCards"), clicker: $("clicker"), packList: $("packList"), packInventoryList: $("packInventoryList"), upgradeList: $("upgradeList"), learnedUpgradeList: $("learnedUpgradeList"), idleList: $("idleList"), luckList: $("luckList"), offlineList: $("offlineList"), achievementList: $("achievementList"), rateList: $("rateList"), collection: $("collection"), rarityFilter: $("rarityFilter"), sortMode: $("sortMode"), modalBackdrop: $("modalBackdrop"), closeModal: $("closeModal"), pulls: $("pulls"), modalTitle: $("modalTitle"), packStage: $("packStage"), stageTitle: $("stageTitle"), stageText: $("stageText"), tradeModalBackdrop: $("tradeModalBackdrop"), closeTradeModal: $("closeTradeModal"), tradeModalTitle: $("tradeModalTitle"), tradeModalText: $("tradeModalText"), tradeChoices: $("tradeChoices"), toastStack: $("toastStack"), saveBtn: $("saveBtn"), resetBtn: $("resetBtn") };
+        let opening = false;
+        function defaultState() { return { currency: 0, perClick: 1, owned: {}, boughtUpgrades: {}, idleLevels: {}, luckUpgrades: {}, offlineUpgrades: {}, packInventory: {}, achievements: {}, packsOpened: 0, lifetimeCards: 0, lastSeen: Date.now() } }
+        function loadState() { try { const raw = localStorage.getItem(SAVE_KEY) || localStorage.getItem("arcanaReliquarySaveV2") || localStorage.getItem("arcanaReliquarySaveV1"); if (!raw) return defaultState(); const parsed = JSON.parse(raw); return { ...defaultState(), ...parsed, owned: parsed.owned || {}, boughtUpgrades: parsed.boughtUpgrades || {}, idleLevels: parsed.idleLevels || {}, luckUpgrades: parsed.luckUpgrades || {}, offlineUpgrades: parsed.offlineUpgrades || {}, packInventory: parsed.packInventory || {}, achievements: parsed.achievements || {}, packsOpened: parsed.packsOpened || 0, lastSeen: parsed.lastSeen || Date.now() } } catch { return defaultState() } }
+        function saveState(show = false) { state.lastSeen = Date.now(); localStorage.setItem(SAVE_KEY, JSON.stringify(state)); if (show) toast("Save crystal sealed.") }
+        function fmt(v) { return Math.floor(v).toLocaleString() }
+        function frame(c) { if (c >= 25) return { name: "Prism", className: "frame-prism", next: null }; if (c >= 20) return { name: "Rainbow", className: "frame-rainbow", next: 25 }; if (c >= 15) return { name: "Gold", className: "frame-gold", next: 20 }; if (c >= 10) return { name: "Silver", className: "frame-silver", next: 15 }; return { name: "Bronze", className: "frame-bronze", next: 10 } }
+        function byRarity(r) { return cardCatalog().filter(c => cardRarity(c) === r) }
+        function luckPower() { return luckUpgrades.reduce((sum, u) => sum + (state.luckUpgrades && state.luckUpgrades[u.id] ? u.bonus : 0), 0) }
+        function effectiveRarityWeights() { const power = luckPower(); const shift = Math.min(18, power * 1.2); return rarityWeights.map(r => { let bonus = 0; if (r.name === "Common") bonus = -shift; if (r.name === "Rare") bonus = shift * .42; if (r.name === "Epic") bonus = shift * .28; if (r.name === "Legendary") bonus = shift * .16; if (r.name === "Mythic") bonus = shift * .10; if (r.name === "Divine") bonus = shift * .04; return { ...r, weight: Math.max(r.name === "Common" ? 50 : .05, +(r.weight + bonus).toFixed(2)) } }) }
+        function weightedRarity(min = "Common") { const weights = effectiveRarityWeights(); const pool = weights.filter(x => rarityRank[x.name] >= rarityRank[min]); const total = pool.reduce((s, x) => s + x.weight, 0); let roll = Math.random() * total; for (const x of pool) { roll -= x.weight; if (roll <= 0) return x.name } return pool.at(-1).name }
+        function drawCard(min = "Common") { const r = weightedRarity(min); const pool = byRarity(r); return pool[Math.floor(Math.random() * pool.length)] || cardCatalog()[0] }
+        function addCard(card, n = 1) { const id = cardId(card); if (!id) return; const before = state.owned[id] || 0; const after = before + n; state.owned[id] = after; state.lifetimeCards += n; if (before > 0 && frame(before).name !== frame(after).name) toast(`${cardName(card)} frame awakened: ${frame(after).name}!`) }
+        function earn(e) { state.currency += state.perClick; sparkle(e, `+${state.perClick}`); updateStats(); renderPacks(); renderIdle(); saveState() }
+        function buyPacks(pack, qty) { const affordable = Math.floor(state.currency / pack.cost); const amount = qty === "max" ? affordable : Math.min(qty, affordable); if (amount <= 0) { toast(`Need ${fmt(pack.cost - state.currency)} more moonshards.`); return } state.currency -= amount * pack.cost; state.packInventory[pack.id] = (state.packInventory[pack.id] || 0) + amount; toast(`Purchased ${amount} ${pack.name}${amount > 1 ? "s" : ""}. Open them from Pack Inventory.`); refreshEconomy(); saveState() }
+        function openPacks(pack, qty) {
+            if (opening) return;
+            const owned = state.packInventory[pack.id] || 0;
+            const amount = qty === "all" ? owned : Math.min(qty, owned);
+            if (amount <= 0) { toast(`No ${pack.name}s to open.`); return }
+            state.packInventory[pack.id] -= amount;
+            if (state.packInventory[pack.id] <= 0) delete state.packInventory[pack.id];
+            ensureStateShape();
+            state.packsOpened += amount;
+            const pulled = [];
+            for (let p = 0; p < amount; p++) {
+                for (let i = 0; i < pack.cards; i++) {
+                    pulled.push(i === 0 && pack.guaranteed ? drawCard(pack.guaranteed) : drawCard());
+                }
+            }
+            refreshEconomy();
+            showAnimatedPulls(pack, amount, pulled);
+            saveState();
+        }
+        function strongestRarity(pulled) { return pulled.reduce((best, c) => rarityRank[cardRarity(c)] > rarityRank[best] ? cardRarity(c) : best, "Common") }
+        function showAnimatedPulls(pack, amount, pulled) {
+            opening = true;
+            const strongest = strongestRarity(pulled);
+            els.modalTitle.textContent = `Opening ${amount} ${pack.name}${amount > 1 ? "s" : ""}`;
+            els.pulls.innerHTML = "";
+            els.pulls.style.display = "none";
+            els.packStage.className = "pack-stage show";
+            els.packStage.style.display = "grid";
+            if (strongest === "Mythic") els.packStage.classList.add("mythic");
+            if (strongest === "Divine") els.packStage.classList.add("divine");
+            els.stageTitle.textContent = strongest === "Divine" ? "DIVINE LIGHT!" : strongest === "Mythic" ? "MYTHIC SURGE!" : "Opening the seal...";
+            els.stageText.textContent = `The seals crack open. Revealing ${pulled.length} cards from ${amount} pack${amount > 1 ? "s" : ""}.`;
+            els.modalBackdrop.classList.add("show");
+            window.clearTimeout(showAnimatedPulls.timer);
+            showAnimatedPulls.timer = window.setTimeout(() => {
+                pulled.forEach(card => addCard(card));
+                checkAchievements();
+                refreshEconomy();
+                renderAchievements();
+                renderCollection();
+                els.packStage.className = "pack-stage";
+                els.packStage.style.display = "none";
+                els.pulls.style.display = "grid";
+                pulled.forEach((c, i) => {
+                    window.setTimeout(() => els.pulls.appendChild(cardEl(c)), Math.min(i * 45, 1200));
+                });
+                opening = false;
+                saveState();
+            }, 1450);
+        }
+        function buyUpgrade(u) { if (state.boughtUpgrades[u.id]) return; if (state.currency < u.cost) { toast(`Need ${fmt(u.cost - state.currency)} more moonshards.`); return } state.currency -= u.cost; state.perClick += u.gain; state.boughtUpgrades[u.id] = true; toast(`${u.name} learned.`); refreshEconomy(); saveState() }
+        function canTrade(card) { const id = cardId(card); return cardRarity(card) !== "Divine" && id && (state.owned[id] || 0) >= 25 }
+        function openTrade(source) { const sourceRarity = cardRarity(source); const targetRarity = nextRarity[sourceRarity]; els.tradeModalTitle.textContent = `Trade ${cardName(source)}`; els.tradeModalText.textContent = `Sacrifice 25 copies of this Prism ${sourceRarity} card to choose one ${targetRarity} card.`; els.tradeChoices.innerHTML = ""; byRarity(targetRarity).forEach(target => { const w = document.createElement("div"); w.className = "trade-choice"; w.appendChild(cardEl(target, false, true)); const b = document.createElement("button"); b.className = "btn primary"; b.type = "button"; b.textContent = `Choose ${cardName(target)}`; b.style.marginTop = "10px"; b.onclick = () => completeTrade(source, target); w.appendChild(b); els.tradeChoices.appendChild(w) }); els.tradeModalBackdrop.classList.add("show") }
+        function completeTrade(source, target) { const sourceId = cardId(source); if (!canTrade(source)) { toast("That card is no longer Prism-ready."); els.tradeModalBackdrop.classList.remove("show"); return } state.owned[sourceId] -= 25; if (state.owned[sourceId] <= 0) delete state.owned[sourceId]; addCard(target); els.tradeModalBackdrop.classList.remove("show"); toast(`Claimed ${cardName(target)}!`); checkAchievements(); updateUI(); saveState() }
+        function cardEl(card, preview = false, showRealCopies = false) { const id = cardId(card); const rarity = cardRarity(card); const copies = preview ? 0 : (state.owned[id] || 0); const f = frame((showRealCopies ? state.owned[id] || 0 : copies) || 1); const displayedCopies = showRealCopies ? (state.owned[id] || 0) : copies; const next = preview ? "Choice card" : f.next ? `${Math.max(f.next - displayedCopies, 0)} to ${frame(f.next).name}` : "Max frame"; const el = document.createElement("article"); el.className = `card ${f.className}`; el.innerHTML = `<div class="card-inner"><div class="art">${cardIcon(card)}</div><div class="card-body"><div class="badges"><span class="badge rarity-${rarity.toLowerCase()}">${rarity}</span><span class="badge">${showRealCopies ? "Target" : f.name}</span></div><div class="card-name">${cardName(card)}</div><div class="card-desc">${cardDesc(card)}</div><div class="badges"><span class="badge">Copies: ${displayedCopies}</span><span class="badge">${next}</span></div></div></div>`; return el }
+        function renderPacks() { els.packList.innerHTML = ""; packs.forEach(p => { const affordable = Math.floor(state.currency / p.cost); const row = document.createElement("div"); row.className = "row"; row.innerHTML = `<div><strong>${p.name}</strong><small>${p.description}<br>Cost: ${fmt(p.cost)} ✦ each</small></div><div class="btns"><button class="btn ${affordable >= 1 ? "primary" : ""}" data-q="1" ${affordable < 1 ? "disabled" : ""}>Buy 1</button><button class="btn ${affordable >= 5 ? "primary" : ""}" data-q="5" ${affordable < 5 ? "disabled" : ""}>Buy 5</button><button class="btn ${affordable >= 10 ? "primary" : ""}" data-q="10" ${affordable < 10 ? "disabled" : ""}>Buy 10</button><button class="btn ${affordable >= 1 ? "primary" : ""}" data-q="max" ${affordable < 1 ? "disabled" : ""}>Buy Max</button></div>`; row.querySelectorAll("button").forEach(b => b.onclick = () => buyPacks(p, b.dataset.q === "max" ? "max" : Number(b.dataset.q))); els.packList.appendChild(row) }) }
+        function renderPackInventory() { els.packInventoryList.innerHTML = ""; let any = false; packs.forEach(p => { const count = state.packInventory[p.id] || 0; if (count <= 0) return; any = true; const row = document.createElement("div"); row.className = "row"; row.innerHTML = `<div><strong>${p.name}</strong><small>Owned: ${fmt(count)} unopened • ${p.cards} cards each</small></div><div class="btns"><button class="btn ${count >= 1 ? "primary" : ""}" data-q="1">Open 1</button><button class="btn ${count >= 5 ? "primary" : ""}" data-q="5" ${count < 5 ? "disabled" : ""}>Open 5</button><button class="btn ${count >= 1 ? "primary" : ""}" data-q="all">Open All</button></div>`; row.querySelectorAll("button").forEach(b => b.onclick = () => openPacks(p, b.dataset.q === "all" ? "all" : Number(b.dataset.q))); els.packInventoryList.appendChild(row) }); if (!any) els.packInventoryList.innerHTML = '<div class="empty">No unopened packs. Buy packs in the bazaar first.</div>' }
+        function renderUpgrades() { els.upgradeList.innerHTML = ""; els.learnedUpgradeList.innerHTML = ""; const available = upgrades.filter(u => !state.boughtUpgrades[u.id]); const learned = upgrades.filter(u => state.boughtUpgrades[u.id]); if (!available.length) { els.upgradeList.innerHTML = '<div class="empty">All guild training has been learned.</div>' } else { available.forEach(u => { const row = document.createElement("div"); row.className = "row"; row.innerHTML = `<div><strong>${u.name}</strong><small>${u.description}</small></div><button class="btn">${fmt(u.cost)} ✦</button>`; row.querySelector("button").onclick = () => buyUpgrade(u); els.upgradeList.appendChild(row) }) } if (!learned.length) { els.learnedUpgradeList.innerHTML = '<div class="empty">No upgrades learned yet.</div>' } else { learned.forEach(u => { const row = document.createElement("div"); row.className = "row"; row.innerHTML = `<div><strong>${u.name}</strong><small>${u.description}</small></div><span class="badge">Learned</span>`; els.learnedUpgradeList.appendChild(row) }) } }
+        function idleCost(u) { const level = state.idleLevels[u.id] || 0; return Math.floor(u.baseCost * Math.pow(u.scale, level)) }
+        function idleGain(u) { const level = state.idleLevels[u.id] || 0; return level * u.baseGain }
+        function totalIdleGain() { return idleUpgrades.reduce((sum, u) => sum + idleGain(u), 0) }
+        function buyIdle(u) { const level = state.idleLevels[u.id] || 0; if (level >= u.maxLevel) { toast(`${u.name} is fully upgraded.`); return } const cost = idleCost(u); if (state.currency < cost) { toast(`Need ${fmt(cost - state.currency)} more moonshards.`); return } state.currency -= cost; state.idleLevels[u.id] = level + 1; toast(`${u.name} upgraded to level ${level + 1}.`); refreshEconomy(); saveState() }
+        function renderIdle() { els.idleList.innerHTML = ""; idleUpgrades.forEach(u => { const level = state.idleLevels[u.id] || 0; const cost = idleCost(u); const maxed = level >= u.maxLevel; const affordable = state.currency >= cost && !maxed; const row = document.createElement("div"); row.className = "row"; row.innerHTML = `<div><strong>${u.name}</strong><small>${u.description}<br>Level ${level}/${u.maxLevel} • Producing ${fmt(idleGain(u))}/sec • Next: +${fmt(u.baseGain)}/sec</small></div><button class="btn ${affordable ? "primary" : ""}" ${maxed ? "disabled" : ""}>${maxed ? "Maxed" : `Upgrade ${fmt(cost)} ✦`}</button>`; row.querySelector("button").onclick = () => buyIdle(u); els.idleList.appendChild(row) }); const total = document.createElement("div"); total.className = "row"; total.innerHTML = `<div><strong>Total Idle Gain</strong><small>Your conduits gather moonshards once per second.</small></div><span class="badge">${fmt(totalIdleGain())}/sec</span>`; els.idleList.prepend(total) }
+        function buyLuck(u) { if (state.luckUpgrades[u.id]) return; if (state.currency < u.cost) { toast(`Need ${fmt(u.cost - state.currency)} more moonshards.`); return } state.currency -= u.cost; state.luckUpgrades[u.id] = true; toast(`${u.name} awakened. Better cards are now more likely.`); refreshEconomy(); saveState() }
+        function renderLuck() { els.luckList.innerHTML = ""; luckUpgrades.forEach(u => { const bought = !!state.luckUpgrades[u.id]; const affordable = state.currency >= u.cost && !bought; const row = document.createElement("div"); row.className = "row"; row.innerHTML = `<div><strong>${u.name}</strong><small>${u.description}<br>Fate power: +${u.bonus} • Current total: ${luckPower()}</small></div><button class="btn ${affordable ? "primary" : ""}" ${bought ? "disabled" : ""}>${bought ? "Awakened" : fmt(u.cost) + " ✦"}</button>`; row.querySelector("button").onclick = () => buyLuck(u); els.luckList.appendChild(row) }); const total = document.createElement("div"); total.className = "row"; total.innerHTML = `<div><strong>Current Effective Odds</strong><small>Fortune Blessings lower Common odds and raise every better rarity.</small></div><span class="badge">${luckPower()} Fate</span>`; els.luckList.prepend(total) }
+        function offlineEfficiency() { return Math.min(1.5, .25 + offlineUpgrades.reduce((sum, u) => sum + (state.offlineUpgrades && state.offlineUpgrades[u.id] ? u.bonus : 0), 0)) }
+        function buyOffline(u) { if (state.offlineUpgrades[u.id]) return; if (state.currency < u.cost) { toast(`Need ${fmt(u.cost - state.currency)} more moonshards.`); return } state.currency -= u.cost; state.offlineUpgrades[u.id] = true; toast(`${u.name} attuned. Offline earnings improved.`); refreshEconomy(); saveState() }
+        function renderOffline() { els.offlineList.innerHTML = ""; const eff = offlineEfficiency(); const current = document.createElement("div"); current.className = "row"; current.innerHTML = `<div><strong>Offline Efficiency</strong><small>While closed, you earn ${Math.round(eff * 100)}% of your idle moonshards/sec. Base is 25%, maximum is 150%.</small></div><span class="badge">${Math.round(eff * 100)}%</span>`; els.offlineList.appendChild(current); offlineUpgrades.forEach(u => { const bought = !!state.offlineUpgrades[u.id]; const affordable = state.currency >= u.cost && !bought; const row = document.createElement("div"); row.className = "row"; row.innerHTML = `<div><strong>${u.name}</strong><small>${u.description}<br>Offline efficiency: +${Math.round(u.bonus * 100)}%</small></div><button class="btn ${affordable ? "primary" : ""}" ${bought ? "disabled" : ""}>${bought ? "Attuned" : fmt(u.cost) + " ✦"}</button>`; row.querySelector("button").onclick = () => buyOffline(u); els.offlineList.appendChild(row) }) }
+        function applyOfflineEarnings() { ensureStateShape(); const now = Date.now(); const elapsed = Math.max(0, Math.floor((now - state.lastSeen) / 1000)); const idle = totalIdleGain(); const gain = Math.floor(elapsed * idle * offlineEfficiency()); if (elapsed >= 60 && idle > 0 && gain > 0) { state.currency += gain; setTimeout(() => toast(`Welcome back! Your conduits gathered ${fmt(gain)} offline moonshards.`), 350) } state.lastSeen = now; saveState() }
+        function uniqueCountByRarity(rarity) { return byRarity(rarity).filter(c => (state.owned[cardId(c)] || 0) > 0).length }
+        function isAchievementUnlocked(a) { const catalog = cardCatalog(); if (a.id === "firstPack") return state.packsOpened >= 1; if (a.id === "packHundred") return state.packsOpened >= 100; if (a.id === "firstDivine") return byRarity("Divine").some(c => (state.owned[cardId(c)] || 0) > 0); if (a.id === "firstPrism") return catalog.some(c => (state.owned[cardId(c)] || 0) >= 25); if (a.id === "fullAlbum") return catalog.every(c => (state.owned[cardId(c)] || 0) > 0); if (a.rarity) return uniqueCountByRarity(a.rarity) === byRarity(a.rarity).length; return false }
+        function ensureStateShape() {
+            if (!state.owned) state.owned = {};
+            if (!state.boughtUpgrades) state.boughtUpgrades = {};
+            if (!state.idleLevels) state.idleLevels = {};
+            if (!state.luckUpgrades) state.luckUpgrades = {};
+            if (!state.offlineUpgrades) state.offlineUpgrades = {};
+            if (!state.packInventory) state.packInventory = {};
+            if (!state.achievements) state.achievements = {};
+            if (!Number.isFinite(state.packsOpened)) state.packsOpened = 0;
+            if (!Number.isFinite(state.currency)) state.currency = 0;
+            if (!Number.isFinite(state.perClick)) state.perClick = 1;
+            if (!Number.isFinite(state.lastSeen)) state.lastSeen = Date.now();
+        }
+        function checkAchievements() { ensureStateShape(); let unlocked = 0; achievements.forEach(a => { if (!state.achievements[a.id] && isAchievementUnlocked(a)) { state.achievements[a.id] = true; state.currency += a.reward; unlocked++; toast(`Achievement unlocked: ${a.name}! +${fmt(a.reward)} moonshards`) } }); return unlocked }
+        function renderAchievements() { const catalog = cardCatalog(); els.achievementList.innerHTML = ""; achievements.forEach(a => { const earned = !!state.achievements[a.id]; const progress = a.rarity ? `${uniqueCountByRarity(a.rarity)}/${byRarity(a.rarity).length}` : a.id === "fullAlbum" ? `${catalog.filter(c => (state.owned[cardId(c)] || 0) > 0).length}/${catalog.length}` : a.id === "packHundred" ? `${Math.min(state.packsOpened, 100)}/100` : earned ? "Complete" : "In progress"; const row = document.createElement("div"); row.className = "row"; row.innerHTML = `<div><strong>${earned ? "🏆 " : "🔒 "}${a.name}</strong><small>${a.description}<br>Progress: ${progress}</small></div><span class="badge">${earned ? "Claimed" : "+" + fmt(a.reward)}</span>`; els.achievementList.appendChild(row) }) }
+        function renderRates() { els.rateList.innerHTML = ""; effectiveRarityWeights().forEach(r => { const base = rarityWeights.find(x => x.name === r.name).weight; const row = document.createElement("div"); row.className = "row"; row.innerHTML = `<div><strong class="rarity-${r.color}">${r.name}</strong><small>${byRarity(r.name).length} unique cards • Base ${base}%</small></div><span class="badge">${r.weight}%</span>`; els.rateList.appendChild(row) }) }
+        function frameScore(card) { const c = state.owned[cardId(card)] || 0; return c >= 25 ? 5 : c >= 20 ? 4 : c >= 15 ? 3 : c >= 10 ? 2 : c >= 5 ? 1 : 0 }
+        function renderCollection() { let owned = cardCatalog().filter(c => (state.owned[cardId(c)] || 0) > 0); const filter = els.rarityFilter.value; if (filter !== "all") owned = owned.filter(c => cardRarity(c) === filter); const sort = els.sortMode.value; owned.sort((a, b) => sort === "name" ? cardName(a).localeCompare(cardName(b)) : sort === "copies" ? (state.owned[cardId(b)] || 0) - (state.owned[cardId(a)] || 0) : sort === "frame" ? frameScore(b) - frameScore(a) : rarityRank[cardRarity(b)] - rarityRank[cardRarity(a)] || cardName(a).localeCompare(cardName(b))); els.collection.innerHTML = ""; if (!owned.length) { els.collection.innerHTML = '<div class="empty">No cards match this filter yet. Channel moonshards and open your first pack.</div>'; return } owned.forEach(c => { const el = cardEl(c); if (canTrade(c)) { const b = document.createElement("button"); b.className = "btn primary"; b.textContent = `Trade for ${nextRarity[cardRarity(c)]}`; b.onclick = () => openTrade(c); el.querySelector(".card-body").appendChild(b) } els.collection.appendChild(el) }) }
+        function updateStats() { const counts = Object.values(state.owned); const catalog = cardCatalog(); els.currency.textContent = fmt(state.currency); els.perClick.textContent = fmt(state.perClick); els.idleRate.textContent = fmt(totalIdleGain()); els.totalCards.textContent = fmt(counts.reduce((s, c) => s + c, 0)); els.uniqueCards.textContent = `${catalog.filter(c => (state.owned[cardId(c)] || 0) > 0).length}/${catalog.length}` }
+        function refreshEconomy() { updateStats(); renderPacks(); renderPackInventory(); renderUpgrades(); renderIdle(); renderLuck(); renderOffline(); renderRates() }
+        function updateUI() { checkAchievements(); refreshEconomy(); renderAchievements(); renderCollection() }
+        function toast(msg) { const d = document.createElement("div"); d.className = "toast"; d.textContent = msg; els.toastStack.appendChild(d); setTimeout(() => { d.style.opacity = "0"; setTimeout(() => d.remove(), 250) }, 2700) }
+        function sparkle(e, t) { const s = document.createElement("div"); s.className = "sparkle"; s.textContent = t; const r = els.clicker.getBoundingClientRect(); s.style.left = ((e && e.clientX) || r.left + r.width / 2) + "px"; s.style.top = ((e && e.clientY) || r.top + r.height / 2) + "px"; document.body.appendChild(s); setTimeout(() => s.remove(), 850) }
+        function resetGame() { if (!confirm("Shatter the save crystal and erase your collection?")) return; localStorage.removeItem(SAVE_KEY); Object.assign(state, defaultState()); updateUI(); toast("The reliquary has been reset.") }
+        function bind() { els.clicker.onclick = earn; els.rarityFilter.onchange = renderCollection; els.sortMode.onchange = renderCollection; els.closeModal.onclick = () => { if (!opening) els.modalBackdrop.classList.remove("show") }; els.modalBackdrop.onclick = e => { if (e.target === els.modalBackdrop && !opening) els.modalBackdrop.classList.remove("show") }; els.closeTradeModal.onclick = () => els.tradeModalBackdrop.classList.remove("show"); els.tradeModalBackdrop.onclick = e => { if (e.target === els.tradeModalBackdrop) els.tradeModalBackdrop.classList.remove("show") }; els.saveBtn.onclick = () => saveState(true); els.resetBtn.onclick = resetGame; window.onkeydown = e => { if (e.code === "Space" && !e.repeat && !["BUTTON", "SELECT"].includes(document.activeElement.tagName)) { e.preventDefault(); earn() } if (e.key === "Escape" && !opening) { els.modalBackdrop.classList.remove("show"); els.tradeModalBackdrop.classList.remove("show") } } }
+        setInterval(() => { const gain = totalIdleGain(); if (gain > 0) { state.currency += gain; refreshEconomy(); saveState() } }, 1000); ensureStateShape(); applyOfflineEarnings(); renderPacks(); renderRates(); bind(); updateUI();
+    </script>
+</body>
+
+</html>
