@@ -25,12 +25,153 @@
     --gold-glow:  rgba(245,200,66,0.5);
     --purple:     #9b59f5;
     --teal:       #2ecbaa;
+    --title-a:    #c9a0ff;
+    --title-b:    #7b5fff;
+    --title-c:    #ff6ba8;
+    --accent-a:   #7b5fff;
+    --accent-b:   #ff6ba8;
+    --accent-c:   #c96fff;
+    --button-done-a:#5af0c0;
+    --button-done-b:#2ecbaa;
+    --button-done-c:#1a7f6a;
+    --button-locked-a:#3a354a;
+    --button-locked-b:#2a2540;
+    --button-locked-c:#1e1a30;
+    --page-bg:
+      radial-gradient(circle at 50% -10%, rgba(155,89,245,0.22), transparent 36%),
+      linear-gradient(180deg, var(--bg-deep), var(--bg-mid));
+    --ambient-layer:
+      radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 30% 60%, rgba(255,255,255,0.3) 0%, transparent 100%),
+      radial-gradient(1px 1px at 55% 10%, rgba(255,255,255,0.5) 0%, transparent 100%),
+      radial-gradient(1px 1px at 75% 80%, rgba(255,255,255,0.3) 0%, transparent 100%),
+      radial-gradient(1px 1px at 90% 40%, rgba(255,255,255,0.4) 0%, transparent 100%);
+    --card-radius:18px;
+    --click-radius:50%;
+    --layout-gap:0.8rem;
     --font: 'Segoe UI', system-ui, sans-serif;
     --radius: 12px;
   }
 
+  body[data-theme="forest"] {
+    --bg-deep:#06130d; --bg-mid:#102418; --bg-card:#14281c; --bg-card2:#1b3525;
+    --border-dim:rgba(119,190,120,0.24); --border-glow:rgba(150,230,140,0.5);
+    --text-main:#eaffdf; --text-muted:#9dbb93; --text-dim:#557052;
+    --gold:#d9e76c; --gold-glow:rgba(217,231,108,0.45); --purple:#64b36a; --teal:#69d39a;
+    --title-a:#d7f99a; --title-b:#67c978; --title-c:#f2ffd0; --accent-a:#3e8f5b; --accent-b:#b7e36f; --accent-c:#65d69a;
+    --button-done-a:#c9f985; --button-done-b:#58c783; --button-done-c:#1f6e45;
+    --button-locked-a:#2d3d29; --button-locked-b:#1d2b20; --button-locked-c:#101a12;
+    --page-bg:radial-gradient(circle at 18% 14%, rgba(143,210,111,0.22), transparent 28%), radial-gradient(circle at 82% 78%, rgba(77,146,96,0.28), transparent 34%), linear-gradient(180deg,#06130d,#102418);
+    --ambient-layer:linear-gradient(115deg, transparent 0 42%, rgba(186,240,150,0.05) 44%, transparent 47%), radial-gradient(2px 9px at 18% 22%, rgba(188,244,156,0.28), transparent 80%), radial-gradient(2px 8px at 72% 42%, rgba(108,209,133,0.24), transparent 80%);
+    --card-radius:22px; --click-radius:34% 66% 38% 62%;
+  }
+
+  body[data-theme="fire"] {
+    --bg-deep:#190607; --bg-mid:#35100b; --bg-card:#2a0e10; --bg-card2:#421513;
+    --border-dim:rgba(255,122,45,0.26); --border-glow:rgba(255,177,76,0.58);
+    --text-main:#fff0dc; --text-muted:#d6a176; --text-dim:#7f4b32;
+    --gold:#ffc857; --gold-glow:rgba(255,153,43,0.55); --purple:#ff5f3d; --teal:#ffb347;
+    --title-a:#ffe08a; --title-b:#ff5b2e; --title-c:#ffffff; --accent-a:#ff3d22; --accent-b:#ffc447; --accent-c:#ff7a2d;
+    --button-done-a:#ffe08a; --button-done-b:#ff7a2d; --button-done-c:#9f1e16;
+    --button-locked-a:#4a2a22; --button-locked-b:#2f1715; --button-locked-c:#190807;
+    --page-bg:radial-gradient(circle at 50% 100%, rgba(255,90,30,0.26), transparent 34%), radial-gradient(circle at 18% 15%, rgba(255,196,71,0.16), transparent 26%), linear-gradient(180deg,#190607,#35100b);
+    --ambient-layer:linear-gradient(15deg, transparent 0 44%, rgba(255,112,43,0.11) 46%, transparent 48%), radial-gradient(2px 7px at 32% 72%, rgba(255,197,87,0.46), transparent 80%), radial-gradient(3px 10px at 68% 84%, rgba(255,91,46,0.36), transparent 80%);
+    --card-radius:10px; --click-radius:42% 58% 48% 52%;
+  }
+
+  body[data-theme="shadow"] {
+    --bg-deep:#05060a; --bg-mid:#0c0d14; --bg-card:#11131d; --bg-card2:#181a28;
+    --border-dim:rgba(125,130,156,0.22); --border-glow:rgba(178,181,210,0.42);
+    --text-main:#ececf6; --text-muted:#8c91a8; --text-dim:#4f5364;
+    --gold:#c7cad8; --gold-glow:rgba(190,195,220,0.36); --purple:#777d9e; --teal:#8aa0b8;
+    --title-a:#f1f1ff; --title-b:#7f86a8; --title-c:#c7cad8; --accent-a:#52586f; --accent-b:#afb4c9; --accent-c:#747b98;
+    --button-done-a:#c3c8da; --button-done-b:#6f7892; --button-done-c:#2e3344;
+    --button-locked-a:#242632; --button-locked-b:#151721; --button-locked-c:#090a10;
+    --page-bg:radial-gradient(circle at 50% 25%, rgba(130,137,166,0.18), transparent 30%), linear-gradient(180deg,#05060a,#0c0d14);
+    --ambient-layer:linear-gradient(120deg, transparent 0 46%, rgba(255,255,255,0.035) 48%, transparent 50%), radial-gradient(1px 1px at 22% 24%, rgba(255,255,255,0.28), transparent 100%), radial-gradient(1px 1px at 78% 66%, rgba(255,255,255,0.18), transparent 100%);
+    --card-radius:6px; --click-radius:14px;
+  }
+
+  body[data-theme="spirit"] {
+    --bg-deep:#07121a; --bg-mid:#102331; --bg-card:#132a35; --bg-card2:#183746;
+    --border-dim:rgba(134,239,172,0.22); --border-glow:rgba(103,232,249,0.48);
+    --text-main:#eaffff; --text-muted:#9bcbd0; --text-dim:#567b80;
+    --gold:#b8f7d4; --gold-glow:rgba(184,247,212,0.45); --purple:#9ce8ff; --teal:#86efac;
+    --title-a:#ffffff; --title-b:#86efac; --title-c:#67e8f9; --accent-a:#67e8f9; --accent-b:#b8f7d4; --accent-c:#86efac;
+    --button-done-a:#ffffff; --button-done-b:#86efac; --button-done-c:#239b78;
+    --button-locked-a:#284044; --button-locked-b:#183035; --button-locked-c:#0a1a20;
+    --page-bg:radial-gradient(circle at 26% 20%, rgba(134,239,172,0.18), transparent 30%), radial-gradient(circle at 78% 68%, rgba(103,232,249,0.18), transparent 34%), linear-gradient(180deg,#07121a,#102331);
+    --ambient-layer:radial-gradient(24px 24px at 18% 28%, rgba(255,255,255,0.10), transparent 70%), radial-gradient(18px 18px at 82% 34%, rgba(134,239,172,0.12), transparent 72%), radial-gradient(2px 2px at 55% 70%, rgba(255,255,255,0.35), transparent 100%);
+    --card-radius:28px; --click-radius:50%;
+  }
+
+  body[data-theme="water"] {
+    --bg-deep:#03111f; --bg-mid:#08233a; --bg-card:#0e2a42; --bg-card2:#123653;
+    --border-dim:rgba(56,189,248,0.24); --border-glow:rgba(125,211,252,0.54);
+    --text-main:#e0f7ff; --text-muted:#8fc8df; --text-dim:#4a7890;
+    --gold:#a7f3ff; --gold-glow:rgba(125,211,252,0.46); --purple:#38bdf8; --teal:#2dd4bf;
+    --title-a:#dffbff; --title-b:#38bdf8; --title-c:#2dd4bf; --accent-a:#0284c7; --accent-b:#22d3ee; --accent-c:#2dd4bf;
+    --button-done-a:#a7f3ff; --button-done-b:#22d3ee; --button-done-c:#075985;
+    --button-locked-a:#243b53; --button-locked-b:#142d44; --button-locked-c:#071a2b;
+    --page-bg:radial-gradient(circle at 50% 0%, rgba(56,189,248,0.22), transparent 32%), linear-gradient(180deg,#03111f,#08233a);
+    --ambient-layer:linear-gradient(105deg, transparent 0 45%, rgba(125,211,252,0.07) 47%, transparent 50%), radial-gradient(30px 9px at 24% 36%, rgba(125,211,252,0.16), transparent 80%), radial-gradient(42px 12px at 78% 72%, rgba(45,212,191,0.13), transparent 80%);
+    --card-radius:18px 18px 30px 30px; --click-radius:46% 54% 52% 48%;
+  }
+
+  body[data-theme="holy"] {
+    --bg-deep:#16130a; --bg-mid:#27210f; --bg-card:#2b2514; --bg-card2:#373017;
+    --border-dim:rgba(253,230,138,0.28); --border-glow:rgba(255,255,210,0.58);
+    --text-main:#fffbe8; --text-muted:#d9c98b; --text-dim:#8f7f45;
+    --gold:#ffe68a; --gold-glow:rgba(255,230,138,0.58); --purple:#facc15; --teal:#fff5b8;
+    --title-a:#ffffff; --title-b:#ffe68a; --title-c:#facc15; --accent-a:#d6a80f; --accent-b:#fff1a8; --accent-c:#facc15;
+    --button-done-a:#ffffff; --button-done-b:#ffe68a; --button-done-c:#b68a10;
+    --button-locked-a:#4a4326; --button-locked-b:#302b19; --button-locked-c:#18140a;
+    --page-bg:radial-gradient(circle at 50% 0%, rgba(255,246,184,0.22), transparent 36%), linear-gradient(180deg,#16130a,#27210f);
+    --ambient-layer:radial-gradient(1px 9px at 50% 18%, rgba(255,255,220,0.34), transparent 90%), radial-gradient(2px 2px at 20% 34%, rgba(255,245,184,0.38), transparent 100%), radial-gradient(2px 2px at 82% 76%, rgba(255,245,184,0.25), transparent 100%);
+    --card-radius:20px; --click-radius:50%;
+  }
+
+  body[data-theme="heaven"] {
+    --bg-deep:#dfefff; --bg-mid:#b9d9ff; --bg-card:rgba(255,255,255,0.72); --bg-card2:rgba(232,244,255,0.86);
+    --border-dim:rgba(62,130,190,0.22); --border-glow:rgba(255,255,255,0.72);
+    --text-main:#183047; --text-muted:#54708b; --text-dim:#7b91a8;
+    --gold:#f6d36b; --gold-glow:rgba(246,211,107,0.48); --purple:#7aa8ff; --teal:#63cdda;
+    --title-a:#ffffff; --title-b:#4c8ddb; --title-c:#f6d36b; --accent-a:#6ea8fe; --accent-b:#ffffff; --accent-c:#f6d36b;
+    --button-done-a:#ffffff; --button-done-b:#7dd3fc; --button-done-c:#3b82f6;
+    --button-locked-a:#c8d6e5; --button-locked-b:#a7bad0; --button-locked-c:#8298ad;
+    --page-bg:radial-gradient(circle at 50% -5%, rgba(255,255,255,0.9), transparent 28%), linear-gradient(180deg,#dfefff,#b9d9ff);
+    --ambient-layer:radial-gradient(80px 28px at 20% 30%, rgba(255,255,255,0.45), transparent 70%), radial-gradient(120px 34px at 78% 62%, rgba(255,255,255,0.38), transparent 72%), radial-gradient(2px 2px at 52% 20%, rgba(255,255,255,0.7), transparent 100%);
+    --card-radius:26px; --click-radius:999px;
+  }
+
+  body[data-theme="death"] {
+    --bg-deep:#080807; --bg-mid:#15140f; --bg-card:#1d1b16; --bg-card2:#28251d;
+    --border-dim:rgba(170,160,135,0.22); --border-glow:rgba(230,220,190,0.42);
+    --text-main:#eee5d1; --text-muted:#a69a84; --text-dim:#655f54;
+    --gold:#d8c08a; --gold-glow:rgba(216,192,138,0.42); --purple:#9a8f76; --teal:#c5bca8;
+    --title-a:#f3ead8; --title-b:#94886d; --title-c:#d8c08a; --accent-a:#706752; --accent-b:#d8c08a; --accent-c:#b8aa8c;
+    --button-done-a:#f3ead8; --button-done-b:#94886d; --button-done-c:#3a352d;
+    --button-locked-a:#343128; --button-locked-b:#211f1a; --button-locked-c:#11100d;
+    --page-bg:radial-gradient(circle at 50% 75%, rgba(216,192,138,0.10), transparent 34%), linear-gradient(180deg,#080807,#15140f);
+    --ambient-layer:linear-gradient(90deg, transparent 0 48%, rgba(238,229,209,0.035) 50%, transparent 52%), radial-gradient(1px 1px at 28% 26%, rgba(238,229,209,0.20), transparent 100%), radial-gradient(1px 1px at 70% 70%, rgba(238,229,209,0.13), transparent 100%);
+    --card-radius:4px; --click-radius:6px;
+  }
+
+  body[data-theme="unholy"] {
+    --bg-deep:#12030b; --bg-mid:#250816; --bg-card:#260b1b; --bg-card2:#3a0d28;
+    --border-dim:rgba(255,79,216,0.24); --border-glow:rgba(255,79,216,0.58);
+    --text-main:#ffe6f8; --text-muted:#cc8eba; --text-dim:#7e4e72;
+    --gold:#ff8bdc; --gold-glow:rgba(255,79,216,0.5); --purple:#a855f7; --teal:#ff4fd8;
+    --title-a:#ffe6f8; --title-b:#ff4fd8; --title-c:#a855f7; --accent-a:#a855f7; --accent-b:#ff4fd8; --accent-c:#fb7185;
+    --button-done-a:#ffb3ec; --button-done-b:#ff4fd8; --button-done-c:#7e145f;
+    --button-locked-a:#462039; --button-locked-b:#2b1123; --button-locked-c:#150711;
+    --page-bg:radial-gradient(circle at 20% 15%, rgba(255,79,216,0.20), transparent 28%), radial-gradient(circle at 78% 78%, rgba(168,85,247,0.22), transparent 34%), linear-gradient(180deg,#12030b,#250816);
+    --ambient-layer:linear-gradient(130deg, transparent 0 44%, rgba(255,79,216,0.07) 46%, transparent 50%), radial-gradient(2px 2px at 23% 34%, rgba(255,79,216,0.36), transparent 100%), radial-gradient(2px 2px at 79% 68%, rgba(168,85,247,0.32), transparent 100%);
+    --card-radius:18px 4px 18px 4px; --click-radius:50% 18% 50% 18%;
+  }
+
   body {
-    background: var(--bg-deep);
+    background: var(--page-bg);
     color: var(--text-main);
     font-family: var(--font);
     min-height: 100vh;
@@ -46,17 +187,7 @@
     content: '';
     position: fixed;
     inset: 0;
-    background-image:
-      radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.4) 0%, transparent 100%),
-      radial-gradient(1px 1px at 30% 60%, rgba(255,255,255,0.3) 0%, transparent 100%),
-      radial-gradient(1px 1px at 55% 10%, rgba(255,255,255,0.5) 0%, transparent 100%),
-      radial-gradient(1px 1px at 75% 80%, rgba(255,255,255,0.3) 0%, transparent 100%),
-      radial-gradient(1px 1px at 90% 40%, rgba(255,255,255,0.4) 0%, transparent 100%),
-      radial-gradient(1px 1px at 20% 90%, rgba(255,255,255,0.3) 0%, transparent 100%),
-      radial-gradient(1px 1px at 65% 50%, rgba(255,255,255,0.2) 0%, transparent 100%),
-      radial-gradient(1.5px 1.5px at 45% 35%, rgba(200,180,255,0.5) 0%, transparent 100%),
-      radial-gradient(1px 1px at 82% 15%, rgba(255,255,255,0.35) 0%, transparent 100%),
-      radial-gradient(2px 2px at 5% 55%, rgba(180,150,255,0.3) 0%, transparent 100%);
+    background-image: var(--ambient-layer);
     pointer-events: none;
     z-index: 0;
   }
@@ -79,7 +210,7 @@
     font-weight: 700;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    background: linear-gradient(110deg, #c9a0ff 0%, #7b5fff 28%, #ffffff 42%, #ff6ba8 56%, #c9a0ff 100%);
+    background: linear-gradient(110deg, var(--title-a) 0%, var(--title-b) 28%, #ffffff 42%, var(--title-c) 56%, var(--title-a) 100%);
     background-size: 260% 100%;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -93,6 +224,35 @@
     font-size: 0.85rem;
     letter-spacing: 0.08em;
     text-transform: uppercase;
+  }
+
+  .theme-panel {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    padding: 0.75rem 0.85rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border-dim);
+    border-radius: var(--card-radius);
+  }
+  .theme-panel label {
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .theme-panel select {
+    min-width: 150px;
+    background: var(--bg-card2);
+    border: 1px solid var(--border-glow);
+    border-radius: 10px;
+    color: var(--text-main);
+    padding: 0.5rem 0.65rem;
+    font: 700 0.78rem var(--font);
+    outline: none;
   }
 
   /* ===== STATS BAR ===== */
@@ -121,7 +281,7 @@
   .stat-box .value {
     font-size: 1.4rem;
     font-weight: 700;
-    background: linear-gradient(135deg, #c9a0ff, #7b5fff);
+    background: linear-gradient(135deg, var(--title-a), var(--title-b));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -204,7 +364,7 @@
   .game-card {
     background: var(--bg-card);
     border: 1px solid var(--border-dim);
-    border-radius: 18px;
+    border-radius: var(--card-radius);
     padding: 1.5rem 1.2rem;
     text-align: center;
     position: relative;
@@ -214,7 +374,7 @@
     content: '';
     position: absolute;
     inset: 0;
-    background: radial-gradient(ellipse at 50% 0%, rgba(120,80,255,0.08) 0%, transparent 70%);
+    background: radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--accent-a) 18%, transparent) 0%, transparent 70%);
     pointer-events: none;
   }
 
@@ -228,7 +388,7 @@
   .day-number {
     font-size: clamp(2rem, 8vw, 3rem);
     font-weight: 800;
-    background: linear-gradient(135deg, #ff9de2, #ff6ba8, #c96fff);
+    background: linear-gradient(135deg, var(--title-c), var(--accent-b), var(--accent-c));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -246,7 +406,7 @@
   .btn-grid {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.8rem;
+    gap: var(--layout-gap);
     justify-content: center;
     margin-bottom: 0.5rem;
   }
@@ -256,7 +416,7 @@
   .click-btn {
     width: 72px;
     height: 72px;
-    border-radius: 50%;
+    border-radius: var(--click-radius);
     border: 3px solid rgba(0,0,0,0.25);
     cursor: pointer;
     font-size: 1.5rem;
@@ -280,15 +440,15 @@
   }
   /* Clicked state — teal checkmark */
   .click-btn.clicked {
-    background: radial-gradient(circle at 35% 35%, #5af0c0, #2ecbaa 55%, #1a7f6a) !important;
-    border-color: #1a7f6a !important;
+    background: radial-gradient(circle at 35% 35%, var(--button-done-a), var(--button-done-b) 55%, var(--button-done-c)) !important;
+    border-color: var(--button-done-c) !important;
     box-shadow: 0 0 16px rgba(46,203,170,0.45) !important;
     cursor: default;
   }
   /* Locked state (day done) */
   .click-btn.locked {
-    background: radial-gradient(circle at 35% 35%, #3a354a, #2a2540 55%, #1e1a30) !important;
-    border-color: #3a354a !important;
+    background: radial-gradient(circle at 35% 35%, var(--button-locked-a), var(--button-locked-b) 55%, var(--button-locked-c)) !important;
+    border-color: var(--button-locked-a) !important;
     box-shadow: none !important;
     cursor: not-allowed;
     opacity: 0.45;
@@ -377,7 +537,7 @@
   .progress-bar {
     height: 100%;
     border-radius: 99px;
-    background: linear-gradient(90deg, #7b5fff, #ff6ba8);
+    background: linear-gradient(90deg, var(--accent-a), var(--accent-b));
     transition: width 0.4s ease;
   }
 
@@ -408,7 +568,7 @@
   .popup-title {
     font-size: clamp(1.6rem, 6vw, 2.4rem);
     font-weight: 800;
-    background: linear-gradient(135deg, var(--gold), #ff9de2, var(--purple));
+    background: linear-gradient(135deg, var(--gold), var(--title-c), var(--purple));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -422,7 +582,7 @@
     line-height: 1.5;
   }
   .popup-close-btn {
-    background: linear-gradient(135deg, #7b5fff, #ff6ba8);
+    background: linear-gradient(135deg, var(--accent-a), var(--accent-b));
     color: #fff;
     border: none;
     border-radius: 99px;
@@ -533,6 +693,21 @@
     <p>Some clicks a day keeps the brain a-ok</p>
   </header>
 
+  <div class="theme-panel">
+    <label for="theme-select">Theme</label>
+    <select id="theme-select" aria-label="Visual theme">
+      <option value="forest">Forest</option>
+      <option value="fire">Fire</option>
+      <option value="shadow">Shadow</option>
+      <option value="spirit">Spirit</option>
+      <option value="water">Water</option>
+      <option value="holy">Holy</option>
+      <option value="heaven">Heaven</option>
+      <option value="death">Death</option>
+      <option value="unholy">Unholy</option>
+    </select>
+  </div>
+
   <!-- Stats bar -->
   <div class="stats">
     <div class="stat-box">
@@ -596,16 +771,38 @@
 </div>
 
 <script>
-  const KEYS = { day:'dcg_day', clickedSet:'dcg_clickedSet', lastDate:'dcg_lastDate', best:'dcg_best', stars:'dcg_stars', openStar:'dcg_openStar' };
+  const KEYS = { day:'dcg_day', clickedSet:'dcg_clickedSet', lastDate:'dcg_lastDate', best:'dcg_best', stars:'dcg_stars', openStar:'dcg_openStar', theme:'dcg_theme' };
   const DAY_GRADIENTS = ['#e84393,#7b2fff','#ff6b35,#f7c948','#2ecbaa,#1a6fff','#ff3c5f,#ff9de2','#a78bfa,#06b6d4','#f59e0b,#ef4444','#10b981,#3b82f6','#f43f5e,#fb923c','#8b5cf6,#ec4899','#14b8a6,#6366f1','#f97316,#a855f7','#22d3ee,#f472b6','#84cc16,#22c55e','#e879f9,#fbbf24','#38bdf8,#818cf8','#fb7185,#fda4af','#a3e635,#4ade80','#c084fc,#f0abfc','#fdba74,#fb923c','#6ee7b7,#34d399','#fca5a5,#f87171','#93c5fd,#60a5fa','#fcd34d,#fbbf24','#d8b4fe,#c084fc','#86efac,#4ade80','#fed7aa,#fb923c','#bae6fd,#38bdf8','#fce7f3,#f9a8d4','#e0e7ff,#a5b4fc','#d1fae5,#6ee7b7'];
   const PRAISE_NORMAL = [["A DAY HAS BEEN VANQUISHED!","You pressed the sacred button and reality has filed the paperwork. Return tomorrow for another microscopic triumph."],["THE CLICKENING IS COMPLETE!","Historians are already arguing about where to put the statue. The streak survives."],["ABSURDLY WELL CLICKED!","One tiny button, one colossal act of unnecessary discipline. Tomorrow demands a sequel."],["THE DAILY PROPHECY IS FULFILLED!","The button has been clicked, the cosmos has nodded, and your future self is being smug about it."],["STREAK DEFENSE SUCCESSFUL!","Against all odds, distractions, and basic common sense, you have protected the ritual."],["BUTTON DOMINANCE ACHIEVED!","A lesser person might have forgotten. You arrived, clicked, and left destiny slightly intimidated."],["TODAY HAS BEEN CERTIFIED CLICKED!","The auditors are weeping. The numbers are glowing. The streak machine remains operational."]];
   const PRAISE_MILESTONE = [["10 DAYS!","TEN WHOLE DAYS. A double-digit monument to clicking discipline. Somewhere, a tiny parade is blocking traffic in your honor."],["20 DAYS!","TWENTY DAYS! This is no longer a habit; this is a legally suspicious lifestyle choice with excellent branding."],["30 DAYS!","ONE FULL PERIOD COMPLETE! You have earned a star, bent time around a button, and forced the calendar to acknowledge your greatness."]];
+  const THEMES = ['forest','fire','shadow','spirit','water','holy','heaven','death','unholy'];
+  const THEME_BUTTON_GRADIENTS = {
+    forest: [['#d7f99a','#3f8f53'],['#b7e36f','#245f38'],['#83d475','#174a2d'],['#e5ffb8','#5e9f42'],['#65d69a','#1f6e45']],
+    fire: [['#ffe08a','#b91c1c'],['#ff7a2d','#7f1d1d'],['#ffc447','#c2410c'],['#ff5b2e','#7c120d'],['#fff1a8','#dc2626']],
+    shadow: [['#c7cad8','#2e3344'],['#8e96b8','#171a25'],['#afb4c9','#3b4054'],['#747b98','#11131d'],['#e5e7f2','#4b5166']],
+    spirit: [['#ffffff','#239b78'],['#b8f7d4','#0f766e'],['#9ce8ff','#1d8096'],['#86efac','#166534'],['#eaffff','#2dd4bf']],
+    water: [['#a7f3ff','#075985'],['#38bdf8','#0c4a6e'],['#2dd4bf','#0f766e'],['#dffbff','#0284c7'],['#7dd3fc','#164e63']],
+    holy: [['#ffffff','#b68a10'],['#ffe68a','#854d0e'],['#fff1a8','#ca8a04'],['#facc15','#713f12'],['#fffbe8','#d6a80f']],
+    heaven: [['#ffffff','#3b82f6'],['#dbeafe','#60a5fa'],['#f6d36b','#4c8ddb'],['#e0f2fe','#0ea5e9'],['#fff7cc','#6ea8fe']],
+    death: [['#f3ead8','#3a352d'],['#d8c08a','#4a4030'],['#b8aa8c','#211f1a'],['#eee5d1','#655f54'],['#a69a84','#302b24']],
+    unholy: [['#ffb3ec','#7e145f'],['#ff4fd8','#4c0d3a'],['#a855f7','#581c87'],['#fb7185','#831843'],['#ffe6f8','#a21caf']]
+  };
+
+  let currentTheme = 'forest';
 
   function todayStr(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
   function parseLocalDate(s){ if(!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null; const [y,m,d]=s.split('-').map(Number); const dt=new Date(y,m-1,d); return (dt.getFullYear()===y&&dt.getMonth()===m-1&&dt.getDate()===d)?dt:null; }
   function daysBetweenDates(a,b){const f=parseLocalDate(a), t=parseLocalDate(b); if(!f||!t) return null; return Math.round((t-f)/(24*60*60*1000));}
   function load(k,f){const v=localStorage.getItem(k); if(v===null) return f; try{return JSON.parse(v);}catch{return v;}}
   function save(k,v){localStorage.setItem(k,JSON.stringify(v));}
+
+  function applyTheme(theme, shouldSave = true){
+    currentTheme = THEMES.includes(theme) ? theme : 'forest';
+    document.body.dataset.theme = currentTheme;
+    const select = document.getElementById('theme-select');
+    if (select) select.value = currentTheme;
+    if (shouldSave) save(KEYS.theme, currentTheme);
+  }
 
   let state={day:1,clickedSet:new Set(),lastDate:'',best:0,stars:[],openStar:-1};
   let openButtonGroup=-1;
@@ -632,7 +829,7 @@
   function renderStarPanel(){const panel=document.getElementById('star-panel-container'); if(state.openStar===-1||state.openStar>=state.stars.length){panel.innerHTML='';return;} const star=state.stars[state.openStar]; let chips=''; for(let d=1;d<=30;d++){const [c1,c2]=DAY_GRADIENTS[d-1].split(','); chips+=`<div class="star-day-chip" style="background:linear-gradient(135deg,${c1},${c2})">Day ${d}<br><small style="font-weight:400;opacity:0.85">${d} click${d>1?'s':''}</small></div>`;} panel.innerHTML=`<div class="star-panel"><h3>⭐ Period ${star.id} — completed on ${star.completedOn}</h3><div class="star-days-grid">${chips}</div></div>`;}
 
   const BTN_GRADIENTS=[['#ff5c74','#b01e31'],['#ff8c42','#c45a10'],['#ffcc44','#c47a00'],['#aaee44','#5a8a00'],['#44ddaa','#0a7a5a'],['#44aaff','#0055bb'],['#8866ff','#4400cc'],['#ee44cc','#990088'],['#ff6688','#aa2244'],['#ff9966','#cc4400'],['#ffee66','#aa8800'],['#88ee66','#338800'],['#22ddcc','#007766'],['#6699ff','#2233cc'],['#bb66ff','#6600cc'],['#ff66bb','#cc0077'],['#ff4455','#880011'],['#ffaa33','#885500'],['#ddff44','#778800'],['#33ffaa','#007744'],['#33ccff','#005588'],['#9944ff','#440088'],['#ff44aa','#880044'],['#ff7733','#993300'],['#eecc22','#886600'],['#66ff88','#118833'],['#00ccdd','#006677'],['#7755ee','#330099'],['#ff55dd','#881166'],['#ff3333','#991111']];
-  function btnGradientStyle(i){const [c1,c2]=BTN_GRADIENTS[i%BTN_GRADIENTS.length]; return `background: radial-gradient(circle at 35% 35%, ${c1}, ${c2} 80%);box-shadow: 0 0 16px ${c2+'88'}, inset 0 2px 4px rgba(255,255,255,0.18);`;}
+  function btnGradientStyle(i){const palette=THEME_BUTTON_GRADIENTS[currentTheme]||BTN_GRADIENTS;const [c1,c2]=palette[i%palette.length]; return `background: radial-gradient(circle at 35% 35%, ${c1}, ${c2} 80%);box-shadow: 0 0 16px ${c2+'88'}, inset 0 2px 4px rgba(255,255,255,0.18);`;}
   function buildBtn(label,i,isClicked,isDone,onClickFn){const btn=document.createElement('button');btn.className='click-btn'; if(isClicked){btn.classList.add('clicked');btn.textContent='✓';btn.style.pointerEvents='none';btn.disabled=true;} else if(isDone){btn.classList.add('locked');btn.textContent=label;btn.disabled=true;} else {btn.setAttribute('style',btnGradientStyle(i));btn.textContent=label;btn.addEventListener('click',()=>onClickFn(btn));} return btn;}
 
   function renderButtons(){const grid=document.getElementById('btn-grid');const required=state.day;grid.innerHTML='';const dayDone=state.clickedSet.size>=required;if(dayDone)openButtonGroup=-1; const fullPeriods=Math.floor(required/30), remainder=required%30;
@@ -666,12 +863,13 @@
     document.getElementById('admin-toggle-btn').classList.toggle('hidden', !allowed);
   }
 
-  document.getElementById('reset-btn').addEventListener('click',()=>{if(!confirm('Reset ALL progress? This cannot be undone.'))return;Object.values(KEYS).forEach((k)=>localStorage.removeItem(k));loadState();init();});
+  document.getElementById('reset-btn').addEventListener('click',()=>{if(!confirm('Reset ALL progress? This cannot be undone.'))return;Object.entries(KEYS).filter(([name])=>name!=='theme').forEach(([,key])=>localStorage.removeItem(key));loadState();init();});
   document.getElementById('setday-btn').addEventListener('click',()=>{const target=parseInt(document.getElementById('setday-input').value,10);if(isNaN(target)||target<1||target>300){alert('Please enter a day number from 1 to 300.');return;} state.day=target;state.clickedSet=new Set();openButtonGroup=-1;state.lastDate=todayStr();saveState();renderButtons();updateUI();});
   document.getElementById('export-save-btn').addEventListener('click',()=>alert('Export from inline version is disabled in this compact embed.'));
   document.getElementById('import-save-btn').addEventListener('click',()=>alert('Import from inline version is disabled in this compact embed.'));
+  document.getElementById('theme-select').addEventListener('change',(event)=>{applyTheme(event.target.value);renderButtons();});
 
-  async function init(){loadState();reconcileDay();saveState();renderButtons();updateUI();await syncAdminPanelVisibility();}
+  async function init(){applyTheme(load(KEYS.theme,'forest'), false);loadState();reconcileDay();saveState();renderButtons();updateUI();await syncAdminPanelVisibility();}
   init();
 </script>
 </body>
