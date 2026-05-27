@@ -180,6 +180,16 @@
       color: var(--bg);
       outline: none;
     }
+    .home-link {
+      position: relative;
+      z-index: 2;
+      display: inline-block;
+      margin-bottom: 12px;
+      padding: 8px 18px;
+      text-decoration: none;
+      font-size: clamp(0.65rem, 1.8vw, 0.85rem);
+      letter-spacing: 0.14em;
+    }
 
     .mode-row {
       display: flex;
@@ -320,6 +330,7 @@
 </head>
 <body>
 
+  <a href="/" class="neon-btn home-link">Back to sarcasm.games</a>
   <div id="title">⬡ CYBER PONG ⬡</div>
 
   <!-- Score display -->
