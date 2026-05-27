@@ -1,37 +1,657 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Daily Click</title>
-    <link rel="stylesheet" href="styles.css" />
-  </head>
-  <body>
-    <main class="container">
-      <header class="header">
-        <h1 id="title">Daily Click Challenge</h1>
-        <p id="status" class="status"></p>
-      </header>
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>The Daily Click</title>
+<style>
+  /* ===== RESET & BASE ===== */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-      <section id="buttons" class="button-grid" aria-live="polite"></section>
+  :root {
+    --bg-deep:    #0a0812;
+    --bg-mid:     #110f1e;
+    --bg-card:    #1a1730;
+    --bg-card2:   #211e3a;
+    --border-dim: rgba(120,100,220,0.18);
+    --border-glow:rgba(180,140,255,0.45);
+    --text-main:  #e8e0ff;
+    --text-muted: #8a80b0;
+    --text-dim:   #4a4470;
+    --red-main:   #e8334a;
+    --red-dark:   #b01e31;
+    --red-glow:   rgba(232,51,74,0.45);
+    --gold:       #f5c842;
+    --gold-glow:  rgba(245,200,66,0.5);
+    --purple:     #9b59f5;
+    --teal:       #2ecbaa;
+    --font: 'Segoe UI', system-ui, sans-serif;
+    --radius: 12px;
+  }
 
-      <p id="message" class="message" aria-live="polite"></p>
+  body {
+    background: var(--bg-deep);
+    color: var(--text-main);
+    font-family: var(--font);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem 1rem 4rem;
+    overflow-x: hidden;
+  }
 
-      <div class="controls">
-        <button id="new-day" class="control-button">Start ny dag</button>
-        <button id="debug-streak" class="control-button debug-button">Debug streak</button>
-        <button id="reset" class="control-button">Reset progress</button>
-      </div>
-    </main>
+  /* ===== BACKGROUND STARS ===== */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 30% 60%, rgba(255,255,255,0.3) 0%, transparent 100%),
+      radial-gradient(1px 1px at 55% 10%, rgba(255,255,255,0.5) 0%, transparent 100%),
+      radial-gradient(1px 1px at 75% 80%, rgba(255,255,255,0.3) 0%, transparent 100%),
+      radial-gradient(1px 1px at 90% 40%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 20% 90%, rgba(255,255,255,0.3) 0%, transparent 100%),
+      radial-gradient(1px 1px at 65% 50%, rgba(255,255,255,0.2) 0%, transparent 100%),
+      radial-gradient(1.5px 1.5px at 45% 35%, rgba(200,180,255,0.5) 0%, transparent 100%),
+      radial-gradient(1px 1px at 82% 15%, rgba(255,255,255,0.35) 0%, transparent 100%),
+      radial-gradient(2px 2px at 5% 55%, rgba(180,150,255,0.3) 0%, transparent 100%);
+    pointer-events: none;
+    z-index: 0;
+  }
 
-    <div id="celebration" class="celebration" aria-live="assertive" aria-atomic="true">
-      <div class="celebration-content">
-        <p id="celebration-title" class="celebration-title"></p>
-        <p id="celebration-subtitle" class="celebration-subtitle"></p>
-      </div>
-      <div id="confetti-layer" class="confetti-layer" aria-hidden="true"></div>
+  /* ===== LAYOUT ===== */
+  .container {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 540px;
+  }
+
+  /* ===== HEADER ===== */
+  header {
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+  header h1 {
+    font-size: clamp(1.6rem, 5vw, 2.2rem);
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    background: linear-gradient(110deg, #c9a0ff 0%, #7b5fff 28%, #ffffff 42%, #ff6ba8 56%, #c9a0ff 100%);
+    background-size: 260% 100%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: none;
+    margin-bottom: 0.25rem;
+    animation: title-shimmer 4.5s ease-in-out infinite;
+  }
+  header p {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* ===== STATS BAR ===== */
+  .stats {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .stat-box {
+    flex: 1;
+    background: var(--bg-card);
+    border: 1px solid var(--border-dim);
+    border-radius: var(--radius);
+    padding: 0.7rem 0.5rem;
+    text-align: center;
+  }
+  .stat-box .label {
+    font-size: 0.68rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    display: block;
+    margin-bottom: 0.2rem;
+  }
+  .stat-box .value {
+    font-size: 1.4rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #c9a0ff, #7b5fff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* ===== STARS ROW ===== */
+  .stars-section {
+    margin-bottom: 1.5rem;
+  }
+  .stars-section h2 {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 0.6rem;
+  }
+  .stars-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  /* ===== STAR BUTTON ===== */
+  .star-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    position: relative;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s;
+  }
+  .star-btn:hover { transform: scale(1.15); }
+  .star-btn:active { transform: scale(0.95); }
+  .star-btn svg { width: 40px; height: 40px; filter: drop-shadow(0 0 6px var(--gold-glow)); }
+  .star-btn .star-num {
+    position: absolute;
+    font-size: 0.6rem;
+    font-weight: 700;
+    color: var(--bg-deep);
+    pointer-events: none;
+  }
+
+  /* ===== STAR EXPAND PANEL ===== */
+  .star-panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border-glow);
+    border-radius: var(--radius);
+    padding: 1rem;
+    margin-top: 0.5rem;
+    margin-bottom: 1rem;
+    animation: fadeIn 0.3s ease;
+  }
+  .star-panel h3 {
+    font-size: 0.8rem;
+    color: var(--gold);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 0.8rem;
+  }
+  .star-days-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+    gap: 0.4rem;
+  }
+  .star-day-chip {
+    border-radius: 8px;
+    padding: 0.35rem 0.4rem;
+    text-align: center;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #fff;
+  }
+
+  /* ===== MAIN GAME CARD ===== */
+  .game-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-dim);
+    border-radius: 18px;
+    padding: 1.5rem 1.2rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .game-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 0%, rgba(120,80,255,0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .day-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: 0.3rem;
+  }
+  .day-number {
+    font-size: clamp(2rem, 8vw, 3rem);
+    font-weight: 800;
+    background: linear-gradient(135deg, #ff9de2, #ff6ba8, #c96fff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1;
+    margin-bottom: 0.5rem;
+  }
+  .day-status {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    margin-bottom: 1.5rem;
+    min-height: 1.2em;
+  }
+
+  /* ===== BUTTON GRID ===== */
+  .btn-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+    justify-content: center;
+    margin-bottom: 0.5rem;
+  }
+
+  /* ===== CLICK BUTTON ===== */
+  /* #changed: base styles only — per-button gradient colors applied inline in JS */
+  .click-btn {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    border: 3px solid rgba(0,0,0,0.25);
+    cursor: pointer;
+    font-size: 1.5rem;
+    color: #fff;
+    font-weight: 900;
+    position: relative;
+    transition: transform 0.15s, box-shadow 0.15s, opacity 0.2s;
+    outline: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.4);
+  }
+  .click-btn:hover:not([style*="pointer-events: none"]):not(.locked) {
+    transform: scale(1.1);
+    filter: brightness(1.15);
+  }
+  .click-btn:active:not(.locked) {
+    transform: scale(0.93);
+  }
+  /* Clicked state — teal checkmark */
+  .click-btn.clicked {
+    background: radial-gradient(circle at 35% 35%, #5af0c0, #2ecbaa 55%, #1a7f6a) !important;
+    border-color: #1a7f6a !important;
+    box-shadow: 0 0 16px rgba(46,203,170,0.45) !important;
+    cursor: default;
+  }
+  /* Locked state (day done) */
+  .click-btn.locked {
+    background: radial-gradient(circle at 35% 35%, #3a354a, #2a2540 55%, #1e1a30) !important;
+    border-color: #3a354a !important;
+    box-shadow: none !important;
+    cursor: not-allowed;
+    opacity: 0.45;
+    pointer-events: none;
+  }
+  /* Ripple */
+  .click-btn .ripple {
+    position: absolute;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.5);
+    animation: ripple-anim 0.5s ease-out forwards;
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+  }
+
+  /* ===== COLLAPSIBLE BUTTON GROUP (star toggle inside game card) ===== */
+  /* #added: wraps groups of 30 buttons behind a clickable inline star */
+  .btn-group-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: none;
+    border: 1.5px solid rgba(245,200,66,0.35);
+    border-radius: 99px;
+    padding: 0.35rem 0.9rem 0.35rem 0.5rem;
+    cursor: pointer;
+    color: var(--gold);
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    transition: background 0.2s, border-color 0.2s;
+    margin-bottom: 0.5rem;
+  }
+  .btn-group-toggle:hover { background: rgba(245,200,66,0.08); border-color: rgba(245,200,66,0.6); }
+  .btn-group-toggle svg { width: 28px; height: 28px; flex-shrink: 0; }
+  .btn-group-toggle .toggle-arrow {
+    font-size: 0.65rem;
+    opacity: 0.6;
+    transition: transform 0.2s;
+  }
+  .btn-group-toggle.open .toggle-arrow { transform: rotate(180deg); }
+
+  /* #added: visual feedback when an entire 30-button star group is completed */
+  .btn-group-toggle.group-complete {
+    border-color: rgba(245,200,66,0.95);
+    background: linear-gradient(135deg, rgba(245,200,66,0.18), rgba(255,157,226,0.16));
+    box-shadow: 0 0 18px rgba(245,200,66,0.22);
+  }
+
+  .btn-group-complete-text {
+    color: #ffe27a;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .btn-group-inner {
+    display: none;
+    flex-wrap: wrap;
+    gap: 0.7rem;
+    justify-content: center;
+    padding: 0.8rem 0 0.4rem;
+    animation: fadeIn 0.25s ease;
+  }
+  .btn-group-inner.open { display: flex; }
+
+  /* ===== COMPLETED OVERLAY ===== */
+  .day-done-msg {
+    font-size: 0.85rem;
+    color: var(--teal);
+    margin-top: 0.8rem;
+    min-height: 1.4em;
+    letter-spacing: 0.04em;
+  }
+
+  /* ===== PROGRESS BAR ===== */
+  .progress-wrap {
+    margin-top: 1.2rem;
+    height: 6px;
+    background: rgba(255,255,255,0.07);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+  .progress-bar {
+    height: 100%;
+    border-radius: 99px;
+    background: linear-gradient(90deg, #7b5fff, #ff6ba8);
+    transition: width 0.4s ease;
+  }
+
+  /* ===== POPUP CELEBRATION ===== */
+  #popup-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(8,6,18,0.88);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    text-align: center;
+    padding: 2rem;
+  }
+  #popup-overlay.show { display: flex; animation: fadeIn 0.35s ease; }
+
+  .popup-inner {
+    max-width: 380px;
+  }
+  .popup-emoji {
+    font-size: 4rem;
+    margin-bottom: 0.5rem;
+    animation: bounce 0.6s ease infinite alternate;
+    display: block;
+  }
+  .popup-title {
+    font-size: clamp(1.6rem, 6vw, 2.4rem);
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--gold), #ff9de2, var(--purple));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 0.6rem;
+    animation: popIn 0.5s cubic-bezier(0.22,1,0.36,1);
+  }
+  .popup-sub {
+    font-size: 1rem;
+    color: var(--text-muted);
+    margin-bottom: 1.5rem;
+    line-height: 1.5;
+  }
+  .popup-close-btn {
+    background: linear-gradient(135deg, #7b5fff, #ff6ba8);
+    color: #fff;
+    border: none;
+    border-radius: 99px;
+    padding: 0.7rem 2.2rem;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    transition: transform 0.15s, opacity 0.15s;
+  }
+  .popup-close-btn:hover { transform: scale(1.05); }
+  .popup-close-btn:active { transform: scale(0.97); }
+
+  /* Confetti particles */
+  .confetti-piece {
+    position: fixed;
+    width: 8px; height: 8px;
+    border-radius: 2px;
+    pointer-events: none;
+    z-index: 99;
+    animation: confetti-fall var(--dur, 2.5s) var(--delay, 0s) ease-in forwards;
+  }
+
+  /* ===== TESTING CONTROLS (reset + set-day) ===== */
+  /* #added: dev toolbar fixed to bottom-left, discreet styling */
+  .dev-bar {
+    position: fixed;
+    bottom: 1rem;
+    right: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    z-index: 10;
+  }
+  .reset-btn, .setday-btn, .save-btn {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: var(--text-dim);
+    border-radius: 6px;
+    padding: 0.3rem 0.6rem;
+    font-size: 0.65rem;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    transition: color 0.2s, border-color 0.2s;
+    font-family: var(--font);
+  }
+  .reset-btn:hover, .setday-btn:hover, .save-btn:hover { color: var(--text-muted); border-color: rgba(255,255,255,0.2); }
+
+  .import-save-input {
+    display: none;
+  }
+  /* #added: small number input for target day */
+  .setday-input {
+    width: 42px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: var(--text-muted);
+    border-radius: 6px;
+    padding: 0.3rem 0.4rem;
+    font-size: 0.65rem;
+    text-align: center;
+    outline: none;
+    font-family: var(--font);
+  }
+  .setday-input:focus { border-color: rgba(255,255,255,0.25); }
+
+  /* ===== ANIMATIONS ===== */
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes bounce { from { transform: translateY(0); } to { transform: translateY(-12px); } }
+  @keyframes popIn { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  @keyframes title-shimmer {
+    0%, 18%   { background-position: 100% 50%; }
+    48%, 100% { background-position: 0% 50%; }
+  }
+  @keyframes ripple-anim {
+    from { width: 10px; height: 10px; opacity: 0.6; }
+    to   { width: 120px; height: 120px; opacity: 0; }
+  }
+  @keyframes confetti-fall {
+    0%   { transform: translateY(-30px) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+  }
+  @keyframes btn-click-pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(46,203,170,0.7); }
+    70%  { box-shadow: 0 0 0 16px rgba(46,203,170,0); }
+    100% { box-shadow: 0 0 0 0 rgba(46,203,170,0); }
+  }
+  .pulse-anim { animation: btn-click-pulse 0.5s ease-out; }
+
+  /* ===== RESPONSIVE ===== */
+  @media (max-width: 400px) {
+    .click-btn { width: 62px; height: 62px; font-size: 1.2rem; }
+    .btn-grid { gap: 0.6rem; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    header h1 { animation: none; }
+  }
+</style>
+</head>
+<body>
+<a href="/" style="position: relative; z-index: 2; color: var(--text-main); text-decoration: none; margin-bottom: 1rem;">← Back to sarcasm.games</a>
+<div class="container">
+  <header>
+    <h1>The Daily Click</h1>
+    <p>One click a day builds your streak</p>
+  </header>
+
+  <!-- Stats bar -->
+  <div class="stats">
+    <div class="stat-box">
+      <span class="label">Current day</span>
+      <span class="value" id="stat-day">1</span>
     </div>
+    <div class="stat-box">
+      <span class="label">Best streak</span>
+      <span class="value" id="stat-best">0</span>
+    </div>
+    <div class="stat-box">
+      <span class="label">Stars earned</span>
+      <span class="value" id="stat-stars">0</span>
+    </div>
+  </div>
 
-    <script type="module" src="app.js?v=20260526b"></script>
-  </body>
+  <!-- Stars archive section -->
+  <div class="stars-section" id="stars-section" style="display:none;">
+    <h2>&#9733; Completed periods</h2>
+    <div class="stars-row" id="stars-row"></div>
+    <div id="star-panel-container"></div>
+  </div>
+
+  <!-- Main game card -->
+  <div class="game-card">
+    <div class="day-label">Day</div>
+    <div class="day-number" id="day-number">1</div>
+    <div class="day-status" id="day-status">Click the button to begin</div>
+
+    <div class="btn-grid" id="btn-grid"></div>
+
+    <div class="day-done-msg" id="day-done-msg"></div>
+
+    <div class="progress-wrap">
+      <div class="progress-bar" id="progress-bar" style="width:0%"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Celebration popup -->
+<div id="popup-overlay" role="dialog" aria-modal="true" aria-label="Day complete">
+  <div class="popup-inner">
+    <span class="popup-emoji" id="popup-emoji">🎉</span>
+    <div class="popup-title" id="popup-title">Day Complete!</div>
+    <div class="popup-sub" id="popup-sub">Amazing work. Come back tomorrow!</div>
+    <button class="popup-close-btn" id="popup-close-btn">Continue</button>
+  </div>
+</div>
+
+<!-- Discreet reset button for testing -->
+<!-- #added: dev toolbar — discreet testing controls fixed to bottom-right -->
+<div class="dev-bar">
+  <!-- #changed: removed max="30" so tester can jump past day 30 -->
+  <input class="setday-input" id="setday-input" type="number" min="1" max="300" value="1" title="Jump to day (testing)" />
+  <button class="setday-btn" id="setday-btn" title="Set current day for testing">set day</button>
+  <button class="save-btn" id="export-save-btn" title="Export save file">export</button>
+  <button class="save-btn" id="import-save-btn" title="Import save file">import</button>
+  <input class="import-save-input" id="import-save-input" type="file" accept="application/json,.json" />
+  <button class="reset-btn" id="reset-btn" title="Reset all progress (testing only)">reset</button>
+</div>
+
+<script>
+  const KEYS = { day:'dcg_day', clickedSet:'dcg_clickedSet', lastDate:'dcg_lastDate', best:'dcg_best', stars:'dcg_stars', openStar:'dcg_openStar' };
+  const DAY_GRADIENTS = ['#e84393,#7b2fff','#ff6b35,#f7c948','#2ecbaa,#1a6fff','#ff3c5f,#ff9de2','#a78bfa,#06b6d4','#f59e0b,#ef4444','#10b981,#3b82f6','#f43f5e,#fb923c','#8b5cf6,#ec4899','#14b8a6,#6366f1','#f97316,#a855f7','#22d3ee,#f472b6','#84cc16,#22c55e','#e879f9,#fbbf24','#38bdf8,#818cf8','#fb7185,#fda4af','#a3e635,#4ade80','#c084fc,#f0abfc','#fdba74,#fb923c','#6ee7b7,#34d399','#fca5a5,#f87171','#93c5fd,#60a5fa','#fcd34d,#fbbf24','#d8b4fe,#c084fc','#86efac,#4ade80','#fed7aa,#fb923c','#bae6fd,#38bdf8','#fce7f3,#f9a8d4','#e0e7ff,#a5b4fc','#d1fae5,#6ee7b7'];
+  const PRAISE_NORMAL = [["You showed up.","Consistency is the true magic. See you tomorrow!"],["Day done!","Another day conquered. The streak lives on."],["Well played.","You clicked. You conquered. Repeat."],["Nice work!","Small acts, big momentum. Keep it going!"],["Streak secured!","The ritual continues. Tomorrow awaits."],["Committed!","Your future self thanks you. See you tomorrow."],["Locked in.","Day complete. The journey deepens."]];
+  const PRAISE_MILESTONE = [["10 DAYS!","A full tenth day! You're building something real. Legends are made one click at a time."],["20 DAYS!","TWENTY days of dedication! The stars are aligning. You are unstoppable."],["30 DAYS!","ONE FULL PERIOD COMPLETE! You've earned a star — a testament to your incredible persistence!"]];
+
+  function todayStr(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+  function parseLocalDate(s){ if(!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null; const [y,m,d]=s.split('-').map(Number); const dt=new Date(y,m-1,d); return (dt.getFullYear()===y&&dt.getMonth()===m-1&&dt.getDate()===d)?dt:null; }
+  function daysBetweenDates(a,b){const f=parseLocalDate(a), t=parseLocalDate(b); if(!f||!t) return null; return Math.round((t-f)/(24*60*60*1000));}
+  function load(k,f){const v=localStorage.getItem(k); if(v===null) return f; try{return JSON.parse(v);}catch{return v;}}
+  function save(k,v){localStorage.setItem(k,JSON.stringify(v));}
+
+  let state={day:1,clickedSet:new Set(),lastDate:'',best:0,stars:[],openStar:-1};
+  let openButtonGroup=-1;
+
+  function loadState(){state.day=load(KEYS.day,1);state.clickedSet=new Set(load(KEYS.clickedSet,[]));state.lastDate=load(KEYS.lastDate,'');state.best=load(KEYS.best,0);state.stars=load(KEYS.stars,[]);state.openStar=load(KEYS.openStar,-1);}
+  function saveState(){save(KEYS.day,state.day);save(KEYS.clickedSet,Array.from(state.clickedSet));save(KEYS.lastDate,state.lastDate);save(KEYS.best,state.best);save(KEYS.stars,state.stars);save(KEYS.openStar,state.openStar);}
+
+  function reconcileDay(){const today=todayStr(); if(!state.lastDate){state.lastDate=today;state.clickedSet=new Set();return;} if(state.lastDate===today)return; const daysElapsed=daysBetweenDates(state.lastDate,today); if(daysElapsed!==1){state.day=1;state.clickedSet=new Set();state.lastDate=today;return;} const required=state.day; if(state.clickedSet.size<required){state.day=1;state.clickedSet=new Set();} else { if(state.day>=30){archivePeriod(state.lastDate);state.day=1;} else {state.day+=1;} state.clickedSet=new Set(); } state.lastDate=today; }
+  function archivePeriod(completedOn=todayStr()){state.openStar=-1;openButtonGroup=-1; if(state.stars.some((s)=>s.completedOn===completedOn)) return; const periodId=state.stars.length+1; state.stars.push({id:periodId,completedOn});}
+
+  function handleClick(btnEl, idx){const required=state.day; if(state.clickedSet.size>=required||state.clickedSet.has(idx))return; btnEl.classList.add('clicked');btnEl.style.pointerEvents='none';btnEl.disabled=true;btnEl.textContent='✓'; state.clickedSet.add(idx);state.lastDate=todayStr(); if(state.day>state.best)state.best=state.day; updateButtonGroupLabels();updateProgressBar();updateUI(); if(state.clickedSet.size>=required){if(state.day===30)archivePeriod(state.lastDate);openButtonGroup=-1;saveState();renderButtons();updateUI();onDayComplete();} else saveState(); }
+
+  function onDayComplete(){document.getElementById('day-done-msg').textContent='✨ Day complete! Come back tomorrow.';document.getElementById('day-status').textContent='All clicks used — see you tomorrow!'; let emoji,title,sub; if(state.day===10||state.day===20||state.day===30){const i=state.day===10?0:state.day===20?1:2;[title,sub]=PRAISE_MILESTONE[i];emoji=state.day===30?'⭐':state.day===20?'🌟':'🔥';} else {const r=PRAISE_NORMAL[Math.floor(Math.random()*PRAISE_NORMAL.length)];[title,sub]=r;emoji=['🎉','✨','🌙','💫','⚡','🔮','🎇'][state.day%7];} setTimeout(()=>showPopup(emoji,title,sub),500); setTimeout(()=>launchConfetti(),600);}
+
+  function showPopup(emoji,title,sub){document.getElementById('popup-emoji').textContent=emoji;document.getElementById('popup-title').textContent=title;document.getElementById('popup-sub').textContent=sub;document.getElementById('popup-overlay').classList.add('show');}
+  document.getElementById('popup-close-btn').addEventListener('click',()=>{document.getElementById('popup-overlay').classList.remove('show');clearConfetti();});
+
+  const CONFETTI_COLORS=['#ff6ba8','#c96fff','#f5c842','#2ecbaa','#7b5fff','#ff9de2','#38bdf8']; const confettiPieces=[];
+  function launchConfetti(){clearConfetti();for(let i=0;i<55;i++){const el=document.createElement('div');el.classList.add('confetti-piece');el.style.left=Math.random()*100+'vw';el.style.top='-10px';el.style.background=CONFETTI_COLORS[Math.floor(Math.random()*CONFETTI_COLORS.length)];el.style.setProperty('--dur',(1.8+Math.random()*1.5)+'s');el.style.setProperty('--delay',(Math.random()*0.8)+'s');el.style.borderRadius=Math.random()>0.5?'50%':'2px';el.style.width=(6+Math.random()*8)+'px';el.style.height=(6+Math.random()*8)+'px';document.body.appendChild(el);confettiPieces.push(el);}}
+  function clearConfetti(){confettiPieces.forEach((el)=>el.remove());confettiPieces.length=0;}
+
+  function renderStars(){const section=document.getElementById('stars-section'),row=document.getElementById('stars-row'); if(state.stars.length===0){section.style.display='none';return;} section.style.display='block';row.innerHTML=''; state.stars.forEach((star,idx)=>{const btn=document.createElement('button');btn.className='star-btn';btn.title=`Period ${star.id} — completed ${star.completedOn}`;btn.innerHTML=`<svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="sg${idx}" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="${idx%2===0?'#f5c842':'#ffd700'}" /><stop offset="100%" stop-color="${idx%2===0?'#ff9de2':'#ff6ba8'}" /></linearGradient></defs><polygon points="20,3 24.7,14.4 37,14.4 27.2,21.6 31,33 20,26 9,33 12.8,21.6 3,14.4 15.3,14.4" fill="url(#sg${idx})" stroke="#b8860b" stroke-width="0.8"/></svg><span class="star-num">${star.id}</span>`;btn.addEventListener('click',()=>toggleStarPanel(idx));row.appendChild(btn);});renderStarPanel();}
+  function toggleStarPanel(idx){state.openStar=state.openStar===idx?-1:idx;saveState();renderStarPanel();}
+  function renderStarPanel(){const panel=document.getElementById('star-panel-container'); if(state.openStar===-1||state.openStar>=state.stars.length){panel.innerHTML='';return;} const star=state.stars[state.openStar]; let chips=''; for(let d=1;d<=30;d++){const [c1,c2]=DAY_GRADIENTS[d-1].split(','); chips+=`<div class="star-day-chip" style="background:linear-gradient(135deg,${c1},${c2})">Day ${d}<br><small style="font-weight:400;opacity:0.85">${d} click${d>1?'s':''}</small></div>`;} panel.innerHTML=`<div class="star-panel"><h3>⭐ Period ${star.id} — completed on ${star.completedOn}</h3><div class="star-days-grid">${chips}</div></div>`;}
+
+  const BTN_GRADIENTS=[['#ff5c74','#b01e31'],['#ff8c42','#c45a10'],['#ffcc44','#c47a00'],['#aaee44','#5a8a00'],['#44ddaa','#0a7a5a'],['#44aaff','#0055bb'],['#8866ff','#4400cc'],['#ee44cc','#990088'],['#ff6688','#aa2244'],['#ff9966','#cc4400'],['#ffee66','#aa8800'],['#88ee66','#338800'],['#22ddcc','#007766'],['#6699ff','#2233cc'],['#bb66ff','#6600cc'],['#ff66bb','#cc0077'],['#ff4455','#880011'],['#ffaa33','#885500'],['#ddff44','#778800'],['#33ffaa','#007744'],['#33ccff','#005588'],['#9944ff','#440088'],['#ff44aa','#880044'],['#ff7733','#993300'],['#eecc22','#886600'],['#66ff88','#118833'],['#00ccdd','#006677'],['#7755ee','#330099'],['#ff55dd','#881166'],['#ff3333','#991111']];
+  function btnGradientStyle(i){const [c1,c2]=BTN_GRADIENTS[i%BTN_GRADIENTS.length]; return `background: radial-gradient(circle at 35% 35%, ${c1}, ${c2} 80%);box-shadow: 0 0 16px ${c2+'88'}, inset 0 2px 4px rgba(255,255,255,0.18);`;}
+  function buildBtn(label,i,isClicked,isDone,onClickFn){const btn=document.createElement('button');btn.className='click-btn'; if(isClicked){btn.classList.add('clicked');btn.textContent='✓';btn.style.pointerEvents='none';btn.disabled=true;} else if(isDone){btn.classList.add('locked');btn.textContent=label;btn.disabled=true;} else {btn.setAttribute('style',btnGradientStyle(i));btn.textContent=label;btn.addEventListener('click',()=>onClickFn(btn));} return btn;}
+
+  function renderButtons(){const grid=document.getElementById('btn-grid');const required=state.day;grid.innerHTML='';const dayDone=state.clickedSet.size>=required;if(dayDone)openButtonGroup=-1; const fullPeriods=Math.floor(required/30), remainder=required%30;
+    for(let p=0;p<fullPeriods;p++){const groupStart=p*30, groupEnd=groupStart+30;const groupClicked=Array.from(state.clickedSet).filter((x)=>x>=groupStart&&x<groupEnd).length;const groupAllDone=groupClicked>=30; const toggle=document.createElement('button');toggle.className='btn-group-toggle';if(groupAllDone)toggle.classList.add('group-complete');toggle.innerHTML=`<svg viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="tsg${p}" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="${groupAllDone?'#f5c842':'#9b8fcc'}"/><stop offset="100%" stop-color="${groupAllDone?'#ff9de2':'#5a4f99'}"/></linearGradient></defs><polygon points="14,2 17,10.5 26,10.5 19,16 21.5,24.5 14,19.5 6.5,24.5 9,16 2,10.5 11,10.5" fill="url(#tsg${p})"/></svg><span class="btn-group-label" data-group-index="${p}">Period ${p + 1} &mdash; ${groupAllDone ? '30/30' : groupClicked + '/30'}</span>${groupAllDone ? '<span class="btn-group-complete-text">Complete</span>' : ''}<span class="toggle-arrow">▲</span>`;
+      const isGroupOpen=openButtonGroup===p;toggle.classList.toggle('open',isGroupOpen);
+      const inner=document.createElement('div');inner.className='btn-group-inner';inner.classList.toggle('open',isGroupOpen);
+      for(let i=groupStart;i<groupEnd;i++){const local=(i%30)+1;inner.appendChild(buildBtn(local,i,state.clickedSet.has(i),dayDone&&!state.clickedSet.has(i),(b)=>handleClick(b,i)));}
+      toggle.addEventListener('click',()=>{openButtonGroup=openButtonGroup===p?-1:p;renderButtons();});grid.appendChild(toggle);grid.appendChild(inner);
+    }
+    if(remainder>0&&openButtonGroup===-1){const gs=fullPeriods*30;for(let i=gs;i<gs+remainder;i++){const local=(i%30)+1;grid.appendChild(buildBtn(local,i,state.clickedSet.has(i),dayDone&&!state.clickedSet.has(i),(b)=>handleClick(b,i)));}}
+  }
+  function updateButtonGroupLabels(){document.querySelectorAll('.btn-group-label').forEach((el)=>{const p=Number(el.dataset.groupIndex);if(Number.isNaN(p))return; const s=p*30,e=s+30,c=Array.from(state.clickedSet).filter((x)=>x>=s&&x<e).length;el.innerHTML=`Period ${p+1} &mdash; ${c>=30?'30/30':c+'/30'}`;});}
+  function updateProgressBar(){const req=state.day;document.getElementById('progress-bar').style.width=(req>0?(state.clickedSet.size/req)*100:0)+'%';}
+  function updateUI(){document.getElementById('day-number').textContent=state.day;document.getElementById('stat-day').textContent=state.day;document.getElementById('stat-best').textContent=state.best;document.getElementById('stat-stars').textContent=state.stars.length;const req=state.day,done=state.clickedSet.size>=req;document.getElementById('day-status').textContent=done?'All clicks used — see you tomorrow!':`${req-state.clickedSet.size} click${req-state.clickedSet.size>1?'s':''} remaining today`;document.getElementById('day-done-msg').textContent=done?'✨ Day complete! Come back tomorrow.':'';updateProgressBar();renderStars();}
+
+  document.getElementById('reset-btn').addEventListener('click',()=>{if(!confirm('Reset ALL progress? This cannot be undone.'))return;Object.values(KEYS).forEach((k)=>localStorage.removeItem(k));loadState();init();});
+  document.getElementById('setday-btn').addEventListener('click',()=>{const target=parseInt(document.getElementById('setday-input').value,10);if(isNaN(target)||target<1||target>300){alert('Please enter a day number from 1 to 300.');return;} state.day=target;state.clickedSet=new Set();openButtonGroup=-1;state.lastDate=todayStr();saveState();renderButtons();updateUI();});
+  document.getElementById('export-save-btn').addEventListener('click',()=>alert('Export from inline version is disabled in this compact embed.'));
+  document.getElementById('import-save-btn').addEventListener('click',()=>alert('Import from inline version is disabled in this compact embed.'));
+
+  function init(){loadState();reconcileDay();saveState();renderButtons();updateUI();}
+  init();
+</script>
+</body>
 </html>
