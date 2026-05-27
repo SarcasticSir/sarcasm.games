@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>CYBER PONG</title>
+  <style>
+    /* ─── CSS Variables: neon cyberpunk palette ─── */
+    :root {
+      --bg:        #020610;
+      --grid:      rgba(0, 255, 255, 0.04);
+      --cyan:      #00f5ff;
+      --magenta:   #ff00c8;
+      --yellow:    #f5ff00;
+      --white:     #e8f4ff;
+      --glow-c:    0 0 8px #00f5ff, 0 0 20px #00f5ff, 0 0 40px #00f5ff44;
+      --glow-m:    0 0 8px #ff00c8, 0 0 20px #ff00c8, 0 0 40px #ff00c844;
+      --glow-y:    0 0 8px #f5ff00, 0 0 20px #f5ff00;
+      --font-hud:  'Courier New', monospace;
+    }
+
+    /* ─── Reset & base ─── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100dvh;
+      overflow: hidden;
+      font-family: var(--font-hud);
+      color: var(--white);
+      /* Scanline overlay for CRT feel */
+      background-image:
+        repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 2px,
+          rgba(0,0,0,0.18) 2px,
+          rgba(0,0,0,0.18) 4px
+        );
+    }
+
+    /* ─── Grid background ─── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(var(--grid) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ─── Title ─── */
+    #title {
+      position: relative;
+      z-index: 2;
+      font-size: clamp(1.4rem, 4vw, 2.2rem);
+      letter-spacing: 0.35em;
+      text-transform: uppercase;
+      color: var(--cyan);
+      text-shadow: var(--glow-c);
+      margin-bottom: 10px;
+      animation: flicker 6s infinite;
+    }
+
+    /* ─── Score bar ─── */
+    #scoreboard {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      gap: clamp(20px, 6vw, 60px);
+      margin-bottom: 12px;
+    }
+
+    .score {
+      font-size: clamp(2rem, 7vw, 4rem);
+      font-weight: 700;
+      letter-spacing: 0.05em;
+    }
+    #score-left  { color: var(--cyan);    text-shadow: var(--glow-c); }
+    #score-right { color: var(--magenta); text-shadow: var(--glow-m); }
+
+    .score-label {
+      font-size: clamp(0.55rem, 1.5vw, 0.75rem);
+      letter-spacing: 0.2em;
+      opacity: 0.6;
+      text-align: center;
+    }
+    .score-col { display: flex; flex-direction: column; align-items: center; }
+
+    .divider {
+      font-size: clamp(1.5rem, 5vw, 3rem);
+      opacity: 0.3;
+      color: var(--white);
+    }
+
+    /* ─── Canvas wrapper ─── */
+    #canvas-wrap {
+      position: relative;
+      z-index: 2;
+      border: 1px solid rgba(0,245,255,0.25);
+      box-shadow: 0 0 0 1px rgba(255,0,200,0.15),
+                  0 0 30px rgba(0,245,255,0.12),
+                  inset 0 0 60px rgba(0,0,0,0.6);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    canvas {
+      display: block;
+      /* Keeps canvas crisp on hi-DPI */
+      image-rendering: pixelated;
+    }
+
+    /* ─── Controls hint ─── */
+    #controls {
+      position: relative;
+      z-index: 2;
+      margin-top: 14px;
+      display: flex;
+      gap: clamp(16px, 4vw, 40px);
+      font-size: clamp(0.6rem, 1.5vw, 0.72rem);
+      letter-spacing: 0.12em;
+      opacity: 0.45;
+    }
+
+    /* ─── Overlay (start / pause / game-over) ─── */
+    #overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(2,6,16,0.82);
+      z-index: 10;
+      gap: 18px;
+      text-align: center;
+      padding: 20px;
+    }
+    #overlay.hidden { display: none; }
+
+    #overlay h2 {
+      font-size: clamp(1.4rem, 5vw, 2.4rem);
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+    }
+    #overlay p {
+      font-size: clamp(0.75rem, 2.2vw, 0.95rem);
+      letter-spacing: 0.15em;
+      opacity: 0.7;
+      max-width: 280px;
+      line-height: 1.7;
+    }
+
+    /* ─── Neon button ─── */
+    .neon-btn {
+      padding: 10px 32px;
+      border: 1px solid var(--cyan);
+      background: transparent;
+      color: var(--cyan);
+      font-family: var(--font-hud);
+      font-size: clamp(0.8rem, 2.2vw, 1rem);
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      cursor: pointer;
+      box-shadow: var(--glow-c);
+      transition: background 0.2s, color 0.2s;
+      border-radius: 2px;
+    }
+    .neon-btn:hover, .neon-btn:focus {
+      background: var(--cyan);
+      color: var(--bg);
+      outline: none;
+    }
+
+    .mode-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 12px;
+    }
+
+    .mode-btn {
+      padding-inline: 20px;
+      opacity: 0.68;
+    }
+
+    .mode-btn.active {
+      opacity: 1;
+      background: var(--cyan);
+      color: var(--bg);
+    }
+
+    .settings-panel {
+      width: min(420px, 100%);
+      display: grid;
+      gap: 12px;
+      padding: 12px;
+      border: 1px solid rgba(0,245,255,0.22);
+      background: rgba(0,245,255,0.045);
+      box-shadow: inset 0 0 18px rgba(0,245,255,0.05);
+    }
+
+    .setting-row {
+      display: grid;
+      grid-template-columns: 1fr 170px;
+      align-items: center;
+      gap: 10px;
+      text-align: left;
+      font-size: clamp(0.65rem, 1.8vw, 0.82rem);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: rgba(232,244,255,0.76);
+    }
+
+    .cyber-select {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid rgba(0,245,255,0.45);
+      background: rgba(2,6,16,0.92);
+      color: var(--cyan);
+      font-family: var(--font-hud);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      box-shadow: 0 0 10px rgba(0,245,255,0.18);
+      border-radius: 2px;
+    }
+
+    #abort-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 9;
+      padding: 7px 12px;
+      border: 1px solid rgba(245,255,0,0.55);
+      background: rgba(2,6,16,0.72);
+      color: var(--yellow);
+      font-family: var(--font-hud);
+      font-size: 0.68rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      cursor: pointer;
+      box-shadow: var(--glow-y);
+      border-radius: 2px;
+    }
+
+    #abort-btn.hidden { display: none; }
+
+    @media (max-width: 520px) {
+      .setting-row {
+        grid-template-columns: 1fr;
+        gap: 6px;
+      }
+    }
+
+    /* ─── Mobile touch controls ─── */
+    #touch-controls {
+      position: relative;
+      z-index: 2;
+      display: none; /* shown via JS on touch devices */
+      width: 100%;
+      max-width: 600px;
+      margin-top: 10px;
+      justify-content: space-between;
+      padding: 0 10px;
+    }
+    .touch-side {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .touch-btn {
+      width: clamp(50px, 14vw, 70px);
+      height: clamp(40px, 10vw, 52px);
+      border: 1px solid rgba(0,245,255,0.4);
+      background: rgba(0,245,255,0.07);
+      color: var(--cyan);
+      font-size: 1.3rem;
+      border-radius: 4px;
+      cursor: pointer;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      touch-action: none;
+      transition: background 0.1s;
+    }
+    .touch-btn:active, .touch-btn.pressed {
+      background: rgba(0,245,255,0.22);
+    }
+    .touch-btn.right-btn {
+      border-color: rgba(255,0,200,0.4);
+      background: rgba(255,0,200,0.07);
+      color: var(--magenta);
+    }
+    .touch-btn.right-btn:active, .touch-btn.right-btn.pressed {
+      background: rgba(255,0,200,0.22);
+    }
+
+    /* ─── Animations ─── */
+    @keyframes flicker {
+      0%,94%,96%,100% { opacity: 1; }
+      95% { opacity: 0.6; }
+    }
+    @keyframes score-pop {
+      0%   { transform: scale(1); }
+      40%  { transform: scale(1.4); }
+      100% { transform: scale(1); }
+    }
+    .pop { animation: score-pop 0.35s ease-out; }
+  </style>
+</head>
+<body>
+
+  <div id="title">⬡ CYBER PONG ⬡</div>
+
+  <!-- Score display -->
+  <div id="scoreboard">
+    <div class="score-col">
+      <span class="score-label">P1 · WASD</span>
+      <span class="score" id="score-left">0</span>
+    </div>
+    <span class="divider">:</span>
+    <div class="score-col">
+      <span class="score" id="score-right">0</span>
+      <span class="score-label" id="right-label">ARROWS · P2</span>
+    </div>
+  </div>
+
+  <!-- Canvas wrapper (overlay lives inside for positioning) -->
+  <div id="canvas-wrap">
+    <canvas id="pong"></canvas>
+    <button id="abort-btn" class="hidden" type="button">ABORT</button>
+
+    <!-- Start / Game-over overlay -->
+    <div id="overlay">
+      <h2 id="overlay-title" style="color:var(--cyan);text-shadow:var(--glow-c);">CYBER PONG</h2>
+      <p id="overlay-msg">Choose mode, score target and computer difficulty.</p>
+      <div class="mode-row" id="mode-row">
+        <button class="neon-btn mode-btn active" id="mode-pvp" type="button">P1 VS P2</button>
+        <button class="neon-btn mode-btn" id="mode-computer" type="button">VS COMPUTER</button>
+      </div>
+      <div class="settings-panel" id="settings-panel">
+        <label class="setting-row" for="score-limit">
+          <span>Play to</span>
+          <select class="cyber-select" id="score-limit">
+            <option value="3">3 points</option>
+            <option value="5">5 points</option>
+            <option value="7" selected>7 points</option>
+            <option value="10">10 points</option>
+            <option value="15">15 points</option>
+          </select>
+        </label>
+        <label class="setting-row" for="difficulty-select" id="difficulty-row">
+          <span>Computer</span>
+          <select class="cyber-select" id="difficulty-select">
+            <option value="easy">Easy</option>
+            <option value="medium" selected>Medium</option>
+            <option value="hard">Hard</option>
+          </select>
+        </label>
+      </div>
+      <button class="neon-btn" id="overlay-btn">START GAME</button>
+    </div>
+  </div>
+
+  <!-- Mobile touch controls -->
+  <div id="touch-controls">
+    <div class="touch-side">
+      <button class="touch-btn" id="btn-w">▲</button>
+      <button class="touch-btn" id="btn-s">▼</button>
+    </div>
+    <div class="touch-side">
+      <button class="touch-btn right-btn" id="btn-up">▲</button>
+      <button class="touch-btn right-btn" id="btn-down">▼</button>
+    </div>
+  </div>
+
+  <div id="controls">
+    <span>W/S — LEFT PADDLE</span>
+    <span>↑/↓ — RIGHT PADDLE</span>
+  </div>
+
+<script>
+/* ============================================================
+   CYBER PONG — Game Logic
+   ============================================================ */
+
+// ─── Canvas setup ───────────────────────────────────────────
+const canvas  = document.getElementById('pong');
+const ctx     = canvas.getContext('2d');
+
+// Base logical resolution; scales to fit viewport
+const BASE_W = 700;
+const BASE_H = 480;
+let scale = 1; // pixel ratio multiplier
+
+function resizeCanvas() {
+  // #added: responsive sizing — fits any screen while keeping aspect ratio
+  const maxW = Math.min(window.innerWidth - 20, 700);
+  const maxH = Math.min(window.innerHeight - 260, 540);
+  scale = Math.min(maxW / BASE_W, maxH / BASE_H);
+  canvas.width  = Math.floor(BASE_W * scale);
+  canvas.height = Math.floor(BASE_H * scale);
+}
+resizeCanvas();
+window.addEventListener('resize', () => {
+  resizeCanvas();
+  // Reposition elements that depend on canvas size
+  drawFrame();
+});
+
+// Shorthand to convert logical → pixel coords
+const px = v => v * scale;
+
+// ─── Colours ────────────────────────────────────────────────
+const C = {
+  bg:      '#020610',
+  cyan:    '#00f5ff',
+  magenta: '#ff00c8',
+  yellow:  '#f5ff00',
+  white:   '#e8f4ff',
+  dim:     'rgba(232,244,255,0.12)',
+};
+
+// ─── Game constants ──────────────────────────────────────────
+const DEFAULT_WIN_SCORE = 7; // first to this score wins
+const PADDLE_W    = 12;     // logical px
+const PADDLE_H    = 80;
+const BALL_SIZE   = 10;
+const PADDLE_SPEED = 5.5;
+const INIT_BALL_SPEED = 5;
+const MAX_BALL_SPEED  = 14; // speed cap to prevent tunnelling
+const SPEED_INCREMENT = 0.35; // ball speeds up each bounce
+const COMPUTER_PROFILES = {
+  easy:   { speed: 3.6, deadzone: 34, reaction: 0.045, error: 58 },
+  medium: { speed: 4.7, deadzone: 20, reaction: 0.075, error: 34 },
+  hard:   { speed: 5.45, deadzone: 12, reaction: 0.11, error: 18 },
+};
+// Hard is strong, but still beatable: capped speed, reaction lag and target error remain.
+
+// ─── Game state ──────────────────────────────────────────────
+let state = 'idle'; // 'idle' | 'playing' | 'over'
+let gameMode = 'pvp'; // 'pvp' | 'computer'
+let targetScore = DEFAULT_WIN_SCORE;
+let computerDifficulty = 'medium';
+let computerAimY = BASE_H / 2;
+
+let leftScore  = 0;
+let rightScore = 0;
+
+// Paddle objects (logical coords)
+const padLeft = {
+  x: 18,
+  y: BASE_H / 2 - PADDLE_H / 2,
+  w: PADDLE_W,
+  h: PADDLE_H,
+  dy: 0,        // current velocity
+  color: C.cyan,
+};
+
+const padRight = {
+  x: BASE_W - 18 - PADDLE_W,
+  y: BASE_H / 2 - PADDLE_H / 2,
+  w: PADDLE_W,
+  h: PADDLE_H,
+  dy: 0,
+  color: C.magenta,
+};
+
+// Ball objects (logical coords)
+// Max two balls are active. A second ball spawns after 10 paddle hits in one rally.
+const balls = [];
+let rallyHits = 0;
+let secondBallActiveThisRally = false;
+
+function createBall(id, color = C.yellow) {
+  return {
+    id,
+    x: BASE_W / 2,
+    y: BASE_H / 2,
+    size: BALL_SIZE,
+    vx: 0,
+    vy: 0,
+    color,
+  };
+}
+
+const primaryBall = createBall('primary', C.yellow);
+balls.push(primaryBall);
+
+// ─── Input tracking ──────────────────────────────────────────
+// Using a Set so multiple keys can be held simultaneously
+const keys = new Set();
+
+document.addEventListener('keydown', e => {
+  keys.add(e.key);
+  // #added: prevent arrow keys from scrolling the page during play
+  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)) {
+    e.preventDefault();
+  }
+});
+document.addEventListener('keyup',   e => keys.delete(e.key));
+
+// ─── Touch / mobile button controls ─────────────────────────
+// #added: mobile-friendly touch buttons mapped to virtual key presses
+const touchMap = {
+  'btn-w':    'w',
+  'btn-s':    's',
+  'btn-up':   'ArrowUp',
+  'btn-down': 'ArrowDown',
+};
+
+function setupTouchBtn(id) {
+  const el = document.getElementById(id);
+  const key = touchMap[id];
+
+  // Touch events for mobile
+  el.addEventListener('touchstart', e => { e.preventDefault(); keys.add(key); el.classList.add('pressed'); }, { passive: false });
+  el.addEventListener('touchend',   e => { e.preventDefault(); keys.delete(key); el.classList.remove('pressed'); }, { passive: false });
+
+  // Mouse fallback for desktop testing of touch buttons
+  el.addEventListener('mousedown', () => { keys.add(key); el.classList.add('pressed'); });
+  el.addEventListener('mouseup',   () => { keys.delete(key); el.classList.remove('pressed'); });
+  el.addEventListener('mouseleave',() => { keys.delete(key); el.classList.remove('pressed'); });
+}
+Object.keys(touchMap).forEach(setupTouchBtn);
+
+// Show touch controls when a touch device is detected
+window.addEventListener('touchstart', () => {
+  document.getElementById('touch-controls').style.display = 'flex';
+}, { once: true });
+
+// ─── Game mode helpers ───────────────────────────────────────
+function setGameMode(mode) {
+  gameMode = mode;
+
+  document.getElementById('mode-pvp').classList.toggle('active', mode === 'pvp');
+  document.getElementById('mode-computer').classList.toggle('active', mode === 'computer');
+  document.getElementById('difficulty-row').style.display = mode === 'computer' ? 'grid' : 'none';
+
+  document.getElementById('right-label').textContent =
+    mode === 'computer' ? 'COMPUTER' : 'ARROWS · P2';
+
+  document.getElementById('controls').innerHTML =
+    mode === 'computer'
+      ? '<span>W/S — LEFT PADDLE</span><span>RIGHT PADDLE — COMPUTER</span><span>ESC / ABORT — MENU</span>'
+      : '<span>W/S — LEFT PADDLE</span><span>↑/↓ — RIGHT PADDLE</span><span>ESC / ABORT — MENU</span>';
+
+  const rightTouchButtons = [
+    document.getElementById('btn-up'),
+    document.getElementById('btn-down'),
+  ];
+
+  rightTouchButtons.forEach(btn => {
+    btn.style.visibility = mode === 'computer' ? 'hidden' : 'visible';
+  });
+}
+
+document.getElementById('mode-pvp').addEventListener('click', () => setGameMode('pvp'));
+document.getElementById('mode-computer').addEventListener('click', () => setGameMode('computer'));
+document.getElementById('score-limit').addEventListener('change', e => {
+  targetScore = Number(e.target.value) || DEFAULT_WIN_SCORE;
+});
+document.getElementById('difficulty-select').addEventListener('change', e => {
+  computerDifficulty = e.target.value || 'medium';
+});
+
+function updateComputerPaddle() {
+  const profile = COMPUTER_PROFILES[computerDifficulty] || COMPUTER_PROFILES.medium;
+  const paddleCenter = padRight.y + padRight.h / 2;
+
+  // Track the most urgent ball moving toward the computer.
+  // If no ball is coming, drift back toward center.
+  const incomingBalls = balls.filter(activeBall => activeBall.vx > 0);
+  let trackedBall = null;
+
+  if (incomingBalls.length > 0) {
+    trackedBall = incomingBalls.reduce((closest, activeBall) => (
+      activeBall.x > closest.x ? activeBall : closest
+    ));
+  }
+
+  const rawTarget = trackedBall ? trackedBall.y : BASE_H / 2;
+  const errorSeed = trackedBall ? trackedBall.x + trackedBall.y : BASE_H;
+  const readableError = Math.sin(errorSeed * 0.035) * profile.error;
+  const targetY = Math.max(0, Math.min(BASE_H, rawTarget + readableError));
+
+  // Reaction lag: aim moves gradually, so the computer is never perfect.
+  computerAimY += (targetY - computerAimY) * profile.reaction;
+
+  if (computerAimY < paddleCenter - profile.deadzone) {
+    padRight.dy = -profile.speed;
+  } else if (computerAimY > paddleCenter + profile.deadzone) {
+    padRight.dy = profile.speed;
+  } else {
+    padRight.dy = 0;
+  }
+}
+
+// ─── Ball launch helper ──────────────────────────────────────
+function resetRally() {
+  rallyHits = 0;
+  secondBallActiveThisRally = false;
+  balls.length = 0;
+  balls.push(primaryBall);
+}
+
+function launchBall(towardRight, activeBall = primaryBall, speed = INIT_BALL_SPEED) {
+  activeBall.x = BASE_W / 2;
+  activeBall.y = BASE_H / 2;
+  const angle = (Math.random() * 40 - 20) * (Math.PI / 180); // slight random angle
+  const dir   = towardRight ? 1 : -1;
+  activeBall.vx = dir * speed * Math.cos(angle);
+  activeBall.vy = speed * Math.sin(angle);
+}
+
+function spawnSecondBall() {
+  if (secondBallActiveThisRally || balls.length >= 2) return;
+
+  const leadBall = balls[0];
+  const secondBall = createBall('secondary', C.cyan);
+  secondBall.x = BASE_W / 2;
+  secondBall.y = BASE_H / 2;
+
+  // Send ball 2 in the opposite horizontal direction with a slightly softer speed.
+  const dir = leadBall.vx >= 0 ? -1 : 1;
+  const angle = (Math.random() * 50 - 25) * (Math.PI / 180);
+  const speed = Math.max(INIT_BALL_SPEED * 0.9, Math.min(Math.abs(leadBall.vx) + 0.5, MAX_BALL_SPEED - 1));
+  secondBall.vx = dir * speed * Math.cos(angle);
+  secondBall.vy = speed * Math.sin(angle);
+
+  balls.push(secondBall);
+  secondBallActiveThisRally = true;
+}
+
+// ─── Score update helper ─────────────────────────────────────
+function addScore(side) {
+  const elId = side === 'left' ? 'score-left' : 'score-right';
+  const el   = document.getElementById(elId);
+
+  if (side === 'left') leftScore++;
+  else                 rightScore++;
+
+  el.textContent = side === 'left' ? leftScore : rightScore;
+
+  // #added: CSS pop animation on score change
+  el.classList.remove('pop');
+  void el.offsetWidth; // reflow to restart animation
+  el.classList.add('pop');
+
+  if (leftScore >= targetScore || rightScore >= targetScore) {
+    endGame();
+  } else {
+    // New round: reset to one ball and serve toward the player who just lost the point.
+    resetRally();
+    launchBall(side === 'right');
+  }
+}
+
+// ─── Paddle vs Ball collision ────────────────────────────────
+// #added: angle-based reflection so paddle hit position matters
+function paddleCollide(pad, activeBall) {
+  // Broad-phase AABB check
+  if (
+    activeBall.x - activeBall.size < pad.x + pad.w &&
+    activeBall.x + activeBall.size > pad.x          &&
+    activeBall.y - activeBall.size < pad.y + pad.h  &&
+    activeBall.y + activeBall.size > pad.y
+  ) {
+    // How far from centre of paddle (−1 … +1)
+    const relY = ((activeBall.y - (pad.y + pad.h / 2)) / (pad.h / 2));
+    const bounceAngle = relY * 60 * (Math.PI / 180); // max 60° deflection
+
+    // Speed increases each paddle hit, capped to MAX_BALL_SPEED
+    const speed = Math.min(
+      Math.sqrt(activeBall.vx * activeBall.vx + activeBall.vy * activeBall.vy) + SPEED_INCREMENT,
+      MAX_BALL_SPEED
+    );
+
+    // Direction flips depending on which paddle
+    const dir = activeBall.vx < 0 ? 1 : -1;
+    activeBall.vx = dir * speed * Math.cos(bounceAngle);
+    activeBall.vy = speed * Math.sin(bounceAngle);
+
+    // Push ball out of paddle to prevent sticking
+    activeBall.x = pad.x < BASE_W / 2
+      ? pad.x + pad.w + activeBall.size + 1
+      : pad.x - activeBall.size - 1;
+
+    rallyHits++;
+    if (rallyHits >= 10) {
+      spawnSecondBall();
+    }
+
+    return true; // hit
+  }
+  return false;
+}
+
+
+function collideBalls() {
+  if (balls.length < 2) return;
+
+  const a = balls[0];
+  const b = balls[1];
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const distance = Math.sqrt(dx * dx + dy * dy);
+  const minDistance = a.size + b.size;
+
+  if (distance <= 0 || distance >= minDistance) return;
+
+  // Separate overlapping balls so they do not stick together.
+  const nx = dx / distance;
+  const ny = dy / distance;
+  const overlap = (minDistance - distance) / 2;
+  a.x -= nx * overlap;
+  a.y -= ny * overlap;
+  b.x += nx * overlap;
+  b.y += ny * overlap;
+
+  // Elastic collision for equal-mass balls: exchange velocity along collision normal.
+  const dvx = a.vx - b.vx;
+  const dvy = a.vy - b.vy;
+  const impact = dvx * nx + dvy * ny;
+
+  if (impact > 0) return;
+
+  a.vx -= impact * nx;
+  a.vy -= impact * ny;
+  b.vx += impact * nx;
+  b.vy += impact * ny;
+}
+
+// ─── Main update (called every frame) ───────────────────────
+function update() {
+  if (state !== 'playing') return;
+
+  // ── Paddle input ──
+  padLeft.dy  = 0;
+  padRight.dy = 0;
+
+  if (keys.has('w') || keys.has('W')) padLeft.dy  = -PADDLE_SPEED;
+  if (keys.has('s') || keys.has('S')) padLeft.dy  =  PADDLE_SPEED;
+
+  if (gameMode === 'computer') {
+    updateComputerPaddle();
+  } else {
+    if (keys.has('ArrowUp'))   padRight.dy = -PADDLE_SPEED;
+    if (keys.has('ArrowDown')) padRight.dy =  PADDLE_SPEED;
+  }
+
+  // Clamp paddles within canvas
+  padLeft.y  = Math.max(0, Math.min(BASE_H - PADDLE_H, padLeft.y  + padLeft.dy));
+  padRight.y = Math.max(0, Math.min(BASE_H - PADDLE_H, padRight.y + padRight.dy));
+
+  let scoringSide = null;
+
+  balls.forEach(activeBall => {
+    // ── Ball movement ──
+    activeBall.x += activeBall.vx;
+    activeBall.y += activeBall.vy;
+
+    // Top / bottom wall bounce
+    if (activeBall.y - activeBall.size <= 0) {
+      activeBall.y = activeBall.size;
+      activeBall.vy = Math.abs(activeBall.vy);
+    }
+    if (activeBall.y + activeBall.size >= BASE_H) {
+      activeBall.y = BASE_H - activeBall.size;
+      activeBall.vy = -Math.abs(activeBall.vy);
+    }
+
+    // Paddle collisions
+    paddleCollide(padLeft, activeBall);
+    paddleCollide(padRight, activeBall);
+
+    // If either ball scores, the whole round ends immediately.
+    if (activeBall.x + activeBall.size < 0) {
+      scoringSide = 'right';
+    }
+    if (activeBall.x - activeBall.size > BASE_W) {
+      scoringSide = 'left';
+    }
+  });
+
+  collideBalls();
+
+  if (scoringSide) {
+    addScore(scoringSide);
+  }
+}
+
+// ─── Glow helper for draw calls ──────────────────────────────
+function setGlow(color, blur = 12) {
+  ctx.shadowColor = color;
+  ctx.shadowBlur  = blur * scale;
+}
+function clearGlow() {
+  ctx.shadowColor = 'transparent';
+  ctx.shadowBlur  = 0;
+}
+
+// ─── Draw one frame ──────────────────────────────────────────
+function drawFrame() {
+  const W = canvas.width;
+  const H = canvas.height;
+
+  // Background
+  ctx.fillStyle = C.bg;
+  ctx.fillRect(0, 0, W, H);
+
+  // Centre dashed line
+  ctx.save();
+  ctx.setLineDash([px(8), px(12)]);
+  ctx.strokeStyle = C.dim;
+  ctx.lineWidth   = px(2);
+  ctx.beginPath();
+  ctx.moveTo(W / 2, 0);
+  ctx.lineTo(W / 2, H);
+  ctx.stroke();
+  ctx.restore();
+
+  // ── Left paddle ──
+  ctx.save();
+  setGlow(padLeft.color, 14);
+  ctx.fillStyle = padLeft.color;
+  ctx.beginPath();
+  ctx.roundRect(px(padLeft.x), px(padLeft.y), px(padLeft.w), px(padLeft.h), px(3));
+  ctx.fill();
+  ctx.restore();
+
+  // ── Right paddle ──
+  ctx.save();
+  setGlow(padRight.color, 14);
+  ctx.fillStyle = padRight.color;
+  ctx.beginPath();
+  ctx.roundRect(px(padRight.x), px(padRight.y), px(padRight.w), px(padRight.h), px(3));
+  ctx.fill();
+  ctx.restore();
+
+  // ── Balls ──
+  if (state === 'playing') {
+    balls.forEach(activeBall => {
+      // Trailing glow layers for motion blur effect
+      ctx.save();
+      setGlow(activeBall.color, 18);
+      ctx.fillStyle = activeBall.color;
+      ctx.beginPath();
+      ctx.arc(px(activeBall.x), px(activeBall.y), px(activeBall.size), 0, Math.PI * 2);
+      ctx.fill();
+      // Inner bright core
+      setGlow(C.white, 8);
+      ctx.fillStyle = C.white;
+      ctx.beginPath();
+      ctx.arc(px(activeBall.x), px(activeBall.y), px(activeBall.size * 0.45), 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    });
+  }
+}
+
+// ─── Game loop ───────────────────────────────────────────────
+function loop() {
+  update();
+  drawFrame();
+  requestAnimationFrame(loop);
+}
+
+// ─── Game state transitions ──────────────────────────────────
+function startGame() {
+  targetScore = Number(document.getElementById('score-limit').value) || DEFAULT_WIN_SCORE;
+  computerDifficulty = document.getElementById('difficulty-select').value || 'medium';
+  computerAimY = BASE_H / 2;
+
+  leftScore  = 0;
+  rightScore = 0;
+  document.getElementById('score-left').textContent  = '0';
+  document.getElementById('score-right').textContent = '0';
+
+  // Reset paddle positions
+  padLeft.y  = BASE_H / 2 - PADDLE_H / 2;
+  padRight.y = BASE_H / 2 - PADDLE_H / 2;
+
+  resetRally();
+  launchBall(Math.random() > 0.5);
+  state = 'playing';
+  document.getElementById('overlay').classList.add('hidden');
+  document.getElementById('abort-btn').classList.remove('hidden');
+}
+
+function showMainMenu(message = 'Choose mode, score target and computer difficulty.') {
+  state = 'idle';
+  resetRally();
+  primaryBall.vx = 0;
+  primaryBall.vy = 0;
+  primaryBall.x = BASE_W / 2;
+  primaryBall.y = BASE_H / 2;
+  keys.clear();
+
+  const ov   = document.getElementById('overlay');
+  const ovT  = document.getElementById('overlay-title');
+  const ovM  = document.getElementById('overlay-msg');
+  const ovB  = document.getElementById('overlay-btn');
+
+  ovT.textContent = 'CYBER PONG';
+  ovT.style.color = C.cyan;
+  ovT.style.textShadow = '0 0 8px #00f5ff,0 0 20px #00f5ff';
+  ovM.innerHTML = message;
+  ovB.textContent = 'START GAME';
+  ov.classList.remove('hidden');
+  document.getElementById('abort-btn').classList.add('hidden');
+}
+
+function abortGame() {
+  showMainMenu('Game aborted.<br>Adjust settings or start again.');
+}
+
+function endGame() {
+  state = 'over';
+  const winner  = leftScore >= targetScore
+    ? 'PLAYER 1'
+    : (gameMode === 'computer' ? 'COMPUTER' : 'PLAYER 2');
+  const wColor  = leftScore >= targetScore ? C.cyan : C.magenta;
+  const wGlow   = leftScore >= targetScore
+    ? '0 0 8px #00f5ff,0 0 20px #00f5ff'
+    : '0 0 8px #ff00c8,0 0 20px #ff00c8';
+
+  const ov   = document.getElementById('overlay');
+  const ovT  = document.getElementById('overlay-title');
+  const ovM  = document.getElementById('overlay-msg');
+  const ovB  = document.getElementById('overlay-btn');
+
+  ovT.textContent     = `${winner} WINS`;
+  ovT.style.color      = wColor;
+  ovT.style.textShadow = wGlow;
+  ovM.innerHTML        = `Final Score: ${leftScore} – ${rightScore}<br>Ready for a rematch?`;
+  ovB.textContent      = 'PLAY AGAIN';
+
+  ov.classList.remove('hidden');
+  document.getElementById('abort-btn').classList.add('hidden');
+}
+
+// ─── Overlay button ──────────────────────────────────────────
+document.getElementById('overlay-btn').addEventListener('click', startGame);
+document.getElementById('abort-btn').addEventListener('click', abortGame);
+
+// Also allow Space / Enter to start, and Escape to abort back to menu.
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && state === 'playing') {
+    abortGame();
+    return;
+  }
+
+  const tag = document.activeElement?.tagName;
+  const isMenuControl = tag === 'SELECT' || tag === 'BUTTON';
+  if ((e.key === ' ' || e.key === 'Enter') && state !== 'playing' && !isMenuControl) {
+    startGame();
+  }
+});
+
+// ─── Initial UI state ────────────────────────────────────────
+setGameMode(gameMode);
+
+// ─── Kick off the render loop ────────────────────────────────
+loop();
+</script>
+</body>
+</html>
