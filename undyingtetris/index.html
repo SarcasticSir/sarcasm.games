@@ -1,0 +1,1543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Cryptfall: Breakout of the Undying Rows</title>
+  <style>
+    :root {
+      --bg0: #07040b;
+      --bg1: #12091f;
+      --bg2: #1e0d2f;
+      --blood: #b32938;
+      --ember: #ff7a2d;
+      --gold: #f6d36b;
+      --violet: #a56cff;
+      --cyan: #67f2ff;
+      --green: #62ff9a;
+      --bone: #f4e6c7;
+      --muted: #a999b8;
+      --panel: rgba(18, 9, 31, 0.78);
+      --stroke: rgba(246, 211, 107, 0.28);
+      --shadow: rgba(0, 0, 0, 0.45);
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: radial-gradient(circle at top, #291142 0%, var(--bg1) 36%, var(--bg0) 100%);
+      color: var(--bone);
+      font-family: Georgia, "Times New Roman", serif;
+      touch-action: none;
+    }
+
+    body::before,
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    body::before {
+      background:
+        radial-gradient(circle at 20% 12%, rgba(165, 108, 255, 0.28), transparent 24%),
+        radial-gradient(circle at 82% 18%, rgba(179, 41, 56, 0.22), transparent 22%),
+        radial-gradient(circle at 50% 100%, rgba(255, 122, 45, 0.18), transparent 35%);
+      mix-blend-mode: screen;
+    }
+
+    body::after {
+      background-image:
+        linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+      background-size: 36px 36px;
+      mask-image: radial-gradient(circle, black 10%, transparent 82%);
+    }
+
+    #app {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      display: grid;
+      grid-template-columns: minmax(220px, 320px) 1fr minmax(220px, 320px);
+      gap: 16px;
+      padding: 16px;
+    }
+
+    .panel {
+      position: relative;
+      z-index: 2;
+      min-height: 0;
+      padding: 16px;
+      border: 1px solid var(--stroke);
+      border-radius: 22px;
+      background: linear-gradient(180deg, rgba(35, 16, 55, 0.78), rgba(7, 4, 11, 0.72));
+      box-shadow: 0 20px 55px var(--shadow), inset 0 0 32px rgba(246, 211, 107, 0.05);
+      backdrop-filter: blur(10px);
+    }
+
+    .left,
+    .right {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      overflow: hidden;
+    }
+
+    .game-wrap {
+      position: relative;
+      z-index: 1;
+      min-width: 0;
+      min-height: 0;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(165, 108, 255, 0.22);
+      border-radius: 26px;
+      background:
+        linear-gradient(180deg, rgba(7, 4, 11, 0.4), rgba(0, 0, 0, 0.72)),
+        radial-gradient(circle at 50% 100%, rgba(179, 41, 56, 0.18), transparent 38%);
+      box-shadow: 0 24px 80px rgba(0,0,0,0.52), inset 0 0 90px rgba(0,0,0,0.5);
+      overflow: hidden;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: none;
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin: 0;
+    }
+
+    h1 {
+      font-size: clamp(22px, 2.3vw, 34px);
+      line-height: 1;
+      letter-spacing: 0.04em;
+      color: var(--gold);
+      text-shadow: 0 0 18px rgba(246, 211, 107, 0.45), 0 2px 0 #3a1b10;
+    }
+
+    h2 {
+      font-size: 15px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--cyan);
+      opacity: 0.9;
+    }
+
+    h3 {
+      font-size: 16px;
+      color: var(--gold);
+      margin-bottom: 6px;
+    }
+
+    .subtitle {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    .stat {
+      padding: 12px;
+      border: 1px solid rgba(246, 211, 107, 0.2);
+      border-radius: 16px;
+      background: rgba(0,0,0,0.22);
+    }
+
+    .stat span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+
+    .stat strong {
+      display: block;
+      margin-top: 6px;
+      color: var(--bone);
+      font-size: 24px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    .meter {
+      height: 12px;
+      border-radius: 999px;
+      background: rgba(0,0,0,0.38);
+      border: 1px solid rgba(255,255,255,0.12);
+      overflow: hidden;
+    }
+
+    .meter > div {
+      width: 0%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--blood), var(--ember), var(--gold));
+      box-shadow: 0 0 18px rgba(255,122,45,0.48);
+      transition: width 0.12s ease;
+    }
+
+    .upgrade-list,
+    .log-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      overflow: auto;
+      scrollbar-width: thin;
+      padding-right: 2px;
+    }
+
+    .upgrade,
+    .log-item,
+    .spell {
+      padding: 10px 11px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(0,0,0,0.24);
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.3;
+    }
+
+    .upgrade strong,
+    .spell strong {
+      color: var(--bone);
+    }
+
+    .upgrade.active {
+      border-color: rgba(103, 242, 255, 0.45);
+      background: rgba(103, 242, 255, 0.08);
+      color: var(--bone);
+      box-shadow: inset 0 0 24px rgba(103, 242, 255, 0.05);
+    }
+
+    .spell.ready {
+      border-color: rgba(98, 255, 154, 0.42);
+      box-shadow: 0 0 20px rgba(98, 255, 154, 0.1);
+    }
+
+    .controls {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .controls kbd {
+      display: inline-block;
+      min-width: 22px;
+      padding: 2px 6px;
+      margin: 1px;
+      border-radius: 7px;
+      border: 1px solid rgba(246, 211, 107, 0.32);
+      background: rgba(0,0,0,0.38);
+      color: var(--gold);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      text-align: center;
+    }
+
+    .button-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    button {
+      appearance: none;
+      border: 1px solid rgba(246, 211, 107, 0.32);
+      border-radius: 14px;
+      background: linear-gradient(180deg, rgba(179, 41, 56, 0.55), rgba(69, 18, 35, 0.82));
+      color: var(--bone);
+      font-family: inherit;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      padding: 12px 10px;
+      cursor: pointer;
+      box-shadow: 0 10px 24px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.14);
+    }
+
+    button:hover,
+    button:focus-visible {
+      outline: none;
+      filter: brightness(1.12);
+      box-shadow: 0 0 0 3px rgba(246,211,107,0.14), 0 12px 28px rgba(0,0,0,0.32);
+    }
+
+    .home-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 38px;
+      margin-top: 14px;
+      padding: 10px 12px;
+      border: 1px solid rgba(246, 211, 107, 0.32);
+      border-radius: 14px;
+      background: linear-gradient(180deg, rgba(179,41,56,0.45), rgba(30,13,47,0.9));
+      color: var(--bone);
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 700;
+      text-decoration: none;
+      text-align: center;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      box-shadow: 0 10px 24px rgba(0,0,0,0.28);
+    }
+
+    .home-link:hover,
+    .home-link:focus-visible {
+      outline: none;
+      filter: brightness(1.12);
+      box-shadow: 0 0 0 3px rgba(246,211,107,0.14), 0 12px 28px rgba(0,0,0,0.32);
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 8;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      background: radial-gradient(circle, rgba(18,9,31,0.62), rgba(0,0,0,0.86));
+      backdrop-filter: blur(7px);
+      transition: opacity 0.22s ease;
+    }
+
+    .overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .modal {
+      width: min(580px, 92vw);
+      padding: 26px;
+      text-align: center;
+      border: 1px solid rgba(246, 211, 107, 0.35);
+      border-radius: 28px;
+      background:
+        linear-gradient(180deg, rgba(35,16,55,0.94), rgba(7,4,11,0.96)),
+        radial-gradient(circle at 50% 0%, rgba(246,211,107,0.12), transparent 45%);
+      box-shadow: 0 30px 90px rgba(0,0,0,0.7), inset 0 0 60px rgba(165,108,255,0.08);
+    }
+
+    .modal h2 {
+      color: var(--gold);
+      font-size: clamp(28px, 5vw, 48px);
+      line-height: 0.95;
+      text-transform: none;
+      letter-spacing: 0.03em;
+      text-shadow: 0 0 24px rgba(246,211,107,0.38);
+    }
+
+    .modal p {
+      max-width: 48ch;
+      margin: 14px auto 0;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.55;
+    }
+
+    .modal .button-row {
+      max-width: 360px;
+      margin: 20px auto 0;
+    }
+
+    .toast {
+      position: absolute;
+      left: 50%;
+      top: 22px;
+      z-index: 7;
+      transform: translateX(-50%);
+      min-width: min(520px, 86vw);
+      padding: 12px 16px;
+      border: 1px solid rgba(103,242,255,0.35);
+      border-radius: 999px;
+      background: rgba(7,4,11,0.76);
+      color: var(--bone);
+      text-align: center;
+      font-size: 14px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.35), 0 0 24px rgba(103,242,255,0.12);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(4px);
+    }
+
+    .mobile-controls {
+      position: fixed;
+      left: 12px;
+      right: 12px;
+      bottom: 12px;
+      z-index: 6;
+      display: none;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      pointer-events: none;
+    }
+
+    .mobile-controls button {
+      pointer-events: auto;
+      min-height: 54px;
+      border-radius: 18px;
+      background: rgba(18, 9, 31, 0.7);
+      backdrop-filter: blur(8px);
+    }
+
+    @media (max-width: 980px) {
+      #app {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr auto;
+        gap: 10px;
+        padding: 10px;
+      }
+
+      .left,
+      .right {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+
+      .right .panel:nth-child(n+3),
+      .left .panel:nth-child(n+3) {
+        display: none;
+      }
+
+      .panel {
+        padding: 12px;
+        border-radius: 18px;
+      }
+
+      h1 {
+        font-size: 22px;
+      }
+
+      .subtitle,
+      .controls {
+        font-size: 12px;
+      }
+
+      .stat strong {
+        font-size: 19px;
+      }
+
+      .mobile-controls {
+        display: grid;
+      }
+    }
+
+    @media (max-width: 620px) {
+      #app {
+        padding-bottom: 86px;
+      }
+
+      .left,
+      .right {
+        grid-template-columns: 1fr;
+      }
+
+      .left .panel:nth-child(n+2),
+      .right .panel:nth-child(n+2) {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <aside class="left">
+      <section class="panel">
+        <h1>Cryptfall</h1>
+        <p class="subtitle">A cursed Tetris × Breakout rite. Smash the bottom row to feed the abyss; each cleared row summons a new row from above.</p>
+        <a class="home-link" href="/">Back to sarcasm.games</a>
+      </section>
+
+      <section class="panel">
+        <h2>Runes</h2>
+        <div class="stat-grid" style="margin-top: 10px;">
+          <div class="stat"><span>Score</span><strong id="score">0</strong></div>
+          <div class="stat"><span>Rows</span><strong id="rows">0</strong></div>
+          <div class="stat"><span>Balls</span><strong id="balls">1</strong></div>
+          <div class="stat"><span>Depth</span><strong id="depth">0</strong></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Doom Gauge</h2>
+        <div class="meter" style="margin-top: 12px;"><div id="doomMeter"></div></div>
+        <p class="subtitle">Rows that reach the paddle awaken the Grave King.</p>
+      </section>
+    </aside>
+
+    <main class="game-wrap" id="gameWrap">
+      <canvas id="gameCanvas" aria-label="Cryptfall game canvas"></canvas>
+      <div class="toast" id="toast">The crypt stirs...</div>
+      <div class="overlay" id="overlay">
+        <div class="modal">
+          <h2 id="modalTitle">Cryptfall</h2>
+          <p id="modalText">Break bricks with your orb. Clear the lowest row to summon fresh cursed rows from the top. Catch relics, trigger spells, and survive the descending tomb.</p>
+          <div class="button-row">
+            <button id="startBtn">Begin Rite</button>
+            <button id="spellBtn">Cast Spell</button>
+          </div>
+          <p><strong>Move:</strong> A/D, ←/→, mouse, or touch. <strong>Launch:</strong> Space/tap. <strong>Spell:</strong> X.</p>
+        </div>
+      </div>
+    </main>
+
+    <aside class="right">
+      <section class="panel">
+        <h2>Relics</h2>
+        <div class="upgrade-list" id="upgradeList" style="margin-top: 10px;"></div>
+      </section>
+
+      <section class="panel">
+        <h2>Spell</h2>
+        <div class="spell" id="spellStatus" style="margin-top: 10px;"><strong>Blood Nova</strong><br/>Charge by breaking stones. Destroys a cross-shaped curse wave.</div>
+      </section>
+
+      <section class="panel">
+        <h2>Controls</h2>
+        <p class="controls" style="margin-top: 8px;">
+          <kbd>A</kbd><kbd>D</kbd>/<kbd>←</kbd><kbd>→</kbd> move<br/>
+          <kbd>Space</kbd> launch / restart<br/>
+          <kbd>X</kbd> cast spell<br/>
+          <kbd>P</kbd> pause<br/>
+          Mouse/touch drag also controls the paddle.
+        </p>
+      </section>
+
+      <section class="panel">
+        <h2>Omens</h2>
+        <div class="log-list" id="logList" style="margin-top: 10px;"></div>
+      </section>
+    </aside>
+  </div>
+
+  <div class="mobile-controls">
+    <button id="leftBtn">◀</button>
+    <button id="launchBtn">Launch</button>
+    <button id="rightBtn">▶</button>
+  </div>
+
+  <script>
+    (() => {
+      'use strict';
+
+      const canvas = document.getElementById('gameCanvas');
+      const ctx = canvas.getContext('2d');
+      const gameWrap = document.getElementById('gameWrap');
+      const overlay = document.getElementById('overlay');
+      const modalTitle = document.getElementById('modalTitle');
+      const modalText = document.getElementById('modalText');
+      const startBtn = document.getElementById('startBtn');
+      const spellBtn = document.getElementById('spellBtn');
+      const scoreEl = document.getElementById('score');
+      const rowsEl = document.getElementById('rows');
+      const ballsEl = document.getElementById('balls');
+      const depthEl = document.getElementById('depth');
+      const doomMeter = document.getElementById('doomMeter');
+      const upgradeList = document.getElementById('upgradeList');
+      const logList = document.getElementById('logList');
+      const spellStatus = document.getElementById('spellStatus');
+      const toast = document.getElementById('toast');
+      const leftBtn = document.getElementById('leftBtn');
+      const rightBtn = document.getElementById('rightBtn');
+      const launchBtn = document.getElementById('launchBtn');
+
+      const COLS = 11;
+      const BASE_ROWS = 12;
+      const BRICK_GAP = 5;
+      const MAX_LOGS = 7;
+      const PARTICLE_LIMIT = 420;
+      const POWER_TYPES = ['widen', 'split', 'pierce', 'slow', 'ember', 'ward'];
+      const BRICK_THEMES = [
+        { name: 'Bone', hp: 1, color: '#d9caa7', glow: '#f4e6c7', score: 40 },
+        { name: 'Bloodstone', hp: 2, color: '#9f2639', glow: '#ff4567', score: 90 },
+        { name: 'Void Iron', hp: 3, color: '#5d45a6', glow: '#a56cff', score: 160 },
+        { name: 'Witchglass', hp: 2, color: '#1ba6a6', glow: '#67f2ff', score: 120 },
+        { name: 'Hell Ember', hp: 4, color: '#d85a24', glow: '#ffb35c', score: 240 }
+      ];
+
+      const state = {
+        running: false,
+        paused: false,
+        gameOver: false,
+        launched: false,
+        width: 1,
+        height: 1,
+        dpr: 1,
+        brickW: 1,
+        brickH: 28,
+        topMargin: 34,
+        paddle: { x: 0, y: 0, w: 116, h: 16, speed: 760, targetX: null, ward: 0 },
+        balls: [],
+        bricks: [],
+        powers: [],
+        particles: [],
+        floatingTexts: [],
+        keys: new Set(),
+        score: 0,
+        rowsCleared: 0,
+        depth: 0,
+        combo: 0,
+        charge: 0,
+        maxCharge: 100,
+        effects: {
+          widen: 0,
+          pierce: 0,
+          slow: 0,
+          ember: 0
+        },
+        lastTime: performance.now(),
+        shake: 0,
+        toastTimer: 0,
+        pointerDown: false,
+        mobileMove: 0,
+        spawnBag: []
+      };
+
+      const upgrades = [
+        { key: 'widen', title: 'Giant’s Rib', text: 'Paddle widens for 18 seconds.' },
+        { key: 'split', title: 'Mirror Imp', text: 'Splits living orbs into a small swarm.' },
+        { key: 'pierce', title: 'Wraith Fang', text: 'Orbs pierce stones for 13 seconds.' },
+        { key: 'slow', title: 'Moon Ash', text: 'Slows the crypt and steadies the orb.' },
+        { key: 'ember', title: 'Hellfire Brand', text: 'Burning hits splash nearby stones.' },
+        { key: 'ward', title: 'Grave Ward', text: 'One lost orb is resurrected.' }
+      ];
+
+      function clamp(value, min, max) {
+        return Math.max(min, Math.min(max, value));
+      }
+
+      function rand(min, max) {
+        return min + Math.random() * (max - min);
+      }
+
+      function choose(list) {
+        return list[Math.floor(Math.random() * list.length)];
+      }
+
+      function resize() {
+        const rect = gameWrap.getBoundingClientRect();
+        state.dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+        state.width = Math.max(320, rect.width);
+        state.height = Math.max(360, rect.height);
+        canvas.width = Math.floor(state.width * state.dpr);
+        canvas.height = Math.floor(state.height * state.dpr);
+        canvas.style.width = `${state.width}px`;
+        canvas.style.height = `${state.height}px`;
+        ctx.setTransform(state.dpr, 0, 0, state.dpr, 0, 0);
+        state.brickW = (state.width - BRICK_GAP * (COLS + 1)) / COLS;
+        state.brickH = clamp(state.height * 0.044, 24, 38);
+        state.topMargin = clamp(state.height * 0.055, 22, 44);
+        state.paddle.y = state.height - clamp(state.height * 0.085, 44, 68);
+        state.paddle.x = clamp(state.paddle.x || state.width / 2, state.paddle.w / 2, state.width - state.paddle.w / 2);
+        if (!state.launched && state.balls[0]) placeBallOnPaddle(state.balls[0]);
+      }
+
+      function defaultBall() {
+        return {
+          x: state.paddle.x,
+          y: state.paddle.y - 14,
+          r: clamp(state.width * 0.009, 6, 9),
+          vx: rand(-120, 120),
+          vy: -430,
+          speed: 455,
+          stuck: true,
+          fire: 0
+        };
+      }
+
+      function resetGame() {
+        state.running = true;
+        state.paused = false;
+        state.gameOver = false;
+        state.launched = false;
+        state.score = 0;
+        state.rowsCleared = 0;
+        state.depth = 0;
+        state.combo = 0;
+        state.charge = 0;
+        state.shake = 0;
+        state.powers.length = 0;
+        state.particles.length = 0;
+        state.floatingTexts.length = 0;
+        state.bricks.length = 0;
+        state.effects.widen = 0;
+        state.effects.pierce = 0;
+        state.effects.slow = 0;
+        state.effects.ember = 0;
+        state.paddle.w = clamp(state.width * 0.16, 90, 132);
+        state.paddle.x = state.width / 2;
+        state.paddle.ward = 0;
+        state.balls = [defaultBall()];
+        state.spawnBag = [];
+        for (let row = 0; row < 6; row += 1) addTopRow(true);
+        addLog('The gate opens beneath the ruined cathedral.');
+        showToast('Break the lowest row. Feed the abyss.');
+        overlay.classList.add('hidden');
+        updateUI();
+      }
+
+      function placeBallOnPaddle(ball) {
+        ball.x = state.paddle.x;
+        ball.y = state.paddle.y - ball.r - 2;
+        ball.vx = 0;
+        ball.vy = -Math.abs(ball.speed);
+        ball.stuck = true;
+      }
+
+      function launchBalls() {
+        if (state.gameOver) {
+          resetGame();
+          return;
+        }
+        if (!state.running) resetGame();
+        let launchedAny = false;
+        for (const ball of state.balls) {
+          if (ball.stuck) {
+            const angle = rand(-0.62, 0.62);
+            ball.vx = Math.sin(angle) * ball.speed;
+            ball.vy = -Math.cos(angle) * ball.speed;
+            ball.stuck = false;
+            launchedAny = true;
+          }
+        }
+        if (launchedAny) {
+          state.launched = true;
+          addLog('The soul-orb screams upward.');
+        }
+      }
+
+      function addTopRow(initial = false) {
+        const existingRows = [...new Set(state.bricks.map(b => b.row))].sort((a, b) => b - a);
+        for (const brick of state.bricks) brick.row += 1;
+        const pattern = makeRowPattern(initial);
+        for (let col = 0; col < COLS; col += 1) {
+          if (!pattern[col]) continue;
+          const difficulty = Math.min(4, Math.floor((state.depth + state.rowsCleared) / 4));
+          const themePool = BRICK_THEMES.slice(0, clamp(2 + difficulty, 2, BRICK_THEMES.length));
+          const theme = choose(themePool);
+          const bonusHp = initial ? 0 : Math.floor(Math.random() * Math.max(1, difficulty / 2));
+          state.bricks.push({
+            col,
+            row: 0,
+            hp: theme.hp + bonusHp,
+            maxHp: theme.hp + bonusHp,
+            theme,
+            rune: choose(['☠', '✦', '✹', '♜', '◆', '✧', '♆', '☽']),
+            wobble: rand(0, Math.PI * 2)
+          });
+        }
+        state.depth += initial ? 0 : 1;
+        if (!initial) {
+          state.shake = Math.max(state.shake, 10);
+          showToast(choose([
+            'A new row descends from the black altar.',
+            'The ceiling bleeds fresh stones.',
+            'The crypt rewards violence with more doom.',
+            'Another curse-row takes shape above.'
+          ]));
+        }
+      }
+
+      function makeRowPattern(initial) {
+        const pattern = new Array(COLS).fill(true);
+        const holes = initial ? 3 : Math.max(1, 3 - Math.floor(state.depth / 8));
+        let carved = 0;
+        while (carved < holes) {
+          const index = Math.floor(Math.random() * COLS);
+          if (pattern[index]) {
+            pattern[index] = false;
+            carved += 1;
+          }
+        }
+        if (!initial && Math.random() < 0.28) {
+          const mid = Math.floor(COLS / 2);
+          pattern[mid] = true;
+          pattern[clamp(mid - 1, 0, COLS - 1)] = true;
+          pattern[clamp(mid + 1, 0, COLS - 1)] = true;
+        }
+        return pattern;
+      }
+
+      function brickRect(brick) {
+        const x = BRICK_GAP + brick.col * (state.brickW + BRICK_GAP);
+        const y = state.topMargin + brick.row * (state.brickH + BRICK_GAP);
+        return { x, y, w: state.brickW, h: state.brickH };
+      }
+
+      function bottomOccupiedRow() {
+        if (state.bricks.length === 0) return -1;
+        return Math.max(...state.bricks.map(b => b.row));
+      }
+
+      function checkBottomRowCleared(previousBottomRow) {
+        if (previousBottomRow < 0) return;
+        const stillHasPreviousBottom = state.bricks.some(b => b.row === previousBottomRow);
+        if (!stillHasPreviousBottom) {
+          state.rowsCleared += 1;
+          state.combo += 1;
+          const rowBonus = 260 * state.combo;
+          state.score += rowBonus;
+          state.charge = clamp(state.charge + 16 + state.combo * 2, 0, state.maxCharge);
+          addFloatingText(state.width / 2, state.height * 0.35, `ROW BANISHED +${rowBonus}`, '#f6d36b');
+          addLog(`Bottom row banished. Combo ×${state.combo}.`);
+          addTopRow(false);
+          maybeGrantRelic();
+        }
+      }
+
+      function maybeGrantRelic() {
+        if (state.rowsCleared % 2 === 0 || Math.random() < 0.22) {
+          const type = choose(POWER_TYPES);
+          spawnPower(type, rand(48, state.width - 48), state.topMargin + rand(20, 70));
+        }
+      }
+
+      function spawnPower(type, x, y) {
+        state.powers.push({ type, x, y, r: 13, vy: 95 + state.depth * 4, pulse: 0 });
+      }
+
+      function applyPower(type) {
+        const relic = upgrades.find(u => u.key === type);
+        switch (type) {
+          case 'widen':
+            state.effects.widen = 18;
+            state.paddle.w = clamp(state.width * 0.24, 124, 190);
+            break;
+          case 'split':
+            splitBalls();
+            break;
+          case 'pierce':
+            state.effects.pierce = 13;
+            break;
+          case 'slow':
+            state.effects.slow = 12;
+            for (const ball of state.balls) {
+              ball.vx *= 0.82;
+              ball.vy *= 0.82;
+            }
+            break;
+          case 'ember':
+            state.effects.ember = 15;
+            break;
+          case 'ward':
+            state.paddle.ward += 1;
+            break;
+        }
+        state.score += 150;
+        state.charge = clamp(state.charge + 10, 0, state.maxCharge);
+        addLog(`${relic.title}: ${relic.text}`);
+        showToast(`${relic.title} acquired`);
+        burst(state.paddle.x, state.paddle.y, relicColor(type), 28, 3.2);
+        updateUI();
+      }
+
+      function splitBalls() {
+        const newBalls = [];
+        const source = state.balls.slice(0, 4);
+        for (const ball of source) {
+          for (const angle of [-0.48, 0.48]) {
+            const speed = Math.hypot(ball.vx, ball.vy) || ball.speed;
+            const base = Math.atan2(ball.vy, ball.vx);
+            newBalls.push({
+              x: ball.x,
+              y: ball.y,
+              r: ball.r * 0.92,
+              vx: Math.cos(base + angle) * speed,
+              vy: Math.sin(base + angle) * speed,
+              speed: ball.speed,
+              stuck: false,
+              fire: 0
+            });
+          }
+        }
+        state.balls.push(...newBalls);
+        while (state.balls.length > 8) state.balls.shift();
+      }
+
+      function castSpell() {
+        if (!state.running || state.gameOver) return;
+        if (state.charge < state.maxCharge) {
+          showToast('Blood Nova is not charged. Break more stones.');
+          return;
+        }
+        state.charge = 0;
+        state.shake = 22;
+        const cx = state.paddle.x;
+        const cy = state.height * 0.52;
+        let destroyed = 0;
+        const beforeBottom = bottomOccupiedRow();
+        state.bricks = state.bricks.filter(brick => {
+          const rect = brickRect(brick);
+          const bx = rect.x + rect.w / 2;
+          const by = rect.y + rect.h / 2;
+          const inCross = Math.abs(bx - cx) < state.brickW * 0.9 || Math.abs(by - cy) < state.brickH * 1.2;
+          const close = Math.hypot(bx - cx, by - cy) < Math.min(state.width, state.height) * 0.18;
+          if (inCross || close) {
+            destroyed += 1;
+            burst(bx, by, '#ff4567', 10, 2.8);
+            return false;
+          }
+          return true;
+        });
+        const gained = destroyed * 120;
+        state.score += gained;
+        addFloatingText(cx, cy, `BLOOD NOVA +${gained}`, '#ff4567');
+        addLog(`Blood Nova devoured ${destroyed} stones.`);
+        showToast('Blood Nova erupts!');
+        checkBottomRowCleared(beforeBottom);
+        updateUI();
+      }
+
+      function update(dt) {
+        if (!state.running || state.paused || state.gameOver) return;
+        state.toastTimer = Math.max(0, state.toastTimer - dt);
+        if (state.toastTimer <= 0) toast.classList.remove('show');
+        updateEffects(dt);
+        updatePaddle(dt);
+        updateBalls(dt);
+        updatePowers(dt);
+        updateParticles(dt);
+        updateFloatingTexts(dt);
+        checkDoom();
+        updateUI();
+      }
+
+      function updateEffects(dt) {
+        for (const key of Object.keys(state.effects)) state.effects[key] = Math.max(0, state.effects[key] - dt);
+        if (state.effects.widen <= 0) state.paddle.w += (clamp(state.width * 0.16, 90, 132) - state.paddle.w) * Math.min(1, dt * 8);
+      }
+
+      function updatePaddle(dt) {
+        const left = state.keys.has('ArrowLeft') || state.keys.has('a') || state.keys.has('A') || state.mobileMove < 0;
+        const right = state.keys.has('ArrowRight') || state.keys.has('d') || state.keys.has('D') || state.mobileMove > 0;
+        if (state.paddle.targetX !== null) {
+          state.paddle.x += (state.paddle.targetX - state.paddle.x) * Math.min(1, dt * 16);
+        }
+        if (left) state.paddle.x -= state.paddle.speed * dt;
+        if (right) state.paddle.x += state.paddle.speed * dt;
+        state.paddle.x = clamp(state.paddle.x, state.paddle.w / 2 + 8, state.width - state.paddle.w / 2 - 8);
+        for (const ball of state.balls) if (ball.stuck) placeBallOnPaddle(ball);
+      }
+
+      function updateBalls(dt) {
+        const speedMod = state.effects.slow > 0 ? 0.82 : 1;
+        const previousBottom = bottomOccupiedRow();
+        for (const ball of state.balls) {
+          if (ball.stuck) continue;
+          ball.x += ball.vx * dt * speedMod;
+          ball.y += ball.vy * dt * speedMod;
+          ball.fire = Math.max(0, ball.fire - dt);
+
+          if (ball.x - ball.r <= 0) {
+            ball.x = ball.r;
+            ball.vx = Math.abs(ball.vx);
+            wallSpark(ball.x, ball.y);
+          }
+          if (ball.x + ball.r >= state.width) {
+            ball.x = state.width - ball.r;
+            ball.vx = -Math.abs(ball.vx);
+            wallSpark(ball.x, ball.y);
+          }
+          if (ball.y - ball.r <= 0) {
+            ball.y = ball.r;
+            ball.vy = Math.abs(ball.vy);
+            wallSpark(ball.x, ball.y);
+          }
+
+          collidePaddle(ball);
+          collideBricks(ball);
+        }
+        state.balls = state.balls.filter(ball => ball.y - ball.r <= state.height + 30);
+        if (state.balls.length === 0) {
+          if (state.paddle.ward > 0) {
+            state.paddle.ward -= 1;
+            state.balls.push(defaultBall());
+            state.launched = false;
+            addLog('The Grave Ward resurrects your orb.');
+            showToast('Grave Ward spent. Orb resurrected.');
+          } else {
+            endGame('The orb is lost to the undercrypt.');
+          }
+        }
+        checkBottomRowCleared(previousBottom);
+      }
+
+      function collidePaddle(ball) {
+        const p = state.paddle;
+        const px = p.x - p.w / 2;
+        const py = p.y - p.h / 2;
+        if (ball.vy > 0 && ball.x + ball.r > px && ball.x - ball.r < px + p.w && ball.y + ball.r > py && ball.y - ball.r < py + p.h) {
+          const hit = clamp((ball.x - p.x) / (p.w / 2), -1, 1);
+          const speed = clamp(Math.hypot(ball.vx, ball.vy) * 1.012, 410, 690 + state.depth * 10);
+          const angle = -Math.PI / 2 + hit * 0.92;
+          ball.vx = Math.cos(angle) * speed;
+          ball.vy = Math.sin(angle) * speed;
+          ball.y = py - ball.r - 1;
+          burst(ball.x, ball.y, '#f6d36b', 8, 1.4);
+          state.combo = Math.max(0, state.combo - 0.15);
+        }
+      }
+
+      function collideBricks(ball) {
+        for (let i = state.bricks.length - 1; i >= 0; i -= 1) {
+          const brick = state.bricks[i];
+          const rect = brickRect(brick);
+          const closestX = clamp(ball.x, rect.x, rect.x + rect.w);
+          const closestY = clamp(ball.y, rect.y, rect.y + rect.h);
+          const dx = ball.x - closestX;
+          const dy = ball.y - closestY;
+          if (dx * dx + dy * dy > ball.r * ball.r) continue;
+
+          damageBrick(brick, i, ball);
+          if (state.effects.pierce <= 0) {
+            const overlapX = Math.min(Math.abs(ball.x - rect.x), Math.abs(ball.x - (rect.x + rect.w)));
+            const overlapY = Math.min(Math.abs(ball.y - rect.y), Math.abs(ball.y - (rect.y + rect.h)));
+            if (overlapX < overlapY) ball.vx *= -1;
+            else ball.vy *= -1;
+          }
+          ball.x += Math.sign(dx || rand(-1, 1)) * 1.8;
+          ball.y += Math.sign(dy || rand(-1, 1)) * 1.8;
+          return;
+        }
+      }
+
+      function damageBrick(brick, index, ball) {
+        brick.hp -= state.effects.ember > 0 ? 2 : 1;
+        state.score += 10;
+        state.charge = clamp(state.charge + 2.2, 0, state.maxCharge);
+        const rect = brickRect(brick);
+        const cx = rect.x + rect.w / 2;
+        const cy = rect.y + rect.h / 2;
+        burst(cx, cy, brick.theme.glow, 7, 1.6);
+        state.shake = Math.max(state.shake, 2.5);
+        if (state.effects.ember > 0) splashDamage(brick);
+        if (brick.hp <= 0) {
+          state.bricks.splice(index, 1);
+          const gained = Math.floor(brick.theme.score * (1 + state.combo * 0.08));
+          state.score += gained;
+          state.combo += 0.22;
+          state.charge = clamp(state.charge + 4.5, 0, state.maxCharge);
+          addFloatingText(cx, cy, `+${gained}`, brick.theme.glow);
+          burst(cx, cy, brick.theme.glow, 18, 2.7);
+          if (Math.random() < 0.075) spawnPower(choose(POWER_TYPES), cx, cy);
+        }
+      }
+
+      function splashDamage(sourceBrick) {
+        for (let i = state.bricks.length - 1; i >= 0; i -= 1) {
+          const brick = state.bricks[i];
+          const near = Math.abs(brick.col - sourceBrick.col) + Math.abs(brick.row - sourceBrick.row) === 1;
+          if (!near) continue;
+          brick.hp -= 0.34;
+          const rect = brickRect(brick);
+          burst(rect.x + rect.w / 2, rect.y + rect.h / 2, '#ff7a2d', 2, 1.1);
+          if (brick.hp <= 0) {
+            state.score += brick.theme.score;
+            state.bricks.splice(i, 1);
+          }
+        }
+      }
+
+      function updatePowers(dt) {
+        for (const power of state.powers) {
+          power.y += power.vy * dt;
+          power.pulse += dt * 5;
+        }
+        for (let i = state.powers.length - 1; i >= 0; i -= 1) {
+          const power = state.powers[i];
+          const p = state.paddle;
+          const hit = power.x > p.x - p.w / 2 && power.x < p.x + p.w / 2 && power.y + power.r > p.y - p.h && power.y - power.r < p.y + p.h;
+          if (hit) {
+            state.powers.splice(i, 1);
+            applyPower(power.type);
+          } else if (power.y > state.height + 40) {
+            state.powers.splice(i, 1);
+          }
+        }
+      }
+
+      function updateParticles(dt) {
+        for (const p of state.particles) {
+          p.x += p.vx * dt;
+          p.y += p.vy * dt;
+          p.vy += p.gravity * dt;
+          p.life -= dt;
+          p.rot += p.spin * dt;
+        }
+        state.particles = state.particles.filter(p => p.life > 0);
+      }
+
+      function updateFloatingTexts(dt) {
+        for (const text of state.floatingTexts) {
+          text.y -= 42 * dt;
+          text.life -= dt;
+        }
+        state.floatingTexts = state.floatingTexts.filter(t => t.life > 0);
+      }
+
+      function checkDoom() {
+        let deepest = 0;
+        for (const brick of state.bricks) {
+          const rect = brickRect(brick);
+          deepest = Math.max(deepest, rect.y + rect.h);
+          if (rect.y + rect.h >= state.paddle.y - 14) {
+            endGame('The Grave King rises. The rows reached your altar.');
+            return;
+          }
+        }
+        if (state.bricks.length === 0) {
+          for (let row = 0; row < 4; row += 1) addTopRow(false);
+          showToast('The empty crypt refills with malice.');
+        }
+        const doom = clamp((deepest - state.topMargin) / Math.max(1, state.paddle.y - state.topMargin), 0, 1);
+        doomMeter.style.width = `${Math.round(doom * 100)}%`;
+      }
+
+      function endGame(reason) {
+        state.gameOver = true;
+        state.running = false;
+        modalTitle.textContent = 'Rite Failed';
+        modalText.textContent = `${reason} Final score: ${state.score}. Rows banished: ${state.rowsCleared}.`;
+        startBtn.textContent = 'Retry Rite';
+        overlay.classList.remove('hidden');
+        addLog(reason);
+      }
+
+      function render() {
+        const s = state.shake;
+        state.shake = Math.max(0, state.shake - 0.55);
+        ctx.save();
+        ctx.clearRect(0, 0, state.width, state.height);
+        if (s > 0) ctx.translate(rand(-s, s), rand(-s, s));
+        drawBackground();
+        drawBricks();
+        drawPowers();
+        drawPaddle();
+        drawBalls();
+        drawParticles();
+        drawFloatingTexts();
+        drawVignette();
+        ctx.restore();
+      }
+
+      function drawBackground() {
+        const g = ctx.createLinearGradient(0, 0, 0, state.height);
+        g.addColorStop(0, '#0b0712');
+        g.addColorStop(0.48, '#16091f');
+        g.addColorStop(1, '#07040b');
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, state.width, state.height);
+
+        ctx.save();
+        ctx.globalAlpha = 0.28;
+        ctx.strokeStyle = '#a56cff';
+        ctx.lineWidth = 1;
+        for (let x = -80; x < state.width + 80; x += 56) {
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x + 160, state.height);
+          ctx.stroke();
+        }
+        ctx.globalAlpha = 0.15;
+        for (let y = state.topMargin; y < state.paddle.y; y += state.brickH + BRICK_GAP) {
+          ctx.beginPath();
+          ctx.moveTo(0, y - BRICK_GAP / 2);
+          ctx.lineTo(state.width, y - BRICK_GAP / 2);
+          ctx.strokeStyle = '#f6d36b';
+          ctx.stroke();
+        }
+        ctx.restore();
+
+        ctx.save();
+        ctx.globalAlpha = 0.38;
+        ctx.fillStyle = '#1b0b2c';
+        for (let i = 0; i < 7; i += 1) {
+          const x = (i / 6) * state.width;
+          drawTower(x, state.height, 28 + (i % 3) * 18, 110 + (i % 2) * 70);
+        }
+        ctx.restore();
+      }
+
+      function drawTower(x, base, w, h) {
+        ctx.beginPath();
+        ctx.moveTo(x - w / 2, base);
+        ctx.lineTo(x - w / 2, base - h);
+        ctx.lineTo(x, base - h - w * 0.9);
+        ctx.lineTo(x + w / 2, base - h);
+        ctx.lineTo(x + w / 2, base);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      function drawBricks() {
+        for (const brick of state.bricks) {
+          const rect = brickRect(brick);
+          const hpRatio = clamp(brick.hp / brick.maxHp, 0, 1);
+          ctx.save();
+          ctx.translate(rect.x, rect.y);
+          const wob = Math.sin(performance.now() / 450 + brick.wobble) * 0.8;
+          ctx.translate(0, wob);
+          roundRect(0, 0, rect.w, rect.h, 9);
+          const grad = ctx.createLinearGradient(0, 0, rect.w, rect.h);
+          grad.addColorStop(0, lighten(brick.theme.color, 34));
+          grad.addColorStop(0.48, brick.theme.color);
+          grad.addColorStop(1, darken(brick.theme.color, 34));
+          ctx.fillStyle = grad;
+          ctx.fill();
+          ctx.strokeStyle = brick.theme.glow;
+          ctx.globalAlpha = 0.24 + hpRatio * 0.34;
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          ctx.globalAlpha = 1;
+          ctx.fillStyle = `rgba(0,0,0,${0.2 + (1 - hpRatio) * 0.38})`;
+          roundRect(4, 4, rect.w - 8, rect.h - 8, 7);
+          ctx.fill();
+          ctx.fillStyle = brick.theme.glow;
+          ctx.globalAlpha = 0.72;
+          ctx.font = `${Math.max(13, rect.h * 0.58)}px Georgia`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(brick.rune, rect.w / 2, rect.h / 2 + 1);
+          ctx.globalAlpha = 1;
+          if (brick.maxHp > 1) {
+            ctx.fillStyle = 'rgba(0,0,0,0.34)';
+            roundRect(8, rect.h - 7, rect.w - 16, 3, 2);
+            ctx.fill();
+            ctx.fillStyle = brick.theme.glow;
+            roundRect(8, rect.h - 7, (rect.w - 16) * hpRatio, 3, 2);
+            ctx.fill();
+          }
+          ctx.restore();
+        }
+      }
+
+      function drawPaddle() {
+        const p = state.paddle;
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.shadowBlur = 22;
+        ctx.shadowColor = p.ward > 0 ? '#62ff9a' : '#f6d36b';
+        const grad = ctx.createLinearGradient(-p.w / 2, -p.h, p.w / 2, p.h);
+        grad.addColorStop(0, '#5b2034');
+        grad.addColorStop(0.5, '#f6d36b');
+        grad.addColorStop(1, '#451223');
+        ctx.fillStyle = grad;
+        roundRect(-p.w / 2, -p.h / 2, p.w, p.h, 999);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = 'rgba(255,255,255,0.42)';
+        ctx.stroke();
+        if (p.ward > 0) {
+          ctx.globalAlpha = 0.42 + Math.sin(performance.now() / 120) * 0.13;
+          ctx.strokeStyle = '#62ff9a';
+          ctx.lineWidth = 3;
+          roundRect(-p.w / 2 - 8, -p.h / 2 - 8, p.w + 16, p.h + 16, 999);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      function drawBalls() {
+        for (const ball of state.balls) {
+          ctx.save();
+          const glow = state.effects.pierce > 0 ? '#a56cff' : state.effects.ember > 0 ? '#ff7a2d' : '#67f2ff';
+          ctx.shadowBlur = 24;
+          ctx.shadowColor = glow;
+          const grad = ctx.createRadialGradient(ball.x - ball.r * 0.35, ball.y - ball.r * 0.35, 1, ball.x, ball.y, ball.r * 1.4);
+          grad.addColorStop(0, '#ffffff');
+          grad.addColorStop(0.34, glow);
+          grad.addColorStop(1, '#16091f');
+          ctx.fillStyle = grad;
+          ctx.beginPath();
+          ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.shadowBlur = 0;
+          ctx.strokeStyle = 'rgba(255,255,255,0.62)';
+          ctx.stroke();
+          ctx.restore();
+        }
+      }
+
+      function drawPowers() {
+        for (const power of state.powers) {
+          const color = relicColor(power.type);
+          ctx.save();
+          ctx.translate(power.x, power.y);
+          ctx.rotate(power.pulse * 0.25);
+          ctx.shadowBlur = 24;
+          ctx.shadowColor = color;
+          ctx.fillStyle = color;
+          ctx.globalAlpha = 0.92;
+          ctx.beginPath();
+          for (let i = 0; i < 8; i += 1) {
+            const a = (Math.PI * 2 * i) / 8;
+            const r = i % 2 === 0 ? power.r + Math.sin(power.pulse) * 2 : power.r * 0.48;
+            const x = Math.cos(a) * r;
+            const y = Math.sin(a) * r;
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          }
+          ctx.closePath();
+          ctx.fill();
+          ctx.globalAlpha = 1;
+          ctx.fillStyle = '#07040b';
+          ctx.font = '14px Georgia';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(relicGlyph(power.type), 0, 1);
+          ctx.restore();
+        }
+      }
+
+      function drawParticles() {
+        for (const p of state.particles) {
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate(p.rot);
+          ctx.globalAlpha = clamp(p.life / p.maxLife, 0, 1);
+          ctx.fillStyle = p.color;
+          roundRect(-p.size / 2, -p.size / 2, p.size, p.size, 2);
+          ctx.fill();
+          ctx.restore();
+        }
+      }
+
+      function drawFloatingTexts() {
+        for (const text of state.floatingTexts) {
+          ctx.save();
+          ctx.globalAlpha = clamp(text.life / text.maxLife, 0, 1);
+          ctx.fillStyle = text.color;
+          ctx.shadowBlur = 12;
+          ctx.shadowColor = text.color;
+          ctx.font = '700 18px Georgia';
+          ctx.textAlign = 'center';
+          ctx.fillText(text.value, text.x, text.y);
+          ctx.restore();
+        }
+      }
+
+      function drawVignette() {
+        const g = ctx.createRadialGradient(state.width / 2, state.height / 2, Math.min(state.width, state.height) * 0.2, state.width / 2, state.height / 2, Math.max(state.width, state.height) * 0.78);
+        g.addColorStop(0, 'rgba(0,0,0,0)');
+        g.addColorStop(1, 'rgba(0,0,0,0.58)');
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, state.width, state.height);
+      }
+
+      function burst(x, y, color, count, power) {
+        for (let i = 0; i < count; i += 1) {
+          const a = rand(0, Math.PI * 2);
+          const sp = rand(35, 120) * power;
+          state.particles.push({
+            x,
+            y,
+            vx: Math.cos(a) * sp,
+            vy: Math.sin(a) * sp,
+            gravity: rand(20, 90),
+            life: rand(0.28, 0.78),
+            maxLife: 0.78,
+            size: rand(2, 6),
+            color,
+            rot: rand(0, Math.PI),
+            spin: rand(-7, 7)
+          });
+        }
+        if (state.particles.length > PARTICLE_LIMIT) state.particles.splice(0, state.particles.length - PARTICLE_LIMIT);
+      }
+
+      function wallSpark(x, y) {
+        if (Math.random() < 0.65) burst(x, y, '#a56cff', 4, 1);
+      }
+
+      function addFloatingText(x, y, value, color) {
+        state.floatingTexts.push({ x, y, value, color, life: 1.05, maxLife: 1.05 });
+      }
+
+      function addLog(text) {
+        const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const div = document.createElement('div');
+        div.className = 'log-item';
+        div.textContent = `${time} — ${text}`;
+        logList.prepend(div);
+        while (logList.children.length > MAX_LOGS) logList.lastChild.remove();
+      }
+
+      function showToast(text) {
+        toast.textContent = text;
+        toast.classList.add('show');
+        state.toastTimer = 2.6;
+      }
+
+      function updateUI() {
+        scoreEl.textContent = String(Math.floor(state.score));
+        rowsEl.textContent = String(state.rowsCleared);
+        ballsEl.textContent = String(state.balls.length);
+        depthEl.textContent = String(state.depth);
+        const chargePct = Math.round((state.charge / state.maxCharge) * 100);
+        spellStatus.classList.toggle('ready', state.charge >= state.maxCharge);
+        spellStatus.innerHTML = `<strong>Blood Nova</strong><br/>${state.charge >= state.maxCharge ? 'Ready. Press X or Cast Spell.' : `Charging: ${chargePct}%`}`;
+        renderUpgrades();
+      }
+
+      function renderUpgrades() {
+        const rows = upgrades.map(upgrade => {
+          const active = upgrade.key === 'ward' ? state.paddle.ward > 0 : state.effects[upgrade.key] > 0;
+          const timer = upgrade.key !== 'ward' && state.effects[upgrade.key] > 0 ? ` ${Math.ceil(state.effects[upgrade.key])}s` : '';
+          const count = upgrade.key === 'ward' && state.paddle.ward > 0 ? ` ×${state.paddle.ward}` : '';
+          return `<div class="upgrade ${active ? 'active' : ''}"><strong>${upgrade.title}${timer}${count}</strong><br>${upgrade.text}</div>`;
+        }).join('');
+        upgradeList.innerHTML = rows;
+      }
+
+      function relicColor(type) {
+        return {
+          widen: '#f6d36b',
+          split: '#67f2ff',
+          pierce: '#a56cff',
+          slow: '#c8d7ff',
+          ember: '#ff7a2d',
+          ward: '#62ff9a'
+        }[type] || '#ffffff';
+      }
+
+      function relicGlyph(type) {
+        return {
+          widen: 'ᚱ',
+          split: '✦',
+          pierce: '†',
+          slow: '☽',
+          ember: '✹',
+          ward: '♢'
+        }[type] || '?';
+      }
+
+      function roundRect(x, y, w, h, r) {
+        const radius = Math.min(r, w / 2, h / 2);
+        ctx.beginPath();
+        ctx.moveTo(x + radius, y);
+        ctx.arcTo(x + w, y, x + w, y + h, radius);
+        ctx.arcTo(x + w, y + h, x, y + h, radius);
+        ctx.arcTo(x, y + h, x, y, radius);
+        ctx.arcTo(x, y, x + w, y, radius);
+        ctx.closePath();
+      }
+
+      function hexToRgb(hex) {
+        const clean = hex.replace('#', '');
+        const n = parseInt(clean.length === 3 ? clean.split('').map(c => c + c).join('') : clean, 16);
+        return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+      }
+
+      function rgbToHex(r, g, b) {
+        return `#${[r, g, b].map(v => clamp(Math.round(v), 0, 255).toString(16).padStart(2, '0')).join('')}`;
+      }
+
+      function lighten(hex, amount) {
+        const { r, g, b } = hexToRgb(hex);
+        return rgbToHex(r + amount, g + amount, b + amount);
+      }
+
+      function darken(hex, amount) {
+        const { r, g, b } = hexToRgb(hex);
+        return rgbToHex(r - amount, g - amount, b - amount);
+      }
+
+      function loop(now) {
+        const dt = Math.min(0.033, (now - state.lastTime) / 1000 || 0);
+        state.lastTime = now;
+        update(dt);
+        render();
+        requestAnimationFrame(loop);
+      }
+
+      function setPointerTarget(clientX) {
+        const rect = canvas.getBoundingClientRect();
+        state.paddle.targetX = clamp(clientX - rect.left, state.paddle.w / 2, state.width - state.paddle.w / 2);
+      }
+
+      window.addEventListener('resize', resize);
+      window.addEventListener('keydown', event => {
+        state.keys.add(event.key);
+        if (['ArrowLeft', 'ArrowRight', ' ', 'Spacebar'].includes(event.key)) event.preventDefault();
+        if (event.key === ' ' || event.key === 'Spacebar') launchBalls();
+        if (event.key === 'x' || event.key === 'X') castSpell();
+        if (event.key === 'p' || event.key === 'P') {
+          if (!state.running || state.gameOver) return;
+          state.paused = !state.paused;
+          modalTitle.textContent = state.paused ? 'Rite Paused' : 'Cryptfall';
+          modalText.textContent = 'The orb hangs in forbidden time. Press P or Begin Rite to resume.';
+          startBtn.textContent = 'Resume';
+          overlay.classList.toggle('hidden', !state.paused);
+        }
+      });
+      window.addEventListener('keyup', event => state.keys.delete(event.key));
+
+      canvas.addEventListener('pointerdown', event => {
+        state.pointerDown = true;
+        canvas.setPointerCapture(event.pointerId);
+        setPointerTarget(event.clientX);
+        if (!state.launched || !state.running) launchBalls();
+      });
+      canvas.addEventListener('pointermove', event => {
+        setPointerTarget(event.clientX);
+      });
+      canvas.addEventListener('pointerup', event => {
+        state.pointerDown = false;
+        try { canvas.releasePointerCapture(event.pointerId); } catch (_) {}
+      });
+      canvas.addEventListener('pointercancel', () => { state.pointerDown = false; });
+
+      startBtn.addEventListener('click', () => {
+        if (state.paused) {
+          state.paused = false;
+          overlay.classList.add('hidden');
+          return;
+        }
+        resetGame();
+      });
+      spellBtn.addEventListener('click', castSpell);
+      launchBtn.addEventListener('click', launchBalls);
+      leftBtn.addEventListener('pointerdown', () => { state.mobileMove = -1; });
+      rightBtn.addEventListener('pointerdown', () => { state.mobileMove = 1; });
+      leftBtn.addEventListener('pointerup', () => { state.mobileMove = 0; });
+      rightBtn.addEventListener('pointerup', () => { state.mobileMove = 0; });
+      leftBtn.addEventListener('pointercancel', () => { state.mobileMove = 0; });
+      rightBtn.addEventListener('pointercancel', () => { state.mobileMove = 0; });
+
+      resize();
+      state.balls = [defaultBall()];
+      renderUpgrades();
+      addLog('Awaiting the first rite.');
+      requestAnimationFrame(loop);
+    })();
+  </script>
+</body>
+</html>
