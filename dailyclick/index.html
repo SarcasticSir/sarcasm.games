@@ -489,6 +489,8 @@
   }
   .setday-input:focus { border-color: rgba(255,255,255,0.25); }
 
+  .hidden { display: none !important; }
+
   /* ===== ANIMATIONS ===== */
   @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
   @keyframes bounce { from { transform: translateY(0); } to { transform: translateY(-12px); } }
@@ -581,8 +583,9 @@
 </div>
 
 <!-- Discreet reset button for testing -->
+<button class="save-btn" id="admin-toggle-btn" style="position:fixed;bottom:1rem;left:1rem;z-index:11;">admin</button>
 <!-- #added: dev toolbar — discreet testing controls fixed to bottom-right -->
-<div class="dev-bar">
+<div class="dev-bar hidden" id="dev-bar">
   <!-- #changed: removed max="30" so tester can jump past day 30 -->
   <input class="setday-input" id="setday-input" type="number" min="1" max="300" value="1" title="Jump to day (testing)" />
   <button class="setday-btn" id="setday-btn" title="Set current day for testing">set day</button>
@@ -645,12 +648,35 @@
   function updateProgressBar(){const req=state.day;document.getElementById('progress-bar').style.width=(req>0?(state.clickedSet.size/req)*100:0)+'%';}
   function updateUI(){document.getElementById('day-number').textContent=state.day;document.getElementById('stat-day').textContent=state.day;document.getElementById('stat-best').textContent=state.best;document.getElementById('stat-stars').textContent=state.stars.length;const req=state.day,done=state.clickedSet.size>=req;document.getElementById('day-status').textContent=done?'All clicks used — see you tomorrow!':`${req-state.clickedSet.size} click${req-state.clickedSet.size>1?'s':''} remaining today`;document.getElementById('day-done-msg').textContent=done?'✨ Day complete! Come back tomorrow.':'';updateProgressBar();renderStars();}
 
+
+  const ADMIN_LOCK_KEY = 'dcg_admin_unlocked';
+  const ADMIN_CODE = 'sarcasm';
+  function syncAdminPanelVisibility(){
+    const unlocked = localStorage.getItem(ADMIN_LOCK_KEY) === '1';
+    document.getElementById('dev-bar').classList.toggle('hidden', !unlocked);
+    document.getElementById('admin-toggle-btn').textContent = unlocked ? 'lock admin' : 'admin';
+  }
+  document.getElementById('admin-toggle-btn').addEventListener('click',()=>{
+    const unlocked = localStorage.getItem(ADMIN_LOCK_KEY) === '1';
+    if (unlocked){
+      localStorage.removeItem(ADMIN_LOCK_KEY);
+      syncAdminPanelVisibility();
+      return;
+    }
+    const code = prompt('Enter admin code');
+    if (code === ADMIN_CODE){
+      localStorage.setItem(ADMIN_LOCK_KEY,'1');
+      syncAdminPanelVisibility();
+    } else if (code !== null){
+      alert('Wrong code');
+    }
+  });
   document.getElementById('reset-btn').addEventListener('click',()=>{if(!confirm('Reset ALL progress? This cannot be undone.'))return;Object.values(KEYS).forEach((k)=>localStorage.removeItem(k));loadState();init();});
   document.getElementById('setday-btn').addEventListener('click',()=>{const target=parseInt(document.getElementById('setday-input').value,10);if(isNaN(target)||target<1||target>300){alert('Please enter a day number from 1 to 300.');return;} state.day=target;state.clickedSet=new Set();openButtonGroup=-1;state.lastDate=todayStr();saveState();renderButtons();updateUI();});
   document.getElementById('export-save-btn').addEventListener('click',()=>alert('Export from inline version is disabled in this compact embed.'));
   document.getElementById('import-save-btn').addEventListener('click',()=>alert('Import from inline version is disabled in this compact embed.'));
 
-  function init(){loadState();reconcileDay();saveState();renderButtons();updateUI();}
+  function init(){loadState();reconcileDay();saveState();renderButtons();updateUI();syncAdminPanelVisibility();}
   init();
 </script>
 </body>
