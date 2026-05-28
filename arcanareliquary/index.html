@@ -505,6 +505,20 @@
             margin-bottom: 14px
         }
 
+        .offline-modal {
+            width: min(520px, 100%);
+            text-align: center
+        }
+
+        .offline-modal .big-pack {
+            margin: 6px auto 12px
+        }
+
+        .offline-modal p {
+            margin: 0 0 18px;
+            color: var(--muted)
+        }
+
         .pack-stage {
             display: none;
             min-height: 360px;
@@ -814,6 +828,14 @@
             <div class="pulls" id="tradeChoices"></div>
         </div>
     </div>
+    <div class="modal-backdrop" id="offlineModalBackdrop">
+        <div class="modal offline-modal">
+            <div class="big-pack">🌙</div>
+            <h2>Welcome Back</h2>
+            <p id="offlineModalText">Your conduits gathered moonshards while you were away.</p>
+            <button class="btn primary" id="closeOfflineModal" type="button">Claim</button>
+        </div>
+    </div>
     <div class="toast-stack" id="toastStack"></div>
     <script>
         const SAVE_KEY = "arcanaReliquarySaveV3";
@@ -908,7 +930,7 @@
         function cardCatalog() { return cards.filter(c => cardId(c)) }
         const state = loadState();
         const $ = id => document.getElementById(id);
-        const els = { currency: $("currency"), perClick: $("perClick"), idleRate: $("idleRate"), totalCards: $("totalCards"), uniqueCards: $("uniqueCards"), clicker: $("clicker"), packList: $("packList"), packInventoryList: $("packInventoryList"), upgradeList: $("upgradeList"), learnedUpgradeList: $("learnedUpgradeList"), idleList: $("idleList"), luckList: $("luckList"), offlineList: $("offlineList"), achievementList: $("achievementList"), rateList: $("rateList"), collection: $("collection"), rarityFilter: $("rarityFilter"), sortMode: $("sortMode"), modalBackdrop: $("modalBackdrop"), closeModal: $("closeModal"), pulls: $("pulls"), modalTitle: $("modalTitle"), packStage: $("packStage"), stageTitle: $("stageTitle"), stageText: $("stageText"), tradeModalBackdrop: $("tradeModalBackdrop"), closeTradeModal: $("closeTradeModal"), tradeModalTitle: $("tradeModalTitle"), tradeModalText: $("tradeModalText"), tradeChoices: $("tradeChoices"), toastStack: $("toastStack"), saveBtn: $("saveBtn"), resetBtn: $("resetBtn") };
+        const els = { currency: $("currency"), perClick: $("perClick"), idleRate: $("idleRate"), totalCards: $("totalCards"), uniqueCards: $("uniqueCards"), clicker: $("clicker"), packList: $("packList"), packInventoryList: $("packInventoryList"), upgradeList: $("upgradeList"), learnedUpgradeList: $("learnedUpgradeList"), idleList: $("idleList"), luckList: $("luckList"), offlineList: $("offlineList"), achievementList: $("achievementList"), rateList: $("rateList"), collection: $("collection"), rarityFilter: $("rarityFilter"), sortMode: $("sortMode"), modalBackdrop: $("modalBackdrop"), closeModal: $("closeModal"), pulls: $("pulls"), modalTitle: $("modalTitle"), packStage: $("packStage"), stageTitle: $("stageTitle"), stageText: $("stageText"), tradeModalBackdrop: $("tradeModalBackdrop"), closeTradeModal: $("closeTradeModal"), tradeModalTitle: $("tradeModalTitle"), tradeModalText: $("tradeModalText"), tradeChoices: $("tradeChoices"), offlineModalBackdrop: $("offlineModalBackdrop"), closeOfflineModal: $("closeOfflineModal"), offlineModalText: $("offlineModalText"), toastStack: $("toastStack"), saveBtn: $("saveBtn"), resetBtn: $("resetBtn") };
         let opening = false;
         function defaultState() { return { currency: 0, perClick: 1, owned: {}, boughtUpgrades: {}, idleLevels: {}, luckUpgrades: {}, offlineUpgrades: {}, packInventory: {}, achievements: {}, packsOpened: 0, lifetimeCards: 0, lastSeen: Date.now() } }
         function loadState() { try { const raw = localStorage.getItem(SAVE_KEY) || localStorage.getItem("arcanaReliquarySaveV2") || localStorage.getItem("arcanaReliquarySaveV1"); if (!raw) return defaultState(); const parsed = JSON.parse(raw); return { ...defaultState(), ...parsed, owned: parsed.owned || {}, boughtUpgrades: parsed.boughtUpgrades || {}, idleLevels: parsed.idleLevels || {}, luckUpgrades: parsed.luckUpgrades || {}, offlineUpgrades: parsed.offlineUpgrades || {}, packInventory: parsed.packInventory || {}, achievements: parsed.achievements || {}, packsOpened: parsed.packsOpened || 0, lastSeen: parsed.lastSeen || Date.now() } } catch { return defaultState() } }
@@ -993,7 +1015,9 @@
         function renderOffline() { els.offlineList.innerHTML = ""; const eff = offlineEfficiency(); const current = document.createElement("div"); current.className = "row"; current.innerHTML = `<div><strong>Offline Efficiency</strong><small>While closed, you earn ${Math.round(eff * 100)}% of your idle moonshards/sec. Base is 25%, maximum is 150%.</small></div><span class="badge">${Math.round(eff * 100)}%</span>`; els.offlineList.appendChild(current); offlineUpgrades.forEach(u => { const bought = !!state.offlineUpgrades[u.id]; const affordable = state.currency >= u.cost && !bought; const row = document.createElement("div"); row.className = "row"; row.innerHTML = `<div><strong>${u.name}</strong><small>${u.description}<br>Offline efficiency: +${Math.round(u.bonus * 100)}%</small></div><button class="btn ${affordable ? "primary" : ""}" ${bought ? "disabled" : ""}>${bought ? "Attuned" : fmt(u.cost) + " ✦"}</button>`; row.querySelector("button").onclick = () => buyOffline(u); els.offlineList.appendChild(row) }) }
         function grantElapsedIdle(multiplier = 1) { ensureStateShape(); const now = Date.now(); const elapsed = Math.max(0, (now - state.lastSeen) / 1000); const gain = elapsed * totalIdleGain() * multiplier; state.lastSeen = now; if (gain > 0) state.currency += gain; return { elapsed, gain } }
         function settleActiveEarnings(render = true) { const result = grantElapsedIdle(1); if (render && result.gain > 0) refreshEconomy(); return result }
-        function applyOfflineEarnings() { const result = grantElapsedIdle(offlineEfficiency()); if (result.elapsed >= 60 && result.gain >= 1) setTimeout(() => toast(`Welcome back! Your conduits gathered ${fmt(result.gain)} offline moonshards.`), 350); saveState() }
+        function showOfflineModal(gain) { els.offlineModalText.textContent = `Your conduits gathered ${fmt(gain)} offline moonshards while you were away.`; els.offlineModalBackdrop.classList.add("show") }
+        function closeOfflineModal() { els.offlineModalBackdrop.classList.remove("show") }
+        function applyOfflineEarnings() { const result = grantElapsedIdle(offlineEfficiency()); if (result.elapsed >= 60 && result.gain >= 1) setTimeout(() => showOfflineModal(result.gain), 350); saveState() }
         function uniqueCountByRarity(rarity) { return byRarity(rarity).filter(c => (state.owned[cardId(c)] || 0) > 0).length }
         function isAchievementUnlocked(a) { const catalog = cardCatalog(); if (a.id === "firstPack") return state.packsOpened >= 1; if (a.id === "packHundred") return state.packsOpened >= 100; if (a.id === "firstDivine") return byRarity("Divine").some(c => (state.owned[cardId(c)] || 0) > 0); if (a.id === "firstPrism") return catalog.some(c => (state.owned[cardId(c)] || 0) >= 25); if (a.id === "fullAlbum") return catalog.every(c => (state.owned[cardId(c)] || 0) > 0); if (a.rarity) return uniqueCountByRarity(a.rarity) === byRarity(a.rarity).length; return false }
         function ensureStateShape() {
@@ -1021,7 +1045,7 @@
         function sparkle(e, t) { const s = document.createElement("div"); s.className = "sparkle"; s.textContent = t; const r = els.clicker.getBoundingClientRect(); s.style.left = ((e && e.clientX) || r.left + r.width / 2) + "px"; s.style.top = ((e && e.clientY) || r.top + r.height / 2) + "px"; document.body.appendChild(s); setTimeout(() => s.remove(), 850) }
         function resetGame() { if (!confirm("Shatter the save crystal and erase your collection?")) return; localStorage.removeItem(SAVE_KEY); Object.assign(state, defaultState()); updateUI(); toast("The reliquary has been reset.") }
         function syncActiveProgress() { const result = settleActiveEarnings(false); if (result.gain > 0) { refreshEconomy(); saveState() } else if (result.elapsed >= 5) saveState() }
-        function bind() { els.clicker.onclick = earn; els.rarityFilter.onchange = renderCollection; els.sortMode.onchange = renderCollection; els.closeModal.onclick = () => { if (!opening) els.modalBackdrop.classList.remove("show") }; els.modalBackdrop.onclick = e => { if (e.target === els.modalBackdrop && !opening) els.modalBackdrop.classList.remove("show") }; els.closeTradeModal.onclick = () => els.tradeModalBackdrop.classList.remove("show"); els.tradeModalBackdrop.onclick = e => { if (e.target === els.tradeModalBackdrop) els.tradeModalBackdrop.classList.remove("show") }; els.saveBtn.onclick = () => { syncActiveProgress(); saveState(true) }; els.resetBtn.onclick = resetGame; document.addEventListener("visibilitychange", syncActiveProgress); window.addEventListener("focus", syncActiveProgress); window.addEventListener("pageshow", syncActiveProgress); window.addEventListener("pagehide", syncActiveProgress); window.onkeydown = e => { if (e.code === "Space" && !e.repeat && !["BUTTON", "SELECT"].includes(document.activeElement.tagName)) { e.preventDefault(); earn() } if (e.key === "Escape" && !opening) { els.modalBackdrop.classList.remove("show"); els.tradeModalBackdrop.classList.remove("show") } } }
+        function bind() { els.clicker.onclick = earn; els.rarityFilter.onchange = renderCollection; els.sortMode.onchange = renderCollection; els.closeModal.onclick = () => { if (!opening) els.modalBackdrop.classList.remove("show") }; els.modalBackdrop.onclick = e => { if (e.target === els.modalBackdrop && !opening) els.modalBackdrop.classList.remove("show") }; els.closeTradeModal.onclick = () => els.tradeModalBackdrop.classList.remove("show"); els.tradeModalBackdrop.onclick = e => { if (e.target === els.tradeModalBackdrop) els.tradeModalBackdrop.classList.remove("show") }; els.closeOfflineModal.onclick = closeOfflineModal; els.offlineModalBackdrop.onclick = e => { if (e.target === els.offlineModalBackdrop) closeOfflineModal() }; els.saveBtn.onclick = () => { syncActiveProgress(); saveState(true) }; els.resetBtn.onclick = resetGame; document.addEventListener("visibilitychange", syncActiveProgress); window.addEventListener("focus", syncActiveProgress); window.addEventListener("pageshow", syncActiveProgress); window.addEventListener("pagehide", syncActiveProgress); window.onkeydown = e => { if (e.code === "Space" && !e.repeat && !["BUTTON", "SELECT"].includes(document.activeElement.tagName)) { e.preventDefault(); earn() } if (e.key === "Escape" && !opening) { els.modalBackdrop.classList.remove("show"); els.tradeModalBackdrop.classList.remove("show"); closeOfflineModal() } } }
         setInterval(syncActiveProgress, 1000); ensureStateShape(); applyOfflineEarnings(); renderPacks(); renderRates(); bind(); updateUI();
     </script>
 </body>
