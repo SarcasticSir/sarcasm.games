@@ -24,14 +24,14 @@
 
     body {
       background: var(--bg);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
       min-height: 100dvh;
-      overflow: hidden;
+      overflow-x: hidden;
+      overflow-y: auto;
+      padding: clamp(10px, 2.5vh, 24px) 10px;
       font-family: var(--font-hud);
       color: var(--white);
+      overscroll-behavior: none;
+      -webkit-tap-highlight-color: transparent;
       /* Scanline overlay for CRT feel */
       background-image:
         repeating-linear-gradient(
@@ -56,6 +56,18 @@
       z-index: 0;
     }
 
+    .game-shell {
+      position: relative;
+      z-index: 1;
+      width: min(100%, 720px);
+      min-height: calc(100dvh - clamp(20px, 5vh, 48px));
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
     /* ─── Title ─── */
     #title {
       position: relative;
@@ -65,7 +77,8 @@
       text-transform: uppercase;
       color: var(--cyan);
       text-shadow: var(--glow-c);
-      margin-bottom: 10px;
+      margin-bottom: 8px;
+      text-align: center;
       animation: flicker 6s infinite;
     }
 
@@ -111,6 +124,8 @@
                   inset 0 0 60px rgba(0,0,0,0.6);
       border-radius: 4px;
       overflow: hidden;
+      width: fit-content;
+      max-width: 100%;
     }
 
     canvas {
@@ -141,9 +156,11 @@
       justify-content: center;
       background: rgba(2,6,16,0.82);
       z-index: 10;
-      gap: 18px;
+      gap: clamp(10px, 2.2vh, 18px);
       text-align: center;
-      padding: 20px;
+      padding: clamp(14px, 3vw, 24px);
+      overflow-y: auto;
+      overscroll-behavior: contain;
     }
     #overlay.hidden { display: none; }
 
@@ -264,32 +281,48 @@
 
     #abort-btn.hidden { display: none; }
 
-    @media (max-width: 520px) {
-      .setting-row {
-        grid-template-columns: 1fr;
-        gap: 6px;
-      }
-    }
-
     /* ─── Mobile touch controls ─── */
     #touch-controls {
       position: relative;
       z-index: 2;
-      display: none; /* shown via JS on touch devices */
+      display: none; /* shown by coarse-pointer media query */
       width: 100%;
-      max-width: 600px;
+      max-width: 700px;
       margin-top: 10px;
       justify-content: space-between;
-      padding: 0 10px;
+      gap: 12px;
     }
+    .touch-player {
+      flex: 1 1 0;
+      min-width: 0;
+      display: grid;
+      gap: 5px;
+    }
+    #touch-controls.menu-hidden {
+      visibility: hidden;
+      pointer-events: none;
+    }
+    .touch-player.computer-controlled {
+      display: none;
+    }
+    .touch-label {
+      font-size: 0.62rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-align: center;
+      text-transform: uppercase;
+      color: rgba(232,244,255,0.68);
+    }
+    .touch-player:last-child .touch-label { color: rgba(255,0,200,0.78); }
     .touch-side {
-      display: flex;
-      flex-direction: column;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 6px;
     }
     .touch-btn {
-      width: clamp(50px, 14vw, 70px);
-      height: clamp(40px, 10vw, 52px);
+      width: 100%;
+      min-width: 0;
+      height: clamp(48px, 13vw, 58px);
       border: 1px solid rgba(0,245,255,0.4);
       background: rgba(0,245,255,0.07);
       color: var(--cyan);
@@ -315,6 +348,142 @@
       background: rgba(255,0,200,0.22);
     }
 
+
+    @media (hover: none), (pointer: coarse) {
+      #touch-controls { display: flex; }
+      #controls { display: none; }
+    }
+
+    @media (max-width: 600px) {
+      body {
+        padding: 8px;
+      }
+
+      .game-shell {
+        width: 100%;
+        min-height: calc(100dvh - 16px);
+        justify-content: flex-start;
+      }
+
+      .home-link {
+        align-self: flex-start;
+        margin-bottom: 6px;
+        padding: 7px 11px;
+        font-size: 0.58rem;
+      }
+
+      #title {
+        font-size: clamp(1.05rem, 5.4vw, 1.45rem);
+        letter-spacing: 0.2em;
+        margin-bottom: 4px;
+      }
+
+      #scoreboard {
+        width: min(76%, 270px);
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 7px;
+      }
+
+      .score { font-size: clamp(1.8rem, 10vw, 2.7rem); }
+      .score-label {
+        font-size: 0.5rem;
+        letter-spacing: 0.1em;
+      }
+
+      #canvas-wrap { width: 100%; }
+      canvas { width: 100%; height: auto; }
+
+      #overlay {
+        position: fixed;
+        inset: max(10px, env(safe-area-inset-top)) 10px max(10px, env(safe-area-inset-bottom));
+        width: auto;
+        max-width: 440px;
+        max-height: calc(100dvh - 20px);
+        margin: auto;
+        border: 1px solid rgba(0,245,255,0.42);
+        border-radius: 8px;
+        background: rgba(2,6,16,0.97);
+        box-shadow: var(--glow-c), inset 0 0 45px rgba(0,245,255,0.06);
+      }
+
+      #overlay h2 {
+        font-size: clamp(1.25rem, 7vw, 1.8rem);
+        letter-spacing: 0.2em;
+      }
+
+      #overlay p {
+        font-size: 0.7rem;
+        line-height: 1.5;
+      }
+
+      .mode-row {
+        width: 100%;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .mode-btn {
+        min-width: 0;
+        padding: 10px 6px;
+        font-size: 0.68rem;
+        letter-spacing: 0.1em;
+      }
+
+      .settings-panel { padding: 10px; }
+      .setting-row {
+        grid-template-columns: minmax(80px, 0.7fr) minmax(0, 1.3fr);
+        gap: 8px;
+        font-size: 0.65rem;
+      }
+      .cyber-select { min-height: 42px; }
+
+      #overlay-btn {
+        width: 100%;
+        min-height: 46px;
+      }
+
+      #abort-btn {
+        top: 6px;
+        right: 6px;
+        min-height: 38px;
+      }
+    }
+
+    @media (max-height: 520px) and (orientation: landscape) {
+      body { padding: 6px; }
+      .game-shell { min-height: calc(100dvh - 12px); }
+      .home-link {
+        position: fixed;
+        top: 6px;
+        left: 6px;
+        margin: 0;
+      }
+      #title { display: none; }
+      #scoreboard {
+        position: fixed;
+        top: 7px;
+        left: 50%;
+        width: 180px;
+        margin: 0;
+        transform: translateX(-50%);
+      }
+      .score { font-size: 1.55rem; }
+      .score-label { display: none; }
+      #canvas-wrap { width: fit-content; margin-top: 38px; }
+      #touch-controls {
+        position: fixed;
+        inset: 50% 8px auto;
+        transform: translateY(-50%);
+        max-width: none;
+        pointer-events: none;
+      }
+      .touch-player { max-width: 142px; pointer-events: auto; }
+      .touch-btn { height: 52px; background: rgba(2,6,16,0.86); }
+      .touch-label { display: none; }
+    }
+
     /* ─── Animations ─── */
     @keyframes flicker {
       0%,94%,96%,100% { opacity: 1; }
@@ -329,14 +498,14 @@
   </style>
 </head>
 <body>
-
+  <main class="game-shell">
   <a href="/" class="neon-btn home-link">Back to sarcasm.games</a>
   <div id="title">⬡ CYBER PONG ⬡</div>
 
   <!-- Score display -->
   <div id="scoreboard">
     <div class="score-col">
-      <span class="score-label">P1 · WASD</span>
+      <span class="score-label" id="left-label">P1 · W/S</span>
       <span class="score" id="score-left">0</span>
     </div>
     <span class="divider">:</span>
@@ -384,14 +553,20 @@
   </div>
 
   <!-- Mobile touch controls -->
-  <div id="touch-controls">
-    <div class="touch-side">
-      <button class="touch-btn" id="btn-w">▲</button>
-      <button class="touch-btn" id="btn-s">▼</button>
+  <div id="touch-controls" class="menu-hidden" aria-label="Touch controls">
+    <div class="touch-player" id="touch-player-one">
+      <span class="touch-label">Player 1</span>
+      <div class="touch-side">
+        <button class="touch-btn" id="btn-w" type="button" aria-label="Move player 1 up">▲</button>
+        <button class="touch-btn" id="btn-s" type="button" aria-label="Move player 1 down">▼</button>
+      </div>
     </div>
-    <div class="touch-side">
-      <button class="touch-btn right-btn" id="btn-up">▲</button>
-      <button class="touch-btn right-btn" id="btn-down">▼</button>
+    <div class="touch-player" id="touch-player-two">
+      <span class="touch-label">Player 2</span>
+      <div class="touch-side">
+        <button class="touch-btn right-btn" id="btn-up" type="button" aria-label="Move player 2 up">▲</button>
+        <button class="touch-btn right-btn" id="btn-down" type="button" aria-label="Move player 2 down">▼</button>
+      </div>
     </div>
   </div>
 
@@ -399,6 +574,7 @@
     <span>W/S — LEFT PADDLE</span>
     <span>↑/↓ — RIGHT PADDLE</span>
   </div>
+  </main>
 
 <script>
 /* ============================================================
@@ -415,19 +591,27 @@ const BASE_H = 480;
 let scale = 1; // pixel ratio multiplier
 
 function resizeCanvas() {
-  // #added: responsive sizing — fits any screen while keeping aspect ratio
-  const maxW = Math.min(window.innerWidth - 20, 700);
-  const maxH = Math.min(window.innerHeight - 260, 540);
-  scale = Math.min(maxW / BASE_W, maxH / BASE_H);
-  canvas.width  = Math.floor(BASE_W * scale);
+  const viewport = window.visualViewport;
+  const viewportWidth = viewport?.width || window.innerWidth;
+  const viewportHeight = viewport?.height || window.innerHeight;
+  const isCompactLandscape = viewportWidth > viewportHeight && viewportHeight <= 520;
+  const horizontalPadding = isCompactLandscape ? 180 : 20;
+  const verticalReserve = isCompactLandscape ? 52 : 250;
+  const maxW = Math.min(viewportWidth - horizontalPadding, BASE_W);
+  const maxH = Math.min(viewportHeight - verticalReserve, BASE_H);
+
+  scale = Math.max(0.25, Math.min(maxW / BASE_W, maxH / BASE_H));
+  canvas.width = Math.floor(BASE_W * scale);
   canvas.height = Math.floor(BASE_H * scale);
 }
 resizeCanvas();
-window.addEventListener('resize', () => {
+function handleViewportResize() {
   resizeCanvas();
-  // Reposition elements that depend on canvas size
   drawFrame();
-});
+}
+
+window.addEventListener('resize', handleViewportResize);
+window.visualViewport?.addEventListener('resize', handleViewportResize);
 
 // Shorthand to convert logical → pixel coords
 const px = v => v * scale;
@@ -537,6 +721,7 @@ function setupTouchBtn(id) {
   // Touch events for mobile
   el.addEventListener('touchstart', e => { e.preventDefault(); keys.add(key); el.classList.add('pressed'); }, { passive: false });
   el.addEventListener('touchend',   e => { e.preventDefault(); keys.delete(key); el.classList.remove('pressed'); }, { passive: false });
+  el.addEventListener('touchcancel', () => { keys.delete(key); el.classList.remove('pressed'); });
 
   // Mouse fallback for desktop testing of touch buttons
   el.addEventListener('mousedown', () => { keys.add(key); el.classList.add('pressed'); });
@@ -545,10 +730,7 @@ function setupTouchBtn(id) {
 }
 Object.keys(touchMap).forEach(setupTouchBtn);
 
-// Show touch controls when a touch device is detected
-window.addEventListener('touchstart', () => {
-  document.getElementById('touch-controls').style.display = 'flex';
-}, { once: true });
+// CSS exposes the controls immediately on coarse-pointer devices.
 
 // ─── Game mode helpers ───────────────────────────────────────
 function setGameMode(mode) {
@@ -558,22 +740,21 @@ function setGameMode(mode) {
   document.getElementById('mode-computer').classList.toggle('active', mode === 'computer');
   document.getElementById('difficulty-row').style.display = mode === 'computer' ? 'grid' : 'none';
 
-  document.getElementById('right-label').textContent =
-    mode === 'computer' ? 'COMPUTER' : 'ARROWS · P2';
+  const usesTouchControls = window.matchMedia('(hover: none), (pointer: coarse)').matches;
+  document.getElementById('left-label').textContent = usesTouchControls ? 'TOUCH · P1' : 'P1 · W/S';
+  document.getElementById('right-label').textContent = mode === 'computer'
+    ? 'COMPUTER'
+    : (usesTouchControls ? 'P2 · TOUCH' : 'ARROWS · P2');
 
   document.getElementById('controls').innerHTML =
     mode === 'computer'
       ? '<span>W/S — LEFT PADDLE</span><span>RIGHT PADDLE — COMPUTER</span><span>ESC / ABORT — MENU</span>'
       : '<span>W/S — LEFT PADDLE</span><span>↑/↓ — RIGHT PADDLE</span><span>ESC / ABORT — MENU</span>';
 
-  const rightTouchButtons = [
-    document.getElementById('btn-up'),
-    document.getElementById('btn-down'),
-  ];
-
-  rightTouchButtons.forEach(btn => {
-    btn.style.visibility = mode === 'computer' ? 'hidden' : 'visible';
-  });
+  document.getElementById('touch-player-two').classList.toggle(
+    'computer-controlled',
+    mode === 'computer',
+  );
 }
 
 document.getElementById('mode-pvp').addEventListener('click', () => setGameMode('pvp'));
@@ -906,6 +1087,7 @@ function startGame() {
   launchBall(Math.random() > 0.5);
   state = 'playing';
   document.getElementById('overlay').classList.add('hidden');
+  document.getElementById('touch-controls').classList.remove('menu-hidden');
   document.getElementById('abort-btn').classList.remove('hidden');
 }
 
@@ -929,6 +1111,7 @@ function showMainMenu(message = 'Choose mode, score target and computer difficul
   ovM.innerHTML = message;
   ovB.textContent = 'START GAME';
   ov.classList.remove('hidden');
+  document.getElementById('touch-controls').classList.add('menu-hidden');
   document.getElementById('abort-btn').classList.add('hidden');
 }
 
@@ -958,6 +1141,7 @@ function endGame() {
   ovB.textContent      = 'PLAY AGAIN';
 
   ov.classList.remove('hidden');
+  document.getElementById('touch-controls').classList.add('menu-hidden');
   document.getElementById('abort-btn').classList.add('hidden');
 }
 
