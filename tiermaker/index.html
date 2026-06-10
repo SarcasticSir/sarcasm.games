@@ -480,6 +480,9 @@
     // Global state for tiers og neste id for elementer
     let tiers = [];
     let nextItemId = 1;
+    const LAYOUT_STORAGE_KEY = 'tierLayout';
+    const AUTO_SAVE_DELAY_MS = 250;
+    let autoSaveTimeout = null;
 
     // Kolonneinnstillinger: et array med opptil 6 objekter { label, showHover, showPermanent }.
     // Disse brukes til å bestemme hvordan ekstra kolonner vises i verktøytips og permanent på elementene.
@@ -693,6 +696,7 @@
       nameInput.title = 'Endre navn på tier';
       nameInput.addEventListener('input', () => {
         tierObj.name = nameInput.value;
+        scheduleAutoSave();
       });
       // Unngå at drag/slipp putter data inn i navnefeltet
       ['dragover', 'drop'].forEach(evtName => {
@@ -748,6 +752,7 @@
         countSpan.style.color = newContrast;
         percentSpan.style.color = newContrast;
         removeBtn && (removeBtn.style.color = newContrast);
+        scheduleAutoSave();
       });
       // Unngå at drag droppes på fargevelger
       ['dragover', 'drop'].forEach(evtName => {
@@ -866,6 +871,7 @@
         // Uansett, oppdater datamodell og teller/progresjon
         updateDataFromDOM();
         updateCountsAndProgress();
+        scheduleAutoSave();
         // Nullstill flagg og global variabel
         wasDeleted = false;
         currentDraggedEl = null;
@@ -929,6 +935,7 @@
       unrankedContainer.appendChild(itemEl);
       // Oppdater counts/progress uten full re-render
       updateCountsAndProgress();
+      scheduleAutoSave();
     }
 
     /**
@@ -1090,6 +1097,7 @@
       // Sett inn før uranket (siste indeks)
       tiers.splice(tiers.length - 1, 0, newTier);
       renderTiers();
+      scheduleAutoSave();
     }
 
     /**
@@ -1103,6 +1111,7 @@
       // Flytt elementer til uranket
       unranked.items = unranked.items.concat(removed.items);
       renderTiers();
+      scheduleAutoSave();
     }
 
     /**
@@ -1139,27 +1148,76 @@
       unrankedTier.items = newItemObjs;
       // Oppdater teller og progresjonsbar
       updateCountsAndProgress();
+      scheduleAutoSave();
     }
 
     /**
-     * Lagre gjeldende oppsett til localStorage.
+     * Persist the current layout to localStorage.
+     * @param {Object} options
+     * @param {boolean} options.syncFromDOM Update state from the DOM before saving.
+     * @param {boolean} options.showFeedback Show a confirmation to the user.
+     * @returns {boolean} true when the layout was saved successfully.
+     */
+    function persistLayout({ syncFromDOM = false, showFeedback = false } = {}) {
+      if (syncFromDOM) {
+        updateDataFromDOM();
+      }
+
+      try {
+        localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify({ tiers, nextItemId, pageTitle, columnSettings }));
+        if (showFeedback) {
+          alert('Oppsett lagret!');
+        }
+        return true;
+      } catch (e) {
+        if (showFeedback) {
+          alert('Kunne ikke lagre oppsettet.');
+        }
+        console.error('Could not save the layout to localStorage', e);
+        return false;
+      }
+    }
+
+    /**
+     * Schedule an automatic save after a short pause between changes.
+     */
+    function scheduleAutoSave() {
+      window.clearTimeout(autoSaveTimeout);
+      autoSaveTimeout = window.setTimeout(() => {
+        autoSaveTimeout = null;
+        persistLayout();
+      }, AUTO_SAVE_DELAY_MS);
+    }
+
+    /**
+     * Flush a pending automatic save before the page is hidden or reloaded.
+     */
+    function flushAutoSave() {
+      if (autoSaveTimeout === null) return;
+      window.clearTimeout(autoSaveTimeout);
+      autoSaveTimeout = null;
+      persistLayout({ syncFromDOM: true });
+    }
+
+    /**
+     * Save the current layout to localStorage and show manual feedback.
      */
     function saveLayout() {
-      updateDataFromDOM();
-      try {
-        localStorage.setItem('tierLayout', JSON.stringify({ tiers, nextItemId, pageTitle, columnSettings }));
-        alert('Oppsett lagret!');
-      } catch (e) {
-        alert('Kunne ikke lagre oppsettet.');
-        console.error(e);
-      }
+      window.clearTimeout(autoSaveTimeout);
+      autoSaveTimeout = null;
+      persistLayout({ syncFromDOM: true, showFeedback: true });
     }
 
     /**
      * Last oppsett fra localStorage hvis tilstede, ellers bruk standard.
      */
     function loadLayout() {
-      const saved = localStorage.getItem('tierLayout');
+      let saved = null;
+      try {
+        saved = localStorage.getItem(LAYOUT_STORAGE_KEY);
+      } catch (e) {
+        console.error('Could not read the layout from localStorage', e);
+      }
       if (saved) {
         try {
           const data = JSON.parse(saved);
@@ -1201,10 +1259,18 @@
      */
     function resetLayout() {
       if (confirm('Are you sure you want to reset? All your changes will be lost, including added titles!')) {
-        localStorage.removeItem('tierLayout');
+        window.clearTimeout(autoSaveTimeout);
+        autoSaveTimeout = null;
+        try {
+          localStorage.removeItem(LAYOUT_STORAGE_KEY);
+        } catch (e) {
+          console.error('Could not remove the saved layout from localStorage', e);
+        }
         tiers = JSON.parse(JSON.stringify(defaultTiers));
         nextItemId = 1;
         pageTitle = 'Simple Tier - list';
+        const titleEl = document.getElementById('pageTitle');
+        if (titleEl) titleEl.textContent = pageTitle;
         renderTiers();
       }
     }
@@ -1220,12 +1286,14 @@
       pageTitleEl.addEventListener('input', () => {
         const text = pageTitleEl.textContent.trim();
         pageTitle = text || 'Simple Tier - list';
+        scheduleAutoSave();
       });
       // Når brukeren forlater feltet (blur), normaliser tom tekst
       pageTitleEl.addEventListener('blur', () => {
         if (!pageTitleEl.textContent.trim()) {
           pageTitle = 'Simple Tier - list';
           pageTitleEl.textContent = pageTitle;
+          scheduleAutoSave();
         }
       });
     }
@@ -1602,6 +1670,7 @@
             renderTiers();
             // Etter rendering, påfør kolonneinnstillinger
             applySettingsToAllItems();
+            scheduleAutoSave();
           } else {
             alert('Invalid JSON: no tier-arrays.');
           }
@@ -1654,6 +1723,7 @@
             }
           }
           updateCountsAndProgress();
+          scheduleAutoSave();
           // Nullstill global variabel for dragged element
           currentDraggedEl = null;
         }
@@ -1762,6 +1832,7 @@
       }
       saveColumnSettings();
       applySettingsToAllItems();
+      scheduleAutoSave();
       hideSettingsPanel();
     });
     document.getElementById('cancelSettingsBtn').addEventListener('click', () => {
@@ -1771,6 +1842,9 @@
     document.getElementById('settingsOverlay').addEventListener('click', () => {
       hideSettingsPanel();
     });
+
+    // Save the latest change even when the page is refreshed or left immediately.
+    window.addEventListener('pagehide', flushAutoSave);
 
     // Last oppsett når siden lastes
     window.addEventListener('DOMContentLoaded', () => {
