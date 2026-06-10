@@ -154,7 +154,7 @@ function normalizeDifficultyFilter(value) {
 
   const normalized = rawValues
     .map((entry) => Number(entry))
-    .filter((entry) => Number.isInteger(entry) && entry >= 1 && entry <= 3);
+    .filter((entry) => Number.isInteger(entry) && entry >= 1 && entry <= 5);
 
   return [...new Set(normalized)];
 }

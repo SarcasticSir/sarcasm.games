@@ -14,6 +14,18 @@ This document reflects the API behavior implemented in:
 - Text-answer matching is delegated to `lib/server/quiz-answer-evaluator.js`.
 - Multiple-choice correctness is evaluated via `quiz_question_options`.
 
+### Difficulty scale
+
+| Value | English | Norwegian |
+| --- | --- | --- |
+| `1` | Easy | Lett |
+| `2` | Medium | Medium |
+| `3` | Somewhat hard | Litt vanskelig |
+| `4` | Hard | Vanskelig |
+| `5` | Extreme | Ekstrem |
+
+Difficulty filters accept unique integer values from `1` through `5`. Values outside that range are ignored.
+
 ## Question object shape (as returned by `/start` and `/quest` today)
 
 ```json
@@ -52,7 +64,7 @@ Used by batch modes (`random10`, `categories`).
   "lang": "en | no",
   "count": 10,
   "categories": ["General", "History"],
-  "difficulty": [1, 2, 3]
+  "difficulty": [1, 2, 3, 4, 5]
 }
 ```
 
@@ -62,7 +74,7 @@ Used by batch modes (`random10`, `categories`).
 {
   "mode": "random10",
   "count": 10,
-  "difficulty": [1, 2, 3],
+  "difficulty": [1, 2, 3, 4, 5],
   "questions": []
 }
 ```

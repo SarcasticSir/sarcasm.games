@@ -8,7 +8,7 @@ function readString(value) {
 
 function normalizeDifficulty(value) {
   const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 3) return null;
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 5) return null;
   return parsed;
 }
 
@@ -93,7 +93,7 @@ module.exports = async function handler(req, res) {
 
     const normalizedEntries = entries.map(normalizeEntry);
     if (normalizedEntries.some((entry) => entry === null)) {
-      res.status(400).json({ error: 'Each entry requires category, question_en, question_no, answers[] and difficulty (1-3)' });
+      res.status(400).json({ error: 'Each entry requires category, question_en, question_no, answers[] and difficulty (1-5)' });
       return;
     }
 

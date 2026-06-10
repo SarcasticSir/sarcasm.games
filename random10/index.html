@@ -144,7 +144,9 @@
         category: 'Category: {category}',
         difficultyEasy: 'Easy',
         difficultyMedium: 'Medium',
+        difficultySomewhatHard: 'Somewhat hard',
         difficultyHard: 'Hard',
+        difficultyExtreme: 'Extreme',
         answerPrefix: 'Answer: {answer}',
         fetchError: 'Could not load questions right now.',
         notEnoughQuestions: 'Not enough questions available.',
@@ -197,8 +199,10 @@
         progress: 'Spørsmål {current} av {total}',
         category: 'Kategori: {category}',
         difficultyEasy: 'Lett',
-        difficultyMedium: 'Middels',
+        difficultyMedium: 'Medium',
+        difficultySomewhatHard: 'Litt vanskelig',
         difficultyHard: 'Vanskelig',
+        difficultyExtreme: 'Ekstrem',
         answerPrefix: 'Fasit: {answer}',
         fetchError: 'Kunne ikke laste spørsmål nå.',
         notEnoughQuestions: 'Ikke nok spørsmål tilgjengelig.',
@@ -688,7 +692,7 @@
         : [raw.answer, raw.answer_en, raw.answer_no].filter(Boolean);
 
       const parsedDifficulty = Number(raw.difficulty);
-      const difficulty = [1, 2, 3].includes(parsedDifficulty) ? parsedDifficulty : null;
+      const difficulty = [1, 2, 3, 4, 5].includes(parsedDifficulty) ? parsedDifficulty : null;
 
       return {
         id: raw.id || `api-${idx}`,
@@ -733,7 +737,9 @@
 
       if (difficulty === 1) return c.difficultyEasy;
       if (difficulty === 2) return c.difficultyMedium;
-      if (difficulty === 3) return c.difficultyHard;
+      if (difficulty === 3) return c.difficultySomewhatHard;
+      if (difficulty === 4) return c.difficultyHard;
+      if (difficulty === 5) return c.difficultyExtreme;
 
       return '';
     }

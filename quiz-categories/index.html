@@ -457,7 +457,9 @@
         metaLine: '{category} • {difficulty}',
         difficultyEasy: 'Easy',
         difficultyMedium: 'Medium',
+        difficultySomewhatHard: 'Somewhat hard',
         difficultyHard: 'Hard',
+        difficultyExtreme: 'Extreme',
         difficultyUnknown: 'Unknown',
         summary: 'You got {correct} / {total} correct.',
         loadedCategories: 'Loaded {categories} categories and {questions} total questions.',
@@ -523,8 +525,10 @@
         difficulty: 'Vanskelighetsgrad: {difficulty}',
         metaLine: '{category} • {difficulty}',
         difficultyEasy: 'Lett',
-        difficultyMedium: 'Middels',
+        difficultyMedium: 'Medium',
+        difficultySomewhatHard: 'Litt vanskelig',
         difficultyHard: 'Vanskelig',
+        difficultyExtreme: 'Ekstrem',
         difficultyUnknown: 'Ukjent',
         summary: 'Du fikk {correct} / {total} riktige.',
         loadedCategories: 'Lastet {categories} kategorier og {questions} spørsmål totalt.',
@@ -1133,7 +1137,9 @@
 
       if (difficulty === 1) return c.difficultyEasy;
       if (difficulty === 2) return c.difficultyMedium;
-      if (difficulty === 3) return c.difficultyHard;
+      if (difficulty === 3) return c.difficultySomewhatHard;
+      if (difficulty === 4) return c.difficultyHard;
+      if (difficulty === 5) return c.difficultyExtreme;
       return c.difficultyUnknown;
     }
 
