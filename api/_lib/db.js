@@ -146,6 +146,31 @@ function sanitizeUsernameCandidate(value) {
   return sanitized || null;
 }
 
+async function runTransaction(callback) {
+  if (typeof callback !== 'function') {
+    throw new TypeError('runTransaction requires a callback');
+  }
+
+  const pool = getPool();
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+    const result = await callback(client);
+    await client.query('COMMIT');
+    return result;
+  } catch (error) {
+    try {
+      await client.query('ROLLBACK');
+    } catch (rollbackError) {
+      console.error('[db] Transaction rollback failed', serializeDbError(rollbackError));
+    }
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 async function runQuery(text, params = []) {
   const pool = getPool();
   const startedAtMs = nowInMs();
@@ -364,6 +389,7 @@ async function listProfiles({ country = null, username = null, email = null } = 
 
 module.exports = {
   runQuery,
+  runTransaction,
   normalizeEmail,
   normalizeUsername,
   normalizeCountry,

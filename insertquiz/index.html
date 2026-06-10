@@ -19,8 +19,13 @@
     .full { grid-column:1 / -1; }
     label { display:block; margin-bottom:4px; color:var(--muted); font-size:.9rem; }
     input, select { width:100%; box-sizing:border-box; background:var(--bg); color:var(--txt); border:1px solid var(--bd); border-radius:8px; padding:10px 12px; }
+    input[type="radio"] { width:auto; margin:0; accent-color:var(--accent); }
+    .helper { display:block; color:var(--muted); font-size:.82rem; margin-top:4px; }
+    .option-row { display:grid; grid-template-columns:auto 1fr; align-items:center; gap:10px; margin-top:8px; }
+    .option-row label { margin:0; }
     .actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:14px; }
     button { border:0; border-radius:8px; padding:10px 14px; font-weight:700; cursor:pointer; }
+    button:disabled { cursor:not-allowed; opacity:.6; }
     .btn-primary { background:var(--accent); color:#111; }
     .btn-neutral { background:var(--bd); color:var(--txt); }
     .btn-danger { background:var(--danger); color:#fff; }
@@ -30,6 +35,9 @@
     .queue-item { border:1px dashed var(--bd); border-radius:8px; padding:10px; margin-top:8px; }
     .queue-item strong { display:block; }
     .queue-item .queue-actions { margin-top:8px; }
+    .queue-details { margin-top:6px; }
+    .queue-options { margin:6px 0 0; padding-left:22px; }
+    .correct-option { color:var(--accent); font-weight:700; }
     .muted { color: var(--muted); }
     .hidden { display:none !important; }
     .top-links { display:flex; gap:10px; margin-bottom:10px; }
@@ -47,7 +55,7 @@
 
     <div class="card">
       <h1>Insert quiz question</h1>
-      <p class="muted">Admin-only tool for inserting questions into <code>public.quiz_questions</code>.</p>
+      <p class="muted">Admin-only tool for inserting unverified questions for review.</p>
       <div id="accessStatus" class="status">Checking access…</div>
     </div>
 
@@ -55,7 +63,7 @@
       <div class="grid">
         <div>
           <label for="category">Category</label>
-          <input id="category" type="text" />
+          <input id="category" type="text" required />
         </div>
         <div>
           <label for="difficulty">Difficulty</label>
@@ -67,17 +75,50 @@
             <option value="5">5 — Extreme</option>
           </select>
         </div>
+        <div>
+          <label for="factKey">Fact key</label>
+          <input id="factKey" type="text" required placeholder="capital_paris" />
+          <span class="helper">Use a lowercase key such as capital_paris, planet_saturn, pokemon_pikachu, or element_gold. It identifies the core fact/answer and helps spot duplicates.</span>
+        </div>
+        <div>
+          <label for="questionType">Question type</label>
+          <select id="questionType">
+            <option value="text">Text question</option>
+            <option value="multiple_choice">Multiple choice</option>
+          </select>
+        </div>
         <div class="full">
           <label for="questionEn">Question English</label>
-          <input id="questionEn" type="text" />
+          <input id="questionEn" type="text" required />
         </div>
         <div class="full">
           <label for="questionNo">Question Norwegian</label>
-          <input id="questionNo" type="text" />
+          <input id="questionNo" type="text" required />
         </div>
-        <div class="full">
-          <label>Accepted answers</label>
-          <input id="answersInput" type="text" placeholder="Use | between answers (e.g. 5 | five | fem)" />
+        <div class="full" id="answersSection">
+          <label for="answersInput">Accepted answers</label>
+          <input id="answersInput" type="text" required placeholder="France | Frankrike" />
+          <span class="helper">Separate all accepted English and Norwegian answer variants with |.</span>
+        </div>
+        <div class="full hidden" id="optionsSection">
+          <label>Multiple choice options</label>
+          <span class="helper">Enter four unique English options and select exactly one correct answer.</span>
+          <div class="option-row">
+            <input id="correctOption0" type="radio" name="correctOption" value="0" aria-label="Mark option 1 as correct" />
+            <label for="option0"><span class="muted">Option 1</span><input id="option0" class="option-input" type="text" disabled /></label>
+          </div>
+          <div class="option-row">
+            <input id="correctOption1" type="radio" name="correctOption" value="1" aria-label="Mark option 2 as correct" />
+            <label for="option1"><span class="muted">Option 2</span><input id="option1" class="option-input" type="text" disabled /></label>
+          </div>
+          <div class="option-row">
+            <input id="correctOption2" type="radio" name="correctOption" value="2" aria-label="Mark option 3 as correct" />
+            <label for="option2"><span class="muted">Option 3</span><input id="option2" class="option-input" type="text" disabled /></label>
+          </div>
+          <div class="option-row">
+            <input id="correctOption3" type="radio" name="correctOption" value="3" aria-label="Mark option 4 as correct" />
+            <label for="option3"><span class="muted">Option 4</span><input id="option3" class="option-input" type="text" disabled /></label>
+          </div>
         </div>
       </div>
 
@@ -106,12 +147,29 @@
 
     const categoryInput = document.getElementById('category');
     const difficultyInput = document.getElementById('difficulty');
+    const factKeyInput = document.getElementById('factKey');
+    const questionTypeInput = document.getElementById('questionType');
     const questionEnInput = document.getElementById('questionEn');
     const questionNoInput = document.getElementById('questionNo');
     const answersInput = document.getElementById('answersInput');
+    const answersSection = document.getElementById('answersSection');
+    const optionsSection = document.getElementById('optionsSection');
+    const optionInputs = Array.from(document.querySelectorAll('.option-input'));
+    const correctOptionInputs = Array.from(document.querySelectorAll('input[name="correctOption"]'));
+    const submitBtn = document.getElementById('submitBtn');
 
     function readString(value) {
       return typeof value === 'string' && value.trim() ? value.trim() : null;
+    }
+
+    function normalizeFactKey(value) {
+      if (typeof value !== 'string') return null;
+      const normalized = value
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '_')
+        .replace(/^_+|_+$/g, '');
+      return normalized || null;
     }
 
     function setFormStatus(message, type = 'neutral') {
@@ -124,8 +182,7 @@
     function readAnswers() {
       const rawAnswers = String(answersInput.value || '')
         .split('|')
-        .map((part) => part.trim())
-        .map((value) => readString(value))
+        .map((part) => readString(part))
         .filter(Boolean);
 
       const seen = new Set();
@@ -135,6 +192,53 @@
         seen.add(key);
         return true;
       });
+    }
+
+    function readOptions() {
+      const optionValues = optionInputs.map((input) => readString(input.value));
+      if (optionValues.some((option) => !option)) {
+        return { error: 'Multiple choice questions require all four options.' };
+      }
+
+      const normalizedOptions = optionValues.map((option) => option.toLowerCase());
+      if (new Set(normalizedOptions).size !== optionValues.length) {
+        return { error: 'Multiple choice options must be unique (case-insensitive).' };
+      }
+
+      const selectedCorrectOptions = correctOptionInputs.filter((input) => input.checked);
+      if (selectedCorrectOptions.length !== 1) {
+        return { error: 'Select exactly one correct multiple choice option.' };
+      }
+
+      const correctIndex = Number(selectedCorrectOptions[0].value);
+      return {
+        value: optionValues.map((option_en, index) => ({
+          option_en,
+          is_correct: index === correctIndex
+        }))
+      };
+    }
+
+    function updateQuestionTypeFields() {
+      const isMultipleChoice = questionTypeInput.value === 'multiple_choice';
+      answersSection.classList.toggle('hidden', isMultipleChoice);
+      answersInput.disabled = isMultipleChoice;
+      answersInput.required = !isMultipleChoice;
+      optionsSection.classList.toggle('hidden', !isMultipleChoice);
+      optionInputs.forEach((input) => {
+        input.disabled = !isMultipleChoice;
+        input.required = isMultipleChoice;
+      });
+      correctOptionInputs.forEach((input) => {
+        input.disabled = !isMultipleChoice;
+      });
+    }
+
+    function appendQueueDetail(container, text) {
+      const detail = document.createElement('div');
+      detail.className = 'muted queue-details';
+      detail.textContent = text;
+      container.appendChild(detail);
     }
 
     function renderQueue() {
@@ -150,10 +254,27 @@
 
         const title = document.createElement('strong');
         title.textContent = `${index + 1}. [${item.category}] ${item.question_en}`;
+        container.appendChild(title);
 
-        const meta = document.createElement('div');
-        meta.className = 'muted';
-        meta.textContent = `NO: ${item.question_no} | Answers: ${item.answers.join(', ')} | Difficulty: ${item.difficulty}`;
+        appendQueueDetail(container, `Fact key: ${item.fact_key} | Type: ${item.question_type} | Difficulty: ${item.difficulty}`);
+        appendQueueDetail(container, `Norwegian: ${item.question_no}`);
+
+        if (item.question_type === 'text') {
+          appendQueueDetail(container, `Accepted answers: ${item.answers.join(', ')}`);
+        } else {
+          const optionsList = document.createElement('ol');
+          optionsList.className = 'queue-options';
+          item.options.forEach((option) => {
+            const optionItem = document.createElement('li');
+            optionItem.textContent = option.option_en;
+            if (option.is_correct) {
+              optionItem.textContent += ' — correct';
+              optionItem.className = 'correct-option';
+            }
+            optionsList.appendChild(optionItem);
+          });
+          container.appendChild(optionsList);
+        }
 
         const actions = document.createElement('div');
         actions.className = 'queue-actions';
@@ -169,8 +290,6 @@
         });
         actions.appendChild(removeBtn);
 
-        container.appendChild(title);
-        container.appendChild(meta);
         container.appendChild(actions);
         queueList.appendChild(container);
       });
@@ -178,37 +297,58 @@
 
     function resetFormInputs() {
       categoryInput.value = '';
+      factKeyInput.value = '';
+      questionTypeInput.value = 'text';
       questionEnInput.value = '';
       questionNoInput.value = '';
       answersInput.value = '';
+      optionInputs.forEach((input) => { input.value = ''; });
+      correctOptionInputs.forEach((input) => { input.checked = false; });
       difficultyInput.value = '1';
+      updateQuestionTypeFields();
       categoryInput.focus();
     }
 
     function readFormEntry() {
       const category = readString(categoryInput.value);
+      const fact_key = normalizeFactKey(factKeyInput.value);
+      const question_type = questionTypeInput.value;
       const question_en = readString(questionEnInput.value);
       const question_no = readString(questionNoInput.value);
-      const answers = readAnswers();
       const difficulty = Number(difficultyInput.value);
 
-      if (!category || !question_en || !question_no || !answers.length) {
-        return { error: 'Please fill out all fields before adding to queue. Add multiple answers with |.' };
+      if (!category || !fact_key || !question_en || !question_no) {
+        return { error: 'Category, fact key, and both question texts are required.' };
+      }
+
+      if (!['text', 'multiple_choice'].includes(question_type)) {
+        return { error: 'Question type must be text or multiple choice.' };
       }
 
       if (!Number.isInteger(difficulty) || difficulty < 1 || difficulty > 5) {
         return { error: 'Difficulty must be an integer from 1 to 5.' };
       }
 
-      return {
-        value: {
-          category,
-          question_en,
-          question_no,
-          answers,
-          difficulty
-        }
+      const baseEntry = {
+        category,
+        fact_key,
+        question_type,
+        question_en,
+        question_no,
+        difficulty
       };
+
+      if (question_type === 'text') {
+        const answers = readAnswers();
+        if (!answers.length) {
+          return { error: 'Text questions require at least one accepted answer. Separate variants with |.' };
+        }
+        return { value: { ...baseEntry, answers } };
+      }
+
+      const optionsResult = readOptions();
+      if (optionsResult.error) return optionsResult;
+      return { value: { ...baseEntry, answers: [], options: optionsResult.value } };
     }
 
     function redirectToHome() {
@@ -253,6 +393,12 @@
       }
     }
 
+    questionTypeInput.addEventListener('change', updateQuestionTypeFields);
+    factKeyInput.addEventListener('blur', () => {
+      const normalized = normalizeFactKey(factKeyInput.value);
+      if (normalized) factKeyInput.value = normalized;
+    });
+
     document.getElementById('addBtn').addEventListener('click', () => {
       const result = readFormEntry();
       if (result.error) {
@@ -262,7 +408,7 @@
 
       queue.push(result.value);
       renderQueue();
-      setFormStatus(`Queued question ${queue.length}.`, 'success');
+      setFormStatus(`Queued question ${queue.length}. It will be inserted as unverified.`, 'success');
       resetFormInputs();
     });
 
@@ -273,13 +419,14 @@
       resetFormInputs();
     });
 
-    document.getElementById('submitBtn').addEventListener('click', async () => {
+    submitBtn.addEventListener('click', async () => {
       if (!queue.length) {
         setFormStatus('Add at least one question before submitting.', 'error');
         return;
       }
 
       setFormStatus('Submitting…');
+      submitBtn.disabled = true;
 
       try {
         const response = await fetch('/api/admin/insert-quiz', {
@@ -297,11 +444,11 @@
         }
 
         const duplicateMessage = (data.duplicates || []).length
-          ? `Skipped duplicates: ${(data.duplicates || []).map((item) => `"${item.question_en}" in "${item.category}"`).join(', ')}.`
-          : 'No duplicates found.';
+          ? `Skipped because the question text already exists: ${(data.duplicates || []).map((item) => `"${item.question_en}"`).join(', ')}.`
+          : 'No duplicate question text found.';
 
         setFormStatus(
-          `Inserted ${data.insertedCount || 0} question(s). ${duplicateMessage}`,
+          `Inserted ${data.insertedCount || 0} unverified question(s). ${duplicateMessage}`,
           'success'
         );
 
@@ -310,10 +457,13 @@
         resetFormInputs();
       } catch (error) {
         setFormStatus('Insert failed due to network error.', 'error');
+      } finally {
+        submitBtn.disabled = false;
       }
     });
 
     difficultyInput.value = '1';
+    updateQuestionTypeFields();
     ensureAdminAccess();
   </script>
 </body>
