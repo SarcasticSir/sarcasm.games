@@ -379,7 +379,9 @@
         noCategories: 'No categories available.',
         difficultyEasy: 'Easy',
         difficultyMedium: 'Medium',
+        difficultySomewhatHard: 'Somewhat hard',
         difficultyHard: 'Hard',
+        difficultyExtreme: 'Extreme',
         inputModeText: 'Text',
         inputModeVoice: 'Voice',
         voiceListening: '🎙️ Listening…',
@@ -431,8 +433,10 @@
         placeholder: 'Skriv svaret ditt',
         noCategories: 'Ingen kategorier tilgjengelig.',
         difficultyEasy: 'Lett',
-        difficultyMedium: 'Middels',
+        difficultyMedium: 'Medium',
+        difficultySomewhatHard: 'Litt vanskelig',
         difficultyHard: 'Vanskelig',
+        difficultyExtreme: 'Ekstrem',
         inputModeText: 'Tekst',
         inputModeVoice: 'Stemmen',
         voiceListening: '🎙️ Lytter…',
@@ -563,7 +567,9 @@
       const parsedDifficulty = Number(difficulty);
       if (parsedDifficulty === 1) return ui().difficultyEasy;
       if (parsedDifficulty === 2) return ui().difficultyMedium;
-      if (parsedDifficulty === 3) return ui().difficultyHard;
+      if (parsedDifficulty === 3) return ui().difficultySomewhatHard;
+      if (parsedDifficulty === 4) return ui().difficultyHard;
+      if (parsedDifficulty === 5) return ui().difficultyExtreme;
       return '';
     }
 

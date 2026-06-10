@@ -60,9 +60,11 @@
         <div>
           <label for="difficulty">Difficulty</label>
           <select id="difficulty">
-            <option value="1">1</option>
-            <option value="2">2</option>
-            <option value="3">3</option>
+            <option value="1">1 — Easy</option>
+            <option value="2">2 — Medium</option>
+            <option value="3">3 — Somewhat hard</option>
+            <option value="4">4 — Hard</option>
+            <option value="5">5 — Extreme</option>
           </select>
         </div>
         <div class="full">
@@ -194,8 +196,8 @@
         return { error: 'Please fill out all fields before adding to queue. Add multiple answers with |.' };
       }
 
-      if (!Number.isInteger(difficulty) || difficulty < 1 || difficulty > 3) {
-        return { error: 'Difficulty must be 1, 2 or 3.' };
+      if (!Number.isInteger(difficulty) || difficulty < 1 || difficulty > 5) {
+        return { error: 'Difficulty must be an integer from 1 to 5.' };
       }
 
       return {
