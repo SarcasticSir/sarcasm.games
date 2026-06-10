@@ -1596,11 +1596,12 @@
           // Del opp i linjer og kolonner (komma/semikolon eller tab)
         const lines = text.split(/\r?\n/);
         const duplicatesCsv = [];
-        lines.forEach(line => {
+        lines.forEach((line, lineIndex) => {
           if (!line.trim()) return;
           // Splitt på semikolon, komma eller tab
           const cols = line.split(/[;,\t]/);
           const firstRaw = cols[0] ? cols[0].trim() : '';
+          if (lineIndex === 0 && isRecognizedImportHeader(firstRaw)) return;
           if (firstRaw) {
             const title = toTitleCase(firstRaw);
             // Hent ekstra kolonner opptil MAX_EXTRA_COLS
