@@ -445,7 +445,7 @@
 
         const duplicateMessage = (data.duplicates || []).length
           ? `Skipped because the question text already exists: ${(data.duplicates || []).map((item) => `"${item.question_en}"`).join(', ')}.`
-          : 'No duplicate question text found.';
+          : 'No identical question text found.';
 
         setFormStatus(
           `Inserted ${data.insertedCount || 0} unverified question(s). ${duplicateMessage}`,
