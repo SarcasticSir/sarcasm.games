@@ -259,8 +259,9 @@
       color: var(--foreground);
     }
 
-    /* Innstillingspanel for kolonne-visning */
-    #settingsOverlay {
+    /* Modal overlays and panels */
+    #settingsOverlay,
+    #helpOverlay {
       position: fixed;
       top: 0;
       left: 0;
@@ -271,7 +272,8 @@
       display: none;
     }
 
-    #settingsPanel {
+    #settingsPanel,
+    #helpPanel {
       position: fixed;
       top: 50%;
       left: 50%;
@@ -282,10 +284,17 @@
       border-radius: 6px;
       padding: 20px;
       z-index: 1001;
-      min-width: 320px;
+      width: min(680px, calc(100vw - 24px));
+      box-sizing: border-box;
+      max-height: calc(100vh - 24px);
+      overflow-y: auto;
       display: none;
     }
-    #settingsPanel h2 {
+    #settingsPanel {
+      width: min(420px, calc(100vw - 24px));
+    }
+    #settingsPanel h2,
+    #helpPanel h2 {
       margin-top: 0;
       margin-bottom: 10px;
       font-size: 1.2rem;
@@ -299,13 +308,42 @@
       font-size: 0.8rem;
       margin-bottom: 3px;
     }
+    .help-intro,
+    .settings-description {
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+    .help-list {
+      padding-left: 1.25rem;
+      line-height: 1.5;
+    }
+    .help-table-wrapper {
+      overflow-x: auto;
+      margin: 12px 0;
+    }
+    .help-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+    .help-table th,
+    .help-table td {
+      border: 1px solid #ccc;
+      padding: 7px;
+      text-align: left;
+      white-space: nowrap;
+    }
+    .help-table th {
+      background-color: var(--tier-items-bg);
+    }
     .settings-actions {
       display: flex;
       justify-content: flex-end;
       gap: 10px;
       margin-top: 15px;
     }
-    #settingsBtn {
+    #settingsBtn,
+    #importHelpBtn {
       width: 2.1rem;
       height: 2.1rem;
       padding: 0;
@@ -319,7 +357,8 @@
       color: var(--control-bg);
       margin-left: 5px;
     }
-    #settingsBtn:hover {
+    #settingsBtn:hover,
+    #importHelpBtn:hover {
       background-color: var(--control-bg);
       color: var(--button-text-color);
     }
@@ -370,6 +409,8 @@
       #trashBin,
       #settingsOverlay,
       #settingsPanel,
+      #helpOverlay,
+      #helpPanel,
       #duplicateMsg {
         display: none !important;
       }
@@ -405,6 +446,7 @@
            vil første kolonne i første ark bli importert. -->
       <input type="file" id="fileInput" accept=".txt,.csv,.xls,.xlsx" style="display:none" />
       <button id="importBtn">Import file</button>
+      <button id="importHelpBtn" type="button" aria-label="Excel import help" title="Excel import help">?</button>
 
       <button id="addTierBtn">Add another tier</button>
       <!-- Temaveksler: smått ikon for å bytte mellom lys/mørk modus -->
@@ -445,13 +487,54 @@
 
     <!-- Overlegg og panel for kolonneinnstillinger -->
     <div id="settingsOverlay"></div>
-    <div id="settingsPanel">
-      <h2>Column settings</h2>
-      <!-- Dynamisk innhold settes inn via JS -->
+    <div id="settingsPanel" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+      <h2 id="settingsTitle">Column settings</h2>
+      <!-- Dynamic content is inserted by JavaScript. -->
       <div id="columnSettingsContainer"></div>
       <div class="settings-actions">
-        <button id="cancelSettingsBtn">Abort</button>
+        <button id="cancelSettingsBtn">Cancel</button>
         <button id="saveSettingsBtn">Save</button>
+      </div>
+    </div>
+
+    <div id="helpOverlay"></div>
+    <div id="helpPanel" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+      <h2 id="helpTitle"></h2>
+      <p id="helpIntro" class="help-intro"></p>
+      <ul class="help-list">
+        <li id="helpColumnA"></li>
+        <li id="helpColumnsBG"></li>
+        <li id="helpFirstSheet"></li>
+        <li id="helpDuplicates"></li>
+      </ul>
+      <h3 id="helpExampleTitle"></h3>
+      <div class="help-table-wrapper">
+        <table class="help-table">
+          <thead>
+            <tr>
+              <th id="helpHeaderTitle"></th>
+              <th id="helpHeaderGenre"></th>
+              <th id="helpHeaderYear"></th>
+              <th id="helpHeaderNotes"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>The Matrix</td><td>Science fiction</td><td>1999</td><td id="helpExampleNoteOne"></td></tr>
+            <tr><td>Alien</td><td>Horror</td><td>1979</td><td id="helpExampleNoteTwo"></td></tr>
+            <tr><td>Arrival</td><td>Science fiction</td><td>2016</td><td id="helpExampleNoteThree"></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h3 id="helpSettingsTitle"></h3>
+      <p id="helpSettingsIntro" class="help-intro"></p>
+      <ul class="help-list">
+        <li id="helpColumnLabel"></li>
+        <li id="helpShowHover"></li>
+        <li id="helpShowPermanent"></li>
+        <li id="helpBothOptions"></li>
+      </ul>
+      <div class="settings-actions">
+        <button id="closeHelpBtn" type="button"></button>
       </div>
     </div>
   </div>
@@ -489,6 +572,90 @@
     let columnSettings = [];
     // Maksimalt antall ekstra kolonner (fra Excel kolonne B til G)
     const MAX_EXTRA_COLS = 6;
+    const TIER_LANGUAGE_KEY = 'quizLanguage';
+    const TIER_TRANSLATIONS = {
+      en: {
+        importHelpLabel: 'Excel import help',
+        helpTitle: 'How to import from Excel',
+        helpIntro: 'Create a spreadsheet where each row represents one item in the tier list. Save it as .xlsx or .xls, select Import file, and choose the file.',
+        helpColumnA: 'Column A: The item title or name. This column is required.',
+        helpColumnsBG: 'Columns B–G: Optional information such as category, year, genre, score, or notes.',
+        helpFirstSheet: 'The first row can be a header row when column A is named Title, Name, or Item. Only the first worksheet is imported, and imported items are added to Unranked.',
+        helpDuplicates: 'Items that already exist in the tier list are not added again. CSV and TXT files are also supported.',
+        helpExampleTitle: 'Example spreadsheet',
+        helpHeaderTitle: 'A – Title',
+        helpHeaderGenre: 'B – Genre',
+        helpHeaderYear: 'C – Year',
+        helpHeaderNotes: 'D – Notes',
+        helpExampleNoteOne: 'A classic',
+        helpExampleNoteTwo: 'Suspenseful',
+        helpExampleNoteThree: 'Great story',
+        helpSettingsTitle: 'Column settings',
+        helpSettingsIntro: 'Select the gear button to control how information from columns B–G is displayed.',
+        helpColumnLabel: 'Column label: Give the column a descriptive name, such as Genre or Year.',
+        helpShowHover: 'Show on hover: Display the information in a tooltip when you hover over an item.',
+        helpShowPermanent: 'Show in tier list: Display the information permanently below the title.',
+        helpBothOptions: 'Both display options can be enabled at the same time. Settings are stored locally in your browser.',
+        close: 'Close',
+        settingsTitle: 'Column settings',
+        settingsDescription: 'Columns B–G contain optional Excel data. Name each column and choose whether its values appear when you hover over an item, permanently below its title, or both.',
+        column: 'Column',
+        showHover: 'Show on hover',
+        showPermanent: 'Show in tier list',
+        cancel: 'Cancel',
+        save: 'Save'
+      },
+      no: {
+        importHelpLabel: 'Hjelp med Excel-import',
+        helpTitle: 'Slik importerer du fra Excel',
+        helpIntro: 'Opprett et regneark der hver rad representerer ett element i tier-listen. Lagre det som .xlsx eller .xls, trykk Import file og velg filen.',
+        helpColumnA: 'Kolonne A: Tittelen eller navnet på elementet. Denne kolonnen er obligatorisk.',
+        helpColumnsBG: 'Kolonne B–G: Valgfri tilleggsinformasjon, for eksempel kategori, år, sjanger, poengsum eller kommentar.',
+        helpFirstSheet: 'Den første raden kan være en overskriftsrad når kolonne A heter Tittel, Navn eller Element. Bare det første arket importeres, og elementene legges i Unranked.',
+        helpDuplicates: 'Elementer som allerede finnes i tier-listen, blir ikke lagt til på nytt. CSV- og TXT-filer støttes også.',
+        helpExampleTitle: 'Eksempel på regneark',
+        helpHeaderTitle: 'A – Tittel',
+        helpHeaderGenre: 'B – Sjanger',
+        helpHeaderYear: 'C – År',
+        helpHeaderNotes: 'D – Kommentar',
+        helpExampleNoteOne: 'En klassiker',
+        helpExampleNoteTwo: 'Spennende',
+        helpExampleNoteThree: 'Sterk historie',
+        helpSettingsTitle: 'Kolonneinnstillinger',
+        helpSettingsIntro: 'Trykk på tannhjulet for å bestemme hvordan informasjonen fra kolonne B–G skal vises.',
+        helpColumnLabel: 'Kolonnenavn: Gi kolonnen et beskrivende navn, for eksempel Sjanger eller År.',
+        helpShowHover: 'Vis når musepekeren holdes over: Vis informasjonen som et verktøytips når du holder musepekeren over et element.',
+        helpShowPermanent: 'Vis i tier-listen: Vis informasjonen permanent under tittelen.',
+        helpBothOptions: 'Begge visningsvalgene kan være slått på samtidig. Innstillingene lagres lokalt i nettleseren.',
+        close: 'Lukk',
+        settingsTitle: 'Kolonneinnstillinger',
+        settingsDescription: 'Kolonne B–G inneholder valgfrie Excel-data. Gi hver kolonne et navn og velg om verdiene skal vises når musepekeren holdes over, permanent under tittelen eller begge deler.',
+        column: 'Kolonne',
+        showHover: 'Vis når musepekeren holdes over',
+        showPermanent: 'Vis i tier-listen',
+        cancel: 'Avbryt',
+        save: 'Lagre'
+      }
+    };
+
+    function getTierLanguage() {
+      try {
+        const storedLanguage = localStorage.getItem(TIER_LANGUAGE_KEY);
+        if (storedLanguage === 'en' || storedLanguage === 'no') return storedLanguage;
+      } catch (error) {
+        // Fall back to the browser language when storage is unavailable.
+      }
+      const browserLanguage = (navigator.language || '').toLowerCase();
+      return browserLanguage.startsWith('no') || browserLanguage.startsWith('nb') || browserLanguage.startsWith('nn') ? 'no' : 'en';
+    }
+
+    function getTierTranslations() {
+      return TIER_TRANSLATIONS[getTierLanguage()] || TIER_TRANSLATIONS.en;
+    }
+
+    function getDefaultColumnLabel(index) {
+      return `${getTierTranslations().column} ${String.fromCharCode(66 + index)}`;
+    }
 
     // Globale variabler for drag‑and‑drop. Brukes for å flytte elementer mellom tiers.
     // Når et item begynner å dras, settes currentDraggedEl til elementet.
@@ -582,8 +749,7 @@
       columnSettings = [];
       for (let i = 0; i < MAX_EXTRA_COLS; i++) {
         // Standardnavn basert på alfabetet (B, C, D, E, F, G)
-        const colName = String.fromCharCode(66 + i);
-        columnSettings.push({ label: `Kol ${colName}`, showHover: true, showPermanent: false });
+        columnSettings.push({ label: getDefaultColumnLabel(i), showHover: true, showPermanent: false });
       }
     }
 
@@ -626,7 +792,7 @@
       for (let i = 0; i < MAX_EXTRA_COLS; i++) {
         const value = extraArr[i];
         if (value !== undefined && value !== null && String(value).trim()) {
-          const cfg = columnSettings[i] || { label: `Kol ${String.fromCharCode(66 + i)}`, showHover: true, showPermanent: false };
+          const cfg = columnSettings[i] || { label: getDefaultColumnLabel(i), showHover: true, showPermanent: false };
           if (cfg.showHover) {
             hoverParts.push(`${cfg.label} - ${String(value).trim()}`);
           }
@@ -640,7 +806,7 @@
       for (let i = 0; i < MAX_EXTRA_COLS; i++) {
         const value = extraArr[i];
         if (value !== undefined && value !== null && String(value).trim()) {
-          const cfg = columnSettings[i] || { label: `Kol ${String.fromCharCode(66 + i)}`, showHover: true, showPermanent: false };
+          const cfg = columnSettings[i] || { label: getDefaultColumnLabel(i), showHover: true, showPermanent: false };
           if (cfg.showPermanent) {
             permanentParts.push({ label: cfg.label, value: String(value).trim() });
           }
@@ -1351,7 +1517,17 @@
       }
     });
 
-    // Filopplasting (tekst/csv). Leser filen linje for linje og henter første kolonne.
+    function isRecognizedImportHeader(value) {
+      if (typeof value !== 'string') return false;
+      const normalized = value.trim().toLowerCase().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ');
+      const recognizedHeaders = new Set([
+        'title', 'item', 'item title', 'name', 'item name',
+        'tittel', 'element', 'elementtittel', 'navn', 'elementnavn'
+      ]);
+      return recognizedHeaders.has(normalized);
+    }
+
+    // Import titles and optional metadata from text, CSV, or Excel files.
     document.getElementById('importBtn').addEventListener('click', () => {
       document.getElementById('fileInput').click();
     });
@@ -1371,27 +1547,9 @@
             const worksheet = workbook.Sheets[sheetName];
             // Konverter arket til et 2D‑array
             const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-            // Hvis det ser ut til å være en overskriftsrad (f.eks. hvis første celle ikke er en ren tekst eller tall), hopp over den.
-            let startIndex = 0;
-            if (rows.length > 1) {
-              const firstCell = rows[0][0];
-              // Hvis første celle er en streng som ikke bare består av tall, kan den være overskrift
-              if (typeof firstCell === 'string' && firstCell.trim().length > 0) {
-                // Sjekk om den er unik i resten av kolonnen – hvis vi finner samme tekst senere anses det som data
-                const lower = firstCell.toLowerCase();
-                let foundElsewhere = false;
-                for (let i = 1; i < rows.length; i++) {
-                  const v = rows[i][0];
-                  if (String(v || '').toLowerCase() === lower) {
-                    foundElsewhere = true;
-                    break;
-                  }
-                }
-                if (!foundElsewhere) {
-                  startIndex = 1;
-                }
-              }
-            }
+            // Skip the first row only when column A contains a recognized heading.
+            const firstCell = rows.length > 0 && Array.isArray(rows[0]) ? rows[0][0] : '';
+            const startIndex = isRecognizedImportHeader(firstCell) ? 1 : 0;
             const duplicates = [];
             for (let i = startIndex; i < rows.length; i++) {
               const row = rows[i];
@@ -1438,11 +1596,12 @@
           // Del opp i linjer og kolonner (komma/semikolon eller tab)
         const lines = text.split(/\r?\n/);
         const duplicatesCsv = [];
-        lines.forEach(line => {
+        lines.forEach((line, lineIndex) => {
           if (!line.trim()) return;
           // Splitt på semikolon, komma eller tab
           const cols = line.split(/[;,\t]/);
           const firstRaw = cols[0] ? cols[0].trim() : '';
+          if (lineIndex === 0 && isRecognizedImportHeader(firstRaw)) return;
           if (firstRaw) {
             const title = toTitleCase(firstRaw);
             // Hent ekstra kolonner opptil MAX_EXTRA_COLS
@@ -1618,7 +1777,7 @@
           for (let i = 0; i < MAX_EXTRA_COLS; i++) {
             const value = extraArr[i];
             if (value !== undefined && value !== null && String(value).trim()) {
-              const cfg = columnSettings[i] || { label: `Kol ${String.fromCharCode(66 + i)}`, showHover: true, showPermanent: false };
+              const cfg = columnSettings[i] || { label: getDefaultColumnLabel(i), showHover: true, showPermanent: false };
               extraParts.push(`${cfg.label}: ${String(value).trim()}`);
             }
           }
@@ -1738,47 +1897,50 @@
       applyTheme(newTheme);
     });
 
-    // Innstillinger-knapp: åpne panel for kolonneinnstillinger
+    // Open the column settings panel.
     document.getElementById('settingsBtn').addEventListener('click', () => {
       showSettingsPanel();
     });
 
-    /**
-     * Vis innstillingspanelet og fyll inn feltene med gjeldende kolonneinnstillinger.
-     */
     function showSettingsPanel() {
       const overlay = document.getElementById('settingsOverlay');
       const panel = document.getElementById('settingsPanel');
       const container = document.getElementById('columnSettingsContainer');
       if (!overlay || !panel || !container) return;
-      // Tøm containeren
+
+      const texts = getTierTranslations();
+      document.getElementById('settingsTitle').textContent = texts.settingsTitle;
+      document.getElementById('cancelSettingsBtn').textContent = texts.cancel;
+      document.getElementById('saveSettingsBtn').textContent = texts.save;
       container.innerHTML = '';
-      // Legg til en beskrivelse
-      const desc = document.createElement('p');
-      desc.textContent = 'Assign labels for each column and choose when to show them.';
-      desc.style.fontSize = '0.85rem';
-      container.appendChild(desc);
-      // Generer felter for hver ekstra kolonne
+
+      const description = document.createElement('p');
+      description.className = 'settings-description';
+      description.textContent = texts.settingsDescription;
+      container.appendChild(description);
+
       for (let i = 0; i < MAX_EXTRA_COLS; i++) {
-        const cfg = columnSettings[i] || { label: `Kol ${String.fromCharCode(66 + i)}`, showHover: true, showPermanent: false };
+        const columnLetter = String.fromCharCode(66 + i);
+        const cfg = columnSettings[i] || { label: getDefaultColumnLabel(i), showHover: true, showPermanent: false };
         const row = document.createElement('div');
         row.className = 'column-setting';
-        // Label for ruten
+
         const title = document.createElement('label');
-        title.textContent = `Column ${String.fromCharCode(66 + i)}:`;
+        title.textContent = `${texts.column} ${columnLetter}:`;
         row.appendChild(title);
-        // Input for etikett
+
         const labelInput = document.createElement('input');
         labelInput.type = 'text';
         labelInput.value = cfg.label;
         labelInput.style.marginBottom = '4px';
         labelInput.dataset.colIndex = i;
-        // Opprett en container for visningsvalg
+
         const optionsDiv = document.createElement('div');
         optionsDiv.style.display = 'flex';
         optionsDiv.style.alignItems = 'center';
         optionsDiv.style.gap = '8px';
-        // Vis ved hover
+        optionsDiv.style.flexWrap = 'wrap';
+
         const hoverLabel = document.createElement('label');
         const hoverCheckbox = document.createElement('input');
         hoverCheckbox.type = 'checkbox';
@@ -1786,29 +1948,28 @@
         hoverCheckbox.dataset.colIndex = i;
         hoverCheckbox.dataset.type = 'hover';
         hoverLabel.appendChild(hoverCheckbox);
-        hoverLabel.appendChild(document.createTextNode('Show when hover'));
-        // Vis permanent
-        const permLabel = document.createElement('label');
-        const permCheckbox = document.createElement('input');
-        permCheckbox.type = 'checkbox';
-        permCheckbox.checked = cfg.showPermanent;
-        permCheckbox.dataset.colIndex = i;
-        permCheckbox.dataset.type = 'permanent';
-        permLabel.appendChild(permCheckbox);
-        permLabel.appendChild(document.createTextNode('Show in tier list'));
+        hoverLabel.appendChild(document.createTextNode(texts.showHover));
+
+        const permanentLabel = document.createElement('label');
+        const permanentCheckbox = document.createElement('input');
+        permanentCheckbox.type = 'checkbox';
+        permanentCheckbox.checked = cfg.showPermanent;
+        permanentCheckbox.dataset.colIndex = i;
+        permanentCheckbox.dataset.type = 'permanent';
+        permanentLabel.appendChild(permanentCheckbox);
+        permanentLabel.appendChild(document.createTextNode(texts.showPermanent));
+
         optionsDiv.appendChild(hoverLabel);
-        optionsDiv.appendChild(permLabel);
+        optionsDiv.appendChild(permanentLabel);
         row.appendChild(labelInput);
         row.appendChild(optionsDiv);
         container.appendChild(row);
       }
+
       overlay.style.display = 'block';
       panel.style.display = 'block';
     }
 
-    /**
-     * Skjul innstillingspanelet.
-     */
     function hideSettingsPanel() {
       const overlay = document.getElementById('settingsOverlay');
       const panel = document.getElementById('settingsPanel');
@@ -1816,31 +1977,73 @@
       if (panel) panel.style.display = 'none';
     }
 
-    // Lytt til lagre-/avbryt-knapper i innstillingspanelet
+    function showHelpPanel() {
+      const texts = getTierTranslations();
+      const translatedElements = {
+        helpTitle: texts.helpTitle,
+        helpIntro: texts.helpIntro,
+        helpColumnA: texts.helpColumnA,
+        helpColumnsBG: texts.helpColumnsBG,
+        helpFirstSheet: texts.helpFirstSheet,
+        helpDuplicates: texts.helpDuplicates,
+        helpExampleTitle: texts.helpExampleTitle,
+        helpHeaderTitle: texts.helpHeaderTitle,
+        helpHeaderGenre: texts.helpHeaderGenre,
+        helpHeaderYear: texts.helpHeaderYear,
+        helpHeaderNotes: texts.helpHeaderNotes,
+        helpExampleNoteOne: texts.helpExampleNoteOne,
+        helpExampleNoteTwo: texts.helpExampleNoteTwo,
+        helpExampleNoteThree: texts.helpExampleNoteThree,
+        helpSettingsTitle: texts.helpSettingsTitle,
+        helpSettingsIntro: texts.helpSettingsIntro,
+        helpColumnLabel: texts.helpColumnLabel,
+        helpShowHover: texts.helpShowHover,
+        helpShowPermanent: texts.helpShowPermanent,
+        helpBothOptions: texts.helpBothOptions,
+        closeHelpBtn: texts.close
+      };
+
+      Object.entries(translatedElements).forEach(([id, value]) => {
+        document.getElementById(id).textContent = value;
+      });
+      document.getElementById('helpOverlay').style.display = 'block';
+      document.getElementById('helpPanel').style.display = 'block';
+      document.getElementById('closeHelpBtn').focus();
+    }
+
+    function hideHelpPanel() {
+      document.getElementById('helpOverlay').style.display = 'none';
+      document.getElementById('helpPanel').style.display = 'none';
+      document.getElementById('importHelpBtn').focus();
+    }
+
+    document.getElementById('importHelpBtn').addEventListener('click', showHelpPanel);
+    document.getElementById('closeHelpBtn').addEventListener('click', hideHelpPanel);
+    document.getElementById('helpOverlay').addEventListener('click', hideHelpPanel);
+
     document.getElementById('saveSettingsBtn').addEventListener('click', () => {
-      // Hent felter og oppdater kolonneinnstillinger
       const container = document.getElementById('columnSettingsContainer');
       if (!container) return;
       for (let i = 0; i < MAX_EXTRA_COLS; i++) {
         const labelInput = container.querySelector(`input[type="text"][data-col-index="${i}"]`);
         const hoverCheckbox = container.querySelector(`input[type="checkbox"][data-col-index="${i}"][data-type="hover"]`);
-        const permCheckbox = container.querySelector(`input[type="checkbox"][data-col-index="${i}"][data-type="permanent"]`);
+        const permanentCheckbox = container.querySelector(`input[type="checkbox"][data-col-index="${i}"][data-type="permanent"]`);
         if (!columnSettings[i]) columnSettings[i] = { label: '', showHover: true, showPermanent: false };
-        columnSettings[i].label = labelInput ? labelInput.value || `Kol ${String.fromCharCode(66 + i)}` : `Kol ${String.fromCharCode(66 + i)}`;
+        columnSettings[i].label = labelInput ? labelInput.value || getDefaultColumnLabel(i) : getDefaultColumnLabel(i);
         columnSettings[i].showHover = hoverCheckbox ? hoverCheckbox.checked : true;
-        columnSettings[i].showPermanent = permCheckbox ? permCheckbox.checked : false;
+        columnSettings[i].showPermanent = permanentCheckbox ? permanentCheckbox.checked : false;
       }
       saveColumnSettings();
       applySettingsToAllItems();
       scheduleAutoSave();
       hideSettingsPanel();
     });
-    document.getElementById('cancelSettingsBtn').addEventListener('click', () => {
-      hideSettingsPanel();
-    });
-    // Lukk panelet hvis overlayen klikkes
-    document.getElementById('settingsOverlay').addEventListener('click', () => {
-      hideSettingsPanel();
+    document.getElementById('cancelSettingsBtn').addEventListener('click', hideSettingsPanel);
+    document.getElementById('settingsOverlay').addEventListener('click', hideSettingsPanel);
+    document.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape') return;
+      if (document.getElementById('helpPanel').style.display === 'block') hideHelpPanel();
+      if (document.getElementById('settingsPanel').style.display === 'block') hideSettingsPanel();
     });
 
     // Save the latest change even when the page is refreshed or left immediately.
@@ -1858,6 +2061,11 @@
         // Faller tilbake til lys modus hvis localStorage ikke er tilgjengelig
         applyTheme('light');
       }
+
+      const texts = getTierTranslations();
+      const importHelpButton = document.getElementById('importHelpBtn');
+      importHelpButton.setAttribute('aria-label', texts.importHelpLabel);
+      importHelpButton.title = texts.importHelpLabel;
 
       // Last inn kolonneinnstillinger
       loadColumnSettings();
