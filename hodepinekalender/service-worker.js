@@ -4,7 +4,10 @@ const CACHE_NAME = "hodepinekalender-shell-v1";
 const APP_SHELL = [
   "./",
   "./index.html",
-  "./app.html.gz.b64",
+  "./payload/payload-01.b64",
+  "./payload/payload-02.b64",
+  "./payload/payload-03.b64",
+  "./payload/payload-04.b64",
   "./manifest.webmanifest",
   "./icons/icon-192.svg",
   "./icons/icon-512.svg",
