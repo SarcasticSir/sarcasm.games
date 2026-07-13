@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 512 512" role="img" aria-label="Hodepinekalender">
+  <rect width="512" height="512" rx="92" fill="#3659d9"/>
+  <circle cx="92" cy="92" r="92" fill="#6f89ed" opacity="0.28"/>
+  <circle cx="438" cy="432" r="132" fill="#183cae" opacity="0.25"/>
+  <rect x="66" y="62" width="380" height="388" rx="50" fill="#ffffff"/>
+  <rect x="66" y="62" width="380" height="88" rx="50" fill="#edf1ff"/>
+  <rect x="66" y="108" width="380" height="42" fill="#edf1ff"/>
+  <rect x="142" y="42" width="34" height="92" rx="17" fill="#2448c6"/>
+  <rect x="336" y="42" width="34" height="92" rx="17" fill="#2448c6"/>
+  <circle cx="150" cy="235" r="34" fill="#72c889"/>
+  <circle cx="256" cy="235" r="34" fill="#ffd264"/>
+  <circle cx="362" cy="235" r="34" fill="#ed8585"/>
+  <path d="M126 329h260" stroke="#dfe3ea" stroke-width="24" stroke-linecap="round"/>
+  <path d="M126 382h184" stroke="#aab7ef" stroke-width="24" stroke-linecap="round"/>
+</svg>
