@@ -9,7 +9,7 @@ Mappen publiseres som `/hodepinekalender/`. Appen må åpnes over HTTPS for at n
 ## Filer
 
 - `index.html` – liten oppstartsside som laster selve kalenderen
-- `app.html.gz.b64` – komprimert, frittstående kalenderapplikasjon
+- `payload/` – fire deler av den komprimerte, frittstående kalenderapplikasjonen
 - `manifest.webmanifest` – navn, appmodus og ikoner
 - `service-worker.js` – offline-cache
 - `icons/` – appikoner
