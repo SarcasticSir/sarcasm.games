@@ -38,10 +38,17 @@
           throw new Error("Nettleseren er for gammel til å åpne denne versjonen av kalenderen.");
         }
 
-        const response = await fetch("app.html.gz.b64", { cache: "no-cache" });
-        if (!response.ok) throw new Error("Kunne ikke laste kalenderfilene.");
-
-        const encoded = (await response.text()).trim();
+        const payloadFiles = [
+          "payload/payload-01.b64",
+          "payload/payload-02.b64",
+          "payload/payload-03.b64",
+          "payload/payload-04.b64"
+        ];
+        const encoded = (await Promise.all(payloadFiles.map(async (path) => {
+          const response = await fetch(path, { cache: "no-cache" });
+          if (!response.ok) throw new Error(`Kunne ikke laste ${path}.`);
+          return (await response.text()).trim();
+        }))).join("");
         const compressed = Uint8Array.from(atob(encoded), (character) => character.charCodeAt(0));
         const stream = new Blob([compressed])
           .stream()
