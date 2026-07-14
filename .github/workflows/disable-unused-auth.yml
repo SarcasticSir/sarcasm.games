@@ -1,0 +1,168 @@
+name: Disable unused authorization
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/disable-unused-auth.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  disable-auth:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Disable frontend authorization calls
+        shell: python
+        run: |
+          from pathlib import Path
+
+          # Root page: keep the existing markup for easy restoration, but hide
+          # the authorization UI and never make session/auth requests at startup.
+          root = Path('index.html')
+          text = root.read_text(encoding='utf-8')
+
+          hidden_rule = ".hidden{display:none!important}"
+          auth_rule = "\n    /* Authorization is temporarily disabled. */\n    #authShell, #toggleLoginBtn, #deleteAccountBtn, #logoutBtn { display:none!important; }"
+          if auth_rule.strip() not in text:
+              if hidden_rule not in text:
+                  raise SystemExit('Could not find root hidden CSS rule')
+              text = text.replace(hidden_rule, hidden_rule + auth_rule, 1)
+
+          old_init = """      if (handleAuthRedirect()) {
+            return;
+          }
+
+          await applyUserState(null);
+          const user = await fetchSession();
+          if (user) await applyUserState(user);
+"""
+          new_init = """      // Authorization is currently disabled. The public site runs as guest.
+          await applyUserState(null);
+"""
+          if old_init in text:
+              text = text.replace(old_init, new_init, 1)
+          elif new_init not in text:
+              raise SystemExit('Could not find root authorization init block')
+
+          root.write_text(text, encoding='utf-8')
+
+          # Daily Click: admin tools stay hidden without calling /api/auth/session.
+          daily = Path('dailyclick/index.html')
+          text = daily.read_text(encoding='utf-8')
+          text = text.replace(
+              '<button class="save-btn" id="admin-toggle-btn"',
+              '<button class="save-btn hidden" id="admin-toggle-btn"',
+              1,
+          )
+
+          old_daily_auth = """  async function isLoggedInAdmin(){
+            try {
+              const response = await fetch('/api/auth/session', { credentials: 'include' });
+              if (!response.ok) return false;
+              const data = await response.json();
+              return data?.user?.role === 'admin';
+            } catch {
+              return false;
+            }
+          }
+
+          async function syncAdminPanelVisibility(){
+            const allowed = await isLoggedInAdmin();
+            document.getElementById('dev-bar').classList.toggle('hidden', !allowed);
+            document.getElementById('admin-toggle-btn').classList.toggle('hidden', !allowed);
+          }
+"""
+          new_daily_auth = """  function syncAdminPanelVisibility(){
+            // Authorization is disabled; do not expose development controls publicly.
+            document.getElementById('dev-bar').classList.add('hidden');
+            document.getElementById('admin-toggle-btn').classList.add('hidden');
+          }
+"""
+          if old_daily_auth in text:
+              text = text.replace(old_daily_auth, new_daily_auth, 1)
+          elif new_daily_auth not in text:
+              raise SystemExit('Could not find Daily Click authorization block')
+
+          text = text.replace(
+              "async function init(){applyTheme(load(KEYS.theme,'forest'), false);loadState();reconcileDay();saveState();renderButtons();updateUI();await syncAdminPanelVisibility();}",
+              "function init(){applyTheme(load(KEYS.theme,'forest'), false);loadState();reconcileDay();saveState();renderButtons();updateUI();syncAdminPanelVisibility();}",
+              1,
+          )
+          daily.write_text(text, encoding='utf-8')
+
+          # Quiz Quest already has complete guest/local-storage support. Bypass the
+          # obsolete session request and remain in guest mode.
+          quest = Path('quiz-quest/index.html')
+          text = quest.read_text(encoding='utf-8')
+          old_quest_auth = """    async function fetchSession() {
+            try {
+              const response = await fetch('/api/auth/session');
+              if (!response.ok) return null;
+              const payload = await response.json();
+              return payload.user || null;
+            } catch (error) {
+              return null;
+            }
+          }
+"""
+          new_quest_auth = """    async function fetchSession() {
+            // Authorization is disabled. Quiz Quest uses its existing guest progress.
+            return null;
+          }
+"""
+          if old_quest_auth in text:
+              text = text.replace(old_quest_auth, new_quest_auth, 1)
+          elif new_quest_auth not in text:
+              raise SystemExit('Could not find Quiz Quest session block')
+          quest.write_text(text, encoding='utf-8')
+
+      - name: Remove unused auth handlers
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -d api/auth
+          rm -rf api/auth
+
+      - name: Verify Vercel function count
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t handlers < <(find api -type f -name '*.js' ! -path 'api/_lib/*' | sort)
+          printf 'Remaining Vercel handlers (%s):\n' "${#handlers[@]}"
+          printf ' - %s\n' "${handlers[@]}"
+          if [ "${#handlers[@]}" -gt 12 ]; then
+            echo 'Too many Vercel Functions remain.' >&2
+            exit 1
+          fi
+
+          if grep -q '/api/auth/' index.html; then
+            echo 'Root page still contains auth API calls.' >&2
+            exit 1
+          fi
+          if grep -q '/api/auth/' dailyclick/index.html; then
+            echo 'Daily Click still contains auth API calls.' >&2
+            exit 1
+          fi
+          if grep -q '/api/auth/' quiz-quest/index.html; then
+            echo 'Quiz Quest still contains auth API calls.' >&2
+            exit 1
+          fi
+
+      - name: Commit final result
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f .github/workflows/disable-unused-auth.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Disable unused authorization and reduce Vercel functions'
+          git push origin HEAD:main
