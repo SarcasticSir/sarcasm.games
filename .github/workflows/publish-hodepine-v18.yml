@@ -1,20 +1,18 @@
-name: Publish Hodepinekalender v18
+name: Publish Hodepinekalender v19
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/publish-hodepine-v18.yml'
-  schedule:
-    - cron: '*/5 * * * *'
-  workflow_dispatch:
+  issues:
+    types: [opened]
 
 permissions:
   contents: write
+  issues: write
 
 jobs:
   publish:
+    if: github.event.issue.title == 'Publish Hodepinekalender v19 now'
     runs-on: ubuntu-latest
+
     steps:
       - name: Check out main
         uses: actions/checkout@v4
@@ -22,46 +20,74 @@ jobs:
           ref: main
           fetch-depth: 0
 
-      - name: Rebuild standalone v18 calendar
+      - name: Rebuild and verify Hodepinekalender v19
         shell: bash
         run: |
           set -euo pipefail
-          test -f .github/hodepine-v18/part-00
-          cat .github/hodepine-v18/part-* \
+
+          test -f .github/hodepine-v19/part-00
+          test -f .github/hodepine-v19/part-05
+
+          cat .github/hodepine-v19/part-* \
             | tr -d '\r\n ' \
             | base64 --decode \
             | gzip --decompress \
             > hodepinekalender/index.html.new
 
-          echo '698d5aa7714fe03f2da2ccd88f17de1e0140644cf440cfa8f2230df00b2fc266  hodepinekalender/index.html.new' \
+          echo '638c0b70dc64120c3d8c2c0fc7fa1c19deed3493bc9aedfe8e08a1791fe37c69  hodepinekalender/index.html.new' \
             | sha256sum --check --strict
 
           grep -q '<title>Hodepinekalender</title>' hodepinekalender/index.html.new
-          grep -q 'mobileMonthViewButton' hodepinekalender/index.html.new
-          grep -q 'Hele måneden' hodepinekalender/index.html.new
-          grep -q 'compact-month-view' hodepinekalender/index.html.new
+          grep -q 'id="calendarViewButton"' hodepinekalender/index.html.new
+          grep -q 'id="bedtimeInput"' hodepinekalender/index.html.new
+          grep -q 'id="wakeTimeInput"' hodepinekalender/index.html.new
+          grep -q 'id="sleepStatistics"' hodepinekalender/index.html.new
 
           mv hodepinekalender/index.html.new hodepinekalender/index.html
 
-      - name: Confirm unrelated quiz files are untouched
+      - name: Confirm quiz and unrelated product files are untouched
         shell: bash
         run: |
           set -euo pipefail
-          git diff --name-only | tee /tmp/changed-files.txt
-          if grep -Ev '^(hodepinekalender/index\.html)$' /tmp/changed-files.txt | grep -q .; then
-            echo 'Unexpected files changed before cleanup.' >&2
+
+          mapfile -t changed_files < <(git diff --name-only)
+          printf 'Changed application files before cleanup:\n'
+          printf ' - %s\n' "${changed_files[@]}"
+
+          if [ "${#changed_files[@]}" -ne 1 ] || [ "${changed_files[0]}" != 'hodepinekalender/index.html' ]; then
+            echo 'Unexpected application files changed. Refusing to publish.' >&2
             exit 1
           fi
 
-      - name: Remove temporary publication files and commit
+      - name: Remove temporary publication files
         shell: bash
         run: |
           set -euo pipefail
+
           rm -rf .github/hodepine-v18
+          rm -rf .github/hodepine-v19
           rm -f .github/workflows/publish-hodepine-v18.yml
+
+          if [ -f hodepinekalender/styles.css ] && [ "$(cat hodepinekalender/styles.css)" = 'PLACEHOLDER' ]; then
+            rm -f hodepinekalender/styles.css
+          fi
+
+      - name: Commit v19 to main
+        shell: bash
+        run: |
+          set -euo pipefail
 
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -A
-          git commit -m 'Update Hodepinekalender to v18 month view'
+          git commit -m 'Update Hodepinekalender to v19 with sleep tracking'
           git push origin HEAD:main
+
+      - name: Close publication trigger issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          gh issue close "$ISSUE_NUMBER" \
+            --repo "$GITHUB_REPOSITORY" \
+            --comment 'Hodepinekalender v19 er publisert og midlertidige filer er ryddet.'
