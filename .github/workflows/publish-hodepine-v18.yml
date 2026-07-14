@@ -1,0 +1,64 @@
+name: Publish Hodepinekalender v18
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/publish-hodepine-v18.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Rebuild standalone v18 calendar
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f .github/hodepine-v18/part-00
+          cat .github/hodepine-v18/part-* \
+            | tr -d '\r\n ' \
+            | base64 --decode \
+            | gzip --decompress \
+            > hodepinekalender/index.html.new
+
+          echo '698d5aa7714fe03f2da2ccd88f17de1e0140644cf440cfa8f2230df00b2fc266  hodepinekalender/index.html.new' \
+            | sha256sum --check --strict
+
+          grep -q '<title>Hodepinekalender</title>' hodepinekalender/index.html.new
+          grep -q 'mobileMonthViewButton' hodepinekalender/index.html.new
+          grep -q 'Hele måneden' hodepinekalender/index.html.new
+          grep -q 'compact-month-view' hodepinekalender/index.html.new
+
+          mv hodepinekalender/index.html.new hodepinekalender/index.html
+
+      - name: Confirm unrelated quiz files are untouched
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --name-only | tee /tmp/changed-files.txt
+          if grep -Ev '^(hodepinekalender/index\.html)$' /tmp/changed-files.txt | grep -q .; then
+            echo 'Unexpected files changed before cleanup.' >&2
+            exit 1
+          fi
+
+      - name: Remove temporary publication files and commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .github/hodepine-v18
+          rm -f .github/workflows/publish-hodepine-v18.yml
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Update Hodepinekalender to v18 month view'
+          git push origin HEAD:main
