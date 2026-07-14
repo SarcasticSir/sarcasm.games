@@ -5,6 +5,9 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/publish-hodepine-v18.yml'
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -62,5 +65,3 @@ jobs:
           git add -A
           git commit -m 'Update Hodepinekalender to v18 month view'
           git push origin HEAD:main
-
-# Triggered after the workflow was present on main.
