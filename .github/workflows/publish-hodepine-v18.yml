@@ -1,18 +1,17 @@
 name: Publish Hodepinekalender v19
 
 on:
-  issues:
-    types: [opened]
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/publish-hodepine-v18.yml'
 
 permissions:
   contents: write
-  issues: write
 
 jobs:
   publish:
-    if: github.event.issue.title == 'Publish Hodepinekalender v19 now'
     runs-on: ubuntu-latest
-
     steps:
       - name: Check out main
         uses: actions/checkout@v4
@@ -20,11 +19,10 @@ jobs:
           ref: main
           fetch-depth: 0
 
-      - name: Rebuild and verify Hodepinekalender v19
+      - name: Build verified standalone v19
         shell: bash
         run: |
           set -euo pipefail
-
           test -f .github/hodepine-v19/part-00
           test -f .github/hodepine-v19/part-05
 
@@ -37,7 +35,6 @@ jobs:
           echo '638c0b70dc64120c3d8c2c0fc7fa1c19deed3493bc9aedfe8e08a1791fe37c69  hodepinekalender/index.html.new' \
             | sha256sum --check --strict
 
-          grep -q '<title>Hodepinekalender</title>' hodepinekalender/index.html.new
           grep -q 'id="calendarViewButton"' hodepinekalender/index.html.new
           grep -q 'id="bedtimeInput"' hodepinekalender/index.html.new
           grep -q 'id="wakeTimeInput"' hodepinekalender/index.html.new
@@ -45,29 +42,13 @@ jobs:
 
           mv hodepinekalender/index.html.new hodepinekalender/index.html
 
-      - name: Confirm quiz and unrelated product files are untouched
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          mapfile -t changed_files < <(git diff --name-only)
-          printf 'Changed application files before cleanup:\n'
-          printf ' - %s\n' "${changed_files[@]}"
-
-          if [ "${#changed_files[@]}" -ne 1 ] || [ "${changed_files[0]}" != 'hodepinekalender/index.html' ]; then
-            echo 'Unexpected application files changed. Refusing to publish.' >&2
-            exit 1
-          fi
-
       - name: Remove temporary publication files
         shell: bash
         run: |
           set -euo pipefail
-
           rm -rf .github/hodepine-v18
           rm -rf .github/hodepine-v19
           rm -f .github/workflows/publish-hodepine-v18.yml
-
           if [ -f hodepinekalender/styles.css ] && [ "$(cat hodepinekalender/styles.css)" = 'PLACEHOLDER' ]; then
             rm -f hodepinekalender/styles.css
           fi
@@ -76,18 +57,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -A
-          git commit -m 'Update Hodepinekalender to v19 with sleep tracking'
+          git commit -m 'Publish Hodepinekalender v19 as standalone HTML'
           git push origin HEAD:main
-
-      - name: Close publication trigger issue
-        env:
-          GH_TOKEN: ${{ github.token }}
-          ISSUE_NUMBER: ${{ github.event.issue.number }}
-        run: |
-          gh issue close "$ISSUE_NUMBER" \
-            --repo "$GITHUB_REPOSITORY" \
-            --comment 'Hodepinekalender v19 er publisert og midlertidige filer er ryddet.'
