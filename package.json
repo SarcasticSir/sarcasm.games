@@ -16,6 +16,8 @@
     "news:install": "node scripts/install-gaming-news.mjs",
     "news:generate": "node scripts/gaming-news.mjs",
     "news:validate": "node scripts/validate-gaming-news.mjs",
+    "news:local:prepare": "node scripts/gaming-news-local.mjs prepare",
+    "news:local:publish": "node scripts/gaming-news-local.mjs publish .gaming-news/codex-output.json",
     "test:news": "node --test scripts/gaming-news.test.mjs"
   }
 }
