@@ -4,12 +4,11 @@ import crypto from 'node:crypto';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const NEWS_DIR = path.join(ROOT, 'news');
-const DATA_DIR = path.join(NEWS_DIR, 'data');
+const DATA_DIR = path.join(ROOT, 'news', 'data');
 const ARCHIVE_DIR = path.join(DATA_DIR, 'archive');
 const TIMEZONE = 'Europe/Oslo';
 const MAX_PER_SOURCE = 14;
-const MAX_PROMPT_ITEMS = 48;
+const MAX_PROMPT_ITEMS = 52;
 const FETCH_TIMEOUT_MS = 18_000;
 
 export const SOURCES = [
@@ -25,9 +24,7 @@ export const SOURCES = [
   { id: 'pushsquare', name: 'Push Square', homepage: 'https://www.pushsquare.com/', feed: 'https://www.pushsquare.com/feeds/latest', weight: 7 }
 ];
 
-const ENTITY_MAP = {
-  amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', ndash: '–', mdash: '—', hellip: '…'
-};
+const ENTITY_MAP = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', ndash: '–', mdash: '—', hellip: '…' };
 
 function decodeEntities(value = '') {
   return value
@@ -56,16 +53,15 @@ function firstTag(block, tagNames) {
 }
 
 function entryLink(block) {
-  const atomAlternate = block.match(/<link\b[^>]*rel=["']alternate["'][^>]*href=["']([^"']+)["'][^>]*\/?>/i)
+  const atom = block.match(/<link\b[^>]*rel=["']alternate["'][^>]*href=["']([^"']+)["'][^>]*\/?>/i)
     || block.match(/<link\b[^>]*href=["']([^"']+)["'][^>]*\/?>/i);
-  if (atomAlternate) return decodeEntities(atomAlternate[1].trim());
-  return firstTag(block, ['link', 'guid']);
+  return atom ? decodeEntities(atom[1].trim()) : firstTag(block, ['link', 'guid']);
 }
 
 function safeUrl(value) {
   try {
     const url = new URL(value);
-    if (url.protocol !== 'http:' && url.protocol !== 'https:') return '';
+    if (!['http:', 'https:'].includes(url.protocol)) return '';
     for (const key of [...url.searchParams.keys()]) {
       if (/^(utm_|fbclid|gclid|ref$|source$)/i.test(key)) url.searchParams.delete(key);
     }
@@ -76,73 +72,50 @@ function safeUrl(value) {
   }
 }
 
-function safeDate(value) {
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? null : date;
-}
-
 export function parseFeed(xml, source) {
-  const itemBlocks = [...xml.matchAll(/<item\b[^>]*>([\s\S]*?)<\/item>/gi)].map((m) => m[1]);
-  const entryBlocks = itemBlocks.length
-    ? itemBlocks
-    : [...xml.matchAll(/<entry\b[^>]*>([\s\S]*?)<\/entry>/gi)].map((m) => m[1]);
-
-  return entryBlocks
-    .map((block, index) => {
-      const title = firstTag(block, ['title']);
-      const url = safeUrl(entryLink(block));
-      const description = firstTag(block, ['description', 'summary', 'content:encoded', 'content']);
-      const publishedRaw = firstTag(block, ['pubDate', 'published', 'updated', 'dc:date']);
-      const publishedDate = safeDate(publishedRaw);
-      if (!title || !url) return null;
-      return {
-        id: `${source.id}-${index + 1}`,
-        sourceId: source.id,
-        sourceName: source.name,
-        sourceWeight: source.weight,
-        title: title.slice(0, 320),
-        description: description.slice(0, 1_200),
-        url,
-        publishedAt: publishedDate?.toISOString() ?? null
-      };
-    })
-    .filter(Boolean);
+  const rss = [...xml.matchAll(/<item\b[^>]*>([\s\S]*?)<\/item>/gi)].map((match) => match[1]);
+  const blocks = rss.length ? rss : [...xml.matchAll(/<entry\b[^>]*>([\s\S]*?)<\/entry>/gi)].map((match) => match[1]);
+  return blocks.map((block, index) => {
+    const title = firstTag(block, ['title']);
+    const url = safeUrl(entryLink(block));
+    if (!title || !url) return null;
+    const rawDate = firstTag(block, ['pubDate', 'published', 'updated', 'dc:date']);
+    const parsedDate = new Date(rawDate);
+    return {
+      id: `${source.id}-${index + 1}`,
+      sourceId: source.id,
+      sourceName: source.name,
+      sourceWeight: source.weight,
+      title: title.slice(0, 320),
+      description: firstTag(block, ['description', 'summary', 'content:encoded', 'content']).slice(0, 1_200),
+      url,
+      publishedAt: Number.isNaN(parsedDate.getTime()) ? null : parsedDate.toISOString()
+    };
+  }).filter(Boolean);
 }
 
-function normalizeWords(value) {
+function wordSet(value) {
   const stop = new Set(['the','a','an','and','or','of','to','in','on','for','with','is','are','was','will','this','that','from','as','at','by','its','it','your','you','new','game','games']);
   return new Set(cleanText(value).toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, ' ').split(/\s+/).filter((word) => word.length > 2 && !stop.has(word)));
 }
 
 function similarity(a, b) {
-  const left = normalizeWords(a);
-  const right = normalizeWords(b);
+  const left = wordSet(a);
+  const right = wordSet(b);
   if (!left.size || !right.size) return 0;
-  let intersection = 0;
-  for (const word of left) if (right.has(word)) intersection += 1;
-  return intersection / (left.size + right.size - intersection);
-}
-
-function ageHours(item, now) {
-  if (!item.publishedAt) return 36;
-  return Math.max(0, (now.getTime() - new Date(item.publishedAt).getTime()) / 3_600_000);
+  let common = 0;
+  for (const word of left) if (right.has(word)) common += 1;
+  return common / (left.size + right.size - common);
 }
 
 function itemScore(item, now) {
-  const freshness = Math.max(0, 72 - ageHours(item, now));
-  return item.sourceWeight * 10 + freshness;
+  const age = item.publishedAt ? Math.max(0, (now - new Date(item.publishedAt)) / 3_600_000) : 36;
+  return item.sourceWeight * 10 + Math.max(0, 72 - age);
 }
 
 export function clusterItems(items, now = new Date()) {
-  const urlSeen = new Set();
-  const sorted = [...items]
-    .filter((item) => {
-      if (!item.url || urlSeen.has(item.url)) return false;
-      urlSeen.add(item.url);
-      return true;
-    })
-    .sort((a, b) => itemScore(b, now) - itemScore(a, now));
-
+  const seen = new Set();
+  const sorted = [...items].filter((item) => item.url && !seen.has(item.url) && seen.add(item.url)).sort((a, b) => itemScore(b, now) - itemScore(a, now));
   const clusters = [];
   for (const item of sorted) {
     const match = clusters.find((cluster) => similarity(cluster.headline, item.title) >= 0.62);
@@ -157,14 +130,17 @@ export function clusterItems(items, now = new Date()) {
       clusters.push({ primary: item, headline: item.title, items: [item], sourceIds: new Set([item.sourceId]) });
     }
   }
+  return clusters.map((cluster) => ({
+    ...cluster,
+    corroboration: cluster.sourceIds.size,
+    score: itemScore(cluster.primary, now) + Math.min(30, (cluster.sourceIds.size - 1) * 12)
+  })).sort((a, b) => b.score - a.score);
+}
 
-  return clusters
-    .map((cluster) => ({
-      ...cluster,
-      corroboration: cluster.sourceIds.size,
-      score: itemScore(cluster.primary, now) + Math.min(30, (cluster.sourceIds.size - 1) * 12)
-    }))
-    .sort((a, b) => b.score - a.score);
+function isObviousEntertainment(item) {
+  const value = `${item.title} ${item.description}`;
+  return /\b(box office|stage play|stage cast|actor dies|actress dies|movie trailer|film trailer|tv series|television series|casting deal|season finale|marvel studios)\b/i.test(value)
+    && !/\b(video game|gaming|gameplay|playstation|xbox|nintendo|switch|steam|console|dlc|patch|mod|remaster|remake|developer|studio game)\b/i.test(value);
 }
 
 async function fetchWithTimeout(url) {
@@ -175,242 +151,152 @@ async function fetchWithTimeout(url) {
       signal: controller.signal,
       redirect: 'follow',
       headers: {
-        'user-agent': 'sarcasm.games-gaming-news/1.0 (+https://sarcasm.games/news/)',
+        'user-agent': 'sarcasm.games-gaming-news/2.0 (+https://sarcasm.games/news/)',
         accept: 'application/rss+xml, application/atom+xml, application/xml, text/xml, */*;q=0.5'
       }
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return await response.text();
+    return response.text();
   } finally {
     clearTimeout(timer);
   }
 }
 
-async function collectFeeds(now = new Date()) {
+async function collectFeeds(now) {
   const settled = await Promise.all(SOURCES.map(async (source) => {
     try {
-      const xml = await fetchWithTimeout(source.feed);
-      const parsed = parseFeed(xml, source)
+      const parsed = parseFeed(await fetchWithTimeout(source.feed), source)
+        .filter((item) => !isObviousEntertainment(item))
         .sort((a, b) => (b.publishedAt || '').localeCompare(a.publishedAt || ''))
         .slice(0, MAX_PER_SOURCE);
-      if (!parsed.length) throw new Error('No readable feed entries');
-      return { source, items: parsed, health: { id: source.id, name: source.name, homepage: source.homepage, status: 'ok', itemCount: parsed.length } };
+      if (!parsed.length) throw new Error('No usable feed entries');
+      return { items: parsed, health: { id: source.id, name: source.name, homepage: source.homepage, status: 'ok', itemCount: parsed.length } };
     } catch (error) {
-      return { source, items: [], health: { id: source.id, name: source.name, homepage: source.homepage, status: 'error', itemCount: 0, error: String(error?.message || error).slice(0, 180) } };
+      return { items: [], health: { id: source.id, name: source.name, homepage: source.homepage, status: 'error', itemCount: 0, error: String(error?.message || error).slice(0, 160) } };
     }
   }));
-
-  const allItems = settled.flatMap((result) => result.items);
-  if (!allItems.length) throw new Error('All configured gaming news feeds failed. Previous edition was kept.');
-
-  const recentCutoff = now.getTime() - 60 * 3_600_000;
-  const recent = allItems.filter((item) => !item.publishedAt || new Date(item.publishedAt).getTime() >= recentCutoff);
-  return {
-    items: recent.length >= 15 ? recent : allItems,
-    health: settled.map((result) => result.health)
-  };
+  const all = settled.flatMap((result) => result.items);
+  if (!all.length) throw new Error('No feeds could be read; previous edition remains published.');
+  const cutoff = now.getTime() - 60 * 3_600_000;
+  const recent = all.filter((item) => !item.publishedAt || new Date(item.publishedAt).getTime() >= cutoff);
+  return { items: recent.length >= 15 ? recent : all, health: settled.map((result) => result.health) };
 }
 
-function osloDateParts(now = new Date()) {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: TIMEZONE,
-    year: 'numeric', month: '2-digit', day: '2-digit'
-  }).formatToParts(now);
+function localDate(now, locale) {
+  return new Intl.DateTimeFormat(locale, { timeZone: TIMEZONE, dateStyle: 'long' }).format(now);
+}
+
+function dateKey(now) {
+  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: TIMEZONE, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(now);
   const get = (type) => parts.find((part) => part.type === type)?.value;
   return `${get('year')}-${get('month')}-${get('day')}`;
 }
 
-function localDateLabel(date, locale) {
-  return new Intl.DateTimeFormat(locale, { timeZone: TIMEZONE, dateStyle: 'long' }).format(date);
+function extractJson(value) {
+  const text = String(value || '').replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+  const start = text.indexOf('{');
+  const end = text.lastIndexOf('}');
+  if (start < 0 || end <= start) throw new Error('Model did not return JSON');
+  return JSON.parse(text.slice(start, end + 1));
+}
+
+async function rewriteWithGitHubModels(promptItems, now) {
+  const token = process.env.GITHUB_TOKEN?.trim();
+  if (!token) throw new Error('GITHUB_TOKEN is unavailable; no copied fallback will be published.');
+  const model = process.env.GITHUB_MODEL?.trim() || 'openai/gpt-4.1';
+  const instructions = `You edit a daily gaming-news page. Select 5-8 genuinely important gaming stories from the supplied feed entries and rewrite them in Norwegian Bokmål and English.
+
+Rules:
+- Use only supplied facts. Never invent details.
+- Exclude film, television, celebrity, shopping, guides and general entertainment.
+- Merge duplicate coverage of the same event.
+- Rewrite both headline and summary from scratch. Do not copy the source headline or source sentences. Avoid any run of seven or more source words except proper names.
+- Keep it compact: headline plus 2-3 factual sentences. No introduction, commentary, filler, hype, "why it matters", or editorial explanation.
+- Mark unconfirmed speculation as rumor. A single outlet normally means reported. Confirmed is reserved for official announcements or multiple independent sources.
+- Return plain JSON only, exactly: {"stories":[{"category":{"no":"","en":""},"status":"confirmed|reported|rumor","title":{"no":"","en":""},"summary":{"no":"","en":""},"sourceIds":["item-id"],"importance":1}]}
+- sourceIds must be copied exactly from the supplied entries.`;
+  const response = await fetch('https://models.github.ai/inference/chat/completions', {
+    method: 'POST',
+    headers: {
+      authorization: `Bearer ${token}`,
+      'content-type': 'application/json',
+      accept: 'application/vnd.github+json'
+    },
+    body: JSON.stringify({
+      model,
+      temperature: 0.15,
+      max_tokens: 5000,
+      messages: [
+        { role: 'system', content: instructions },
+        { role: 'user', content: `Edition date: ${localDate(now, 'nb-NO')} / ${localDate(now, 'en-GB')}\n\nFeed entries:\n${JSON.stringify(promptItems)}` }
+      ]
+    })
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload?.error?.message || `GitHub Models HTTP ${response.status}`);
+  return extractJson(payload?.choices?.[0]?.message?.content);
+}
+
+function words(value) {
+  return cleanText(value).toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, ' ').split(/\s+/).filter(Boolean);
+}
+
+function longestCommonRun(a, b) {
+  const left = words(a);
+  const right = words(b);
+  let best = 0;
+  const row = new Array(right.length + 1).fill(0);
+  for (let i = 1; i <= left.length; i += 1) {
+    for (let j = right.length; j >= 1; j -= 1) {
+      row[j] = left[i - 1] === right[j - 1] ? row[j - 1] + 1 : 0;
+      best = Math.max(best, row[j]);
+    }
+  }
+  return best;
 }
 
 function hashId(value) {
   return crypto.createHash('sha256').update(value).digest('hex').slice(0, 12);
 }
 
-function outputSchema() {
-  const bilingual = {
-    type: 'object', additionalProperties: false, required: ['no', 'en'],
-    properties: { no: { type: 'string' }, en: { type: 'string' } }
-  };
-  const story = {
-    type: 'object', additionalProperties: false,
-    required: ['category', 'status', 'title', 'summary', 'whyItMatters', 'sourceIds', 'importance'],
-    properties: {
-      category: bilingual,
-      status: { type: 'string', enum: ['confirmed', 'reported', 'rumor'] },
-      title: bilingual,
-      summary: bilingual,
-      whyItMatters: bilingual,
-      sourceIds: { type: 'array', minItems: 1, maxItems: 4, items: { type: 'string' } },
-      importance: { type: 'integer', minimum: 1, maximum: 10 }
-    }
-  };
-  const brief = {
-    type: 'object', additionalProperties: false,
-    required: ['title', 'summary', 'sourceIds'],
-    properties: {
-      title: bilingual,
-      summary: bilingual,
-      sourceIds: { type: 'array', minItems: 1, maxItems: 3, items: { type: 'string' } }
-    }
-  };
-  return {
-    type: 'object', additionalProperties: false, required: ['intro', 'stories', 'briefs'],
-    properties: {
-      intro: bilingual,
-      stories: { type: 'array', minItems: 4, maxItems: 8, items: story },
-      briefs: { type: 'array', minItems: 2, maxItems: 8, items: brief }
-    }
-  };
+function bilingual(value, field) {
+  const no = String(value?.no || '').trim();
+  const en = String(value?.en || '').trim();
+  if (!no || !en) throw new Error(`${field} is not bilingual`);
+  if (no === en) throw new Error(`${field} was not translated`);
+  return { no: no.slice(0, 900), en: en.slice(0, 900) };
 }
 
-function responseText(payload) {
-  if (typeof payload.output_text === 'string' && payload.output_text.trim()) return payload.output_text;
-  for (const output of payload.output || []) {
-    for (const content of output.content || []) {
-      if (content.type === 'output_text' && typeof content.text === 'string') return content.text;
-    }
-  }
-  throw new Error('OpenAI response did not contain output text');
-}
-
-async function generateWithOpenAI(promptItems, now) {
-  const apiKey = process.env.OPENAI_API_KEY?.trim();
-  if (!apiKey) return null;
-
-  const model = process.env.OPENAI_MODEL?.trim() || 'gpt-5-mini';
-  const dateNo = localDateLabel(now, 'nb-NO');
-  const dateEn = localDateLabel(now, 'en-GB');
-  const system = `You are the automated gaming-news editor for sarcasm.games. Produce a compact daily edition in Norwegian Bokmål and English. Use only the supplied feed material. Never invent dates, prices, platforms, quotes, announcements, or causal explanations. Combine duplicate reports about the same event. Prefer announcements, releases, major updates, studio/business changes, platform news, and materially important industry reporting. Avoid guides, shopping posts, SEO filler, opinion pieces and minor entertainment trivia unless there is little other news. A primary/official source or several independent reports may be marked confirmed; a single publication should normally be reported; explicitly speculative material must be rumor. Do not copy sentences from descriptions. Summaries should be 2-3 sentences, why-it-matters one sentence, and briefs one sentence. Keep sourceIds exactly as supplied.`;
-  const user = `Edition dates: Norwegian ${dateNo}; English ${dateEn}. Candidate items:\n${JSON.stringify(promptItems)}`;
-
-  const response = await fetch('https://api.openai.com/v1/responses', {
-    method: 'POST',
-    headers: { authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
-    body: JSON.stringify({
-      model,
-      reasoning: { effort: 'low' },
-      input: [
-        { role: 'system', content: [{ type: 'input_text', text: system }] },
-        { role: 'user', content: [{ type: 'input_text', text: user }] }
-      ],
-      text: {
-        format: {
-          type: 'json_schema', name: 'gaming_news_digest', strict: true, schema: outputSchema()
-        }
+function finalizeStories(modelOutput, itemById) {
+  if (!Array.isArray(modelOutput?.stories)) throw new Error('Model output has no stories array');
+  const stories = modelOutput.stories.map((story, index) => {
+    const sourceItems = [...new Set(story.sourceIds || [])].map((id) => itemById.get(id)).filter(Boolean);
+    if (!sourceItems.length) throw new Error(`Story ${index + 1} has no valid source`);
+    const title = bilingual(story.title, `Story ${index + 1} title`);
+    const summary = bilingual(story.summary, `Story ${index + 1} summary`);
+    if (summary.no.length < 80 || summary.en.length < 80) throw new Error(`Story ${index + 1} is too thin`);
+    for (const source of sourceItems) {
+      if (longestCommonRun(title.en, source.title) >= 7 || longestCommonRun(summary.en, source.description) >= 10) {
+        throw new Error(`Story ${index + 1} copies source wording`);
       }
-    })
-  });
-
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const message = payload?.error?.message || `OpenAI HTTP ${response.status}`;
-    throw new Error(message);
-  }
-  return JSON.parse(responseText(payload));
-}
-
-function sourceRecords(sourceIds, itemById) {
-  const seen = new Set();
-  return sourceIds
-    .map((id) => itemById.get(id))
-    .filter((item) => item && !seen.has(item.url) && seen.add(item.url))
-    .map((item) => ({ name: item.sourceName, url: item.url, publishedAt: item.publishedAt }));
-}
-
-function sanitizeBilingual(value, fallback = '') {
-  return {
-    no: String(value?.no || fallback).trim().slice(0, 900),
-    en: String(value?.en || value?.no || fallback).trim().slice(0, 900)
-  };
-}
-
-function finalizeAiEdition(ai, itemById) {
-  const stories = (ai.stories || [])
-    .map((story) => {
-      const sources = sourceRecords(story.sourceIds || [], itemById);
-      if (!sources.length) return null;
-      const title = sanitizeBilingual(story.title);
-      return {
-        id: hashId(`${title.en}|${sources[0].url}`),
-        category: sanitizeBilingual(story.category, 'Gaming'),
-        status: ['confirmed', 'reported', 'rumor'].includes(story.status) ? story.status : 'reported',
-        title,
-        summary: sanitizeBilingual(story.summary),
-        whyItMatters: sanitizeBilingual(story.whyItMatters),
-        importance: Math.max(1, Math.min(10, Number(story.importance) || 5)),
-        sources
-      };
-    })
-    .filter(Boolean)
-    .sort((a, b) => b.importance - a.importance)
-    .slice(0, 8);
-
-  const briefs = (ai.briefs || [])
-    .map((brief) => {
-      const sources = sourceRecords(brief.sourceIds || [], itemById);
-      if (!sources.length) return null;
-      const title = sanitizeBilingual(brief.title);
-      return {
-        id: hashId(`${title.en}|brief|${sources[0].url}`),
-        title,
-        summary: sanitizeBilingual(brief.summary),
-        sources
-      };
-    })
-    .filter(Boolean)
-    .slice(0, 8);
-
-  if (stories.length < 3) throw new Error('AI edition contained too few valid sourced stories');
-  return { intro: sanitizeBilingual(ai.intro), stories, briefs };
-}
-
-function fallbackEdition(clusters, itemById, now) {
-  const selected = clusters.slice(0, 10);
-  const stories = selected.slice(0, 7).map((cluster, index) => {
-    const primary = cluster.primary;
-    const sources = cluster.items.slice(0, 3).map((item) => item.id);
-    const summary = primary.description
-      ? primary.description.slice(0, 360)
-      : `Published by ${primary.sourceName}. Open the original source for the full report.`;
+    }
     return {
-      id: hashId(`${primary.title}|${primary.url}`),
-      category: { no: 'Gaming', en: 'Gaming' },
-      status: 'reported',
-      title: { no: primary.title, en: primary.title },
-      summary: { no: summary, en: summary },
-      whyItMatters: {
-        no: cluster.corroboration > 1 ? `Saken omtales av ${cluster.corroboration} av de valgte kildene.` : 'AI-redigert forklaring er ikke aktiv i denne reserveutgaven.',
-        en: cluster.corroboration > 1 ? `The story appears across ${cluster.corroboration} selected sources.` : 'AI-edited context is not active in this fallback edition.'
-      },
-      importance: Math.max(3, 9 - index),
-      sources: sourceRecords(sources, itemById)
+      id: hashId(`${title.en}|${sourceItems[0].url}`),
+      category: bilingual(story.category, `Story ${index + 1} category`),
+      status: ['confirmed', 'reported', 'rumor'].includes(story.status) ? story.status : 'reported',
+      title,
+      summary,
+      importance: Math.max(1, Math.min(10, Number(story.importance) || 5)),
+      sources: sourceItems.slice(0, 4).map((source) => ({ name: source.sourceName, url: source.url, publishedAt: source.publishedAt }))
     };
-  });
-  const briefs = selected.slice(7, 10).map((cluster) => ({
-    id: hashId(`${cluster.primary.title}|brief|${cluster.primary.url}`),
-    title: { no: cluster.primary.title, en: cluster.primary.title },
-    summary: {
-      no: `Kort oppføring fra ${cluster.primary.sourceName}.`,
-      en: `Brief listing from ${cluster.primary.sourceName}.`
-    },
-    sources: sourceRecords([cluster.primary.id], itemById)
-  }));
-  return {
-    intro: {
-      no: `Automatisk oversikt for ${localDateLabel(now, 'nb-NO')}. Denne reserveutgaven viser kildebaserte overskrifter fordi AI-redigering ikke var tilgjengelig.`,
-      en: `Automated overview for ${localDateLabel(now, 'en-GB')}. This fallback edition shows source-based headlines because AI editing was unavailable.`
-    },
-    stories,
-    briefs
-  };
+  }).sort((a, b) => b.importance - a.importance);
+  if (stories.length < 5 || stories.length > 8) throw new Error('Edition must contain 5-8 rewritten stories');
+  return stories;
 }
 
 async function readArchiveIndex() {
   try {
-    const content = await fs.readFile(path.join(ARCHIVE_DIR, 'index.json'), 'utf8');
-    const parsed = JSON.parse(content);
+    const parsed = JSON.parse(await fs.readFile(path.join(ARCHIVE_DIR, 'index.json'), 'utf8'));
     return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
@@ -419,89 +305,44 @@ async function readArchiveIndex() {
 
 async function writeEdition(edition) {
   await fs.mkdir(ARCHIVE_DIR, { recursive: true });
-  const pretty = `${JSON.stringify(edition, null, 2)}\n`;
-  await fs.writeFile(path.join(DATA_DIR, 'latest.json'), pretty, 'utf8');
-  await fs.writeFile(path.join(ARCHIVE_DIR, `${edition.date}.json`), pretty, 'utf8');
-
-  const index = await readArchiveIndex();
+  const json = `${JSON.stringify(edition, null, 2)}\n`;
+  await fs.writeFile(path.join(DATA_DIR, 'latest.json'), json, 'utf8');
+  await fs.writeFile(path.join(ARCHIVE_DIR, `${edition.date}.json`), json, 'utf8');
+  const oldIndex = await readArchiveIndex();
   const next = [
-    { date: edition.date, generatedAt: edition.generatedAt, mode: edition.mode, storyCount: edition.stories.length, path: `/news/data/archive/${edition.date}.json` },
-    ...index.filter((entry) => entry?.date !== edition.date)
+    { date: edition.date, generatedAt: edition.generatedAt, storyCount: edition.stories.length, path: `/news/data/archive/${edition.date}.json` },
+    ...oldIndex.filter((entry) => entry?.date !== edition.date)
   ].slice(0, 180);
   await fs.writeFile(path.join(ARCHIVE_DIR, 'index.json'), `${JSON.stringify(next, null, 2)}\n`, 'utf8');
 }
 
 export async function main() {
   const now = new Date();
-  const date = osloDateParts(now);
   const collected = await collectFeeds(now);
   const clusters = clusterItems(collected.items, now).slice(0, MAX_PROMPT_ITEMS);
   const promptItems = [];
   const itemById = new Map();
-
   outer: for (const [clusterIndex, cluster] of clusters.entries()) {
     for (const [sourceIndex, item] of cluster.items.slice(0, 4).entries()) {
       if (promptItems.length >= MAX_PROMPT_ITEMS) break outer;
       const id = `item-${String(clusterIndex + 1).padStart(3, '0')}-${sourceIndex + 1}`;
-      const normalized = { ...item, id };
-      itemById.set(item.id, item);
-      itemById.set(id, normalized);
-      promptItems.push({
-        id,
-        source: normalized.sourceName,
-        title: normalized.title,
-        description: normalized.description,
-        publishedAt: normalized.publishedAt,
-        url: normalized.url,
-        corroboration: cluster.corroboration
-      });
+      itemById.set(id, item);
+      promptItems.push({ id, source: item.sourceName, title: item.title, description: item.description, publishedAt: item.publishedAt, url: item.url, corroboration: cluster.corroboration });
     }
   }
-
-  let mode = 'ai';
-  let editorial;
-  try {
-    const ai = await generateWithOpenAI(promptItems, now);
-    if (!ai) {
-      mode = 'headline-fallback';
-      editorial = fallbackEdition(clusters, itemById, now);
-    } else {
-      editorial = finalizeAiEdition(ai, itemById);
-    }
-  } catch (error) {
-    console.warn(`[gaming-news] AI generation failed; publishing safe fallback: ${error?.message || error}`);
-    mode = 'headline-fallback';
-    editorial = fallbackEdition(clusters, itemById, now);
-  }
-
+  const rewritten = await rewriteWithGitHubModels(promptItems, now);
   const edition = {
-    schemaVersion: 1,
-    mode,
-    date,
+    schemaVersion: 2,
+    date: dateKey(now),
     generatedAt: now.toISOString(),
     timezone: TIMEZONE,
-    editionTitle: {
-      no: `Gamingnytt – ${localDateLabel(now, 'nb-NO')}`,
-      en: `Gaming news – ${localDateLabel(now, 'en-GB')}`
-    },
-    intro: editorial.intro,
-    stories: editorial.stories,
-    briefs: editorial.briefs,
-    sourceHealth: collected.health,
-    editorialPolicy: {
-      no: 'Kondensert fra valgte kilder. Rykter merkes tydelig, og alle saker lenker til originalkildene.',
-      en: 'Condensed from selected sources. Rumours are labelled, and every item links to its original sources.'
-    }
+    editionTitle: { no: `Gamingnytt – ${localDate(now, 'nb-NO')}`, en: `Gaming news – ${localDate(now, 'en-GB')}` },
+    stories: finalizeStories(rewritten, itemById),
+    sourceHealth: collected.health
   };
-
   await writeEdition(edition);
-  console.log(`[gaming-news] Wrote ${edition.mode} edition ${edition.date}: ${edition.stories.length} stories, ${edition.briefs.length} briefs.`);
+  console.log(`[gaming-news] Published ${edition.stories.length} rewritten stories for ${edition.date}.`);
 }
 
-const invokedDirectly = process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href;
-if (invokedDirectly) {
-  main().catch((error) => {
-    console.error(`[gaming-news] ${error?.stack || error}`);
-    process.exitCode = 1;
-  });
-}
+const direct = process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href;
+if (direct) main().catch((error) => { console.error(`[gaming-news] ${error?.stack || error}`); process.exitCode = 1; });
