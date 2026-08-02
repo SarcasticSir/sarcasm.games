@@ -8,6 +8,7 @@ name: Publish daily gaming news
       - '.github/workflows/gaming-news.yml'
       - 'scripts/gaming-news.mjs'
       - 'scripts/install-gaming-news.mjs'
+      - 'scripts/refine-gaming-news.mjs'
       - 'scripts/validate-gaming-news.mjs'
       - 'news/**'
   schedule:
@@ -45,6 +46,9 @@ jobs:
           OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-5-mini' }}
         run: node scripts/gaming-news.mjs
 
+      - name: Refine the safe fallback edition
+        run: node scripts/refine-gaming-news.mjs
+
       - name: Validate generated data
         run: node scripts/validate-gaming-news.mjs
 
@@ -55,8 +59,8 @@ jobs:
             echo "No publication changes."
             exit 0
           fi
-          git config user.name "sarcasm.games news bot"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "SarcasticSir"
+          git config user.email "167876826+SarcasticSir@users.noreply.github.com"
           git add index.html news/data
           git commit -m "Publish daily gaming news [skip ci]"
           git push
