@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "mode": "headline-fallback",
   "date": "2026-08-02",
-  "generatedAt": "2026-08-02T12:02:29.349Z",
+  "generatedAt": "2026-08-02T12:06:16.653Z",
   "timezone": "Europe/Oslo",
   "editionTitle": {
     "no": "Gamingnytt – 2. august 2026",
@@ -25,8 +25,8 @@
         "en": "Space Marine 2's latest updates add Terminator Sorcerers and Steam Workshop support, so you can now play co-op with 9 other players if you want"
       },
       "summary": {
-        "no": "Terminator too.",
-        "en": "Terminator too."
+        "no": "Published by PC Gamer. Open the source link for the full report.",
+        "en": "Published by PC Gamer. Open the source link for the full report."
       },
       "whyItMatters": {
         "no": "AI-redigert forklaring er ikke aktiv i denne reserveutgaven.",
@@ -53,8 +53,8 @@
         "en": "Silent Hill: Townfall's dev team wrecked old TVs with magnets to make its in-game gadget feel real"
       },
       "summary": {
-        "no": "Silent Hill: Townfall studio Screen Burn used broken TVs and magnets to make its in-game gadget, the CRTV, feel analogue as well as look it. Read more",
-        "en": "Silent Hill: Townfall studio Screen Burn used broken TVs and magnets to make its in-game gadget, the CRTV, feel analogue as well as look it. Read more"
+        "no": "Silent Hill: Townfall studio Screen Burn used broken TVs and magnets to make its in-game gadget, the CRTV, feel analogue as well as look it.",
+        "en": "Silent Hill: Townfall studio Screen Burn used broken TVs and magnets to make its in-game gadget, the CRTV, feel analogue as well as look it."
       },
       "whyItMatters": {
         "no": "AI-redigert forklaring er ikke aktiv i denne reserveutgaven.",
@@ -109,8 +109,8 @@
         "en": "Xbox UK and Europe console price hikes revealed - and it's even worse than we expected"
       },
       "summary": {
-        "no": "Xbox has finally revealed the price hikes recently rolled out across its hardware, and Xbox consoles in the UK are now between 34 and 49 percent more expensive than they were last month. Read more",
-        "en": "Xbox has finally revealed the price hikes recently rolled out across its hardware, and Xbox consoles in the UK are now between 34 and 49 percent more expensive than they were last month. Read more"
+        "no": "Xbox has finally revealed the price hikes recently rolled out across its hardware, and Xbox consoles in the UK are now between 34 and 49 percent more expensive than they were last month.",
+        "en": "Xbox has finally revealed the price hikes recently rolled out across its hardware, and Xbox consoles in the UK are now between 34 and 49 percent more expensive than they were last month."
       },
       "whyItMatters": {
         "no": "AI-redigert forklaring er ikke aktiv i denne reserveutgaven.",
@@ -126,101 +126,25 @@
       ]
     },
     {
-      "id": "6b6a08084d14",
+      "id": "2090afd6602f",
       "category": {
         "no": "Gaming",
         "en": "Gaming"
       },
       "status": "reported",
       "title": {
-        "no": "Spider-Man: Brand New Day Beats Avengers: Endgame Record to Claim Biggest Domestic Opening Day of All Time",
-        "en": "Spider-Man: Brand New Day Beats Avengers: Endgame Record to Claim Biggest Domestic Opening Day of All Time"
+        "no": "The maker of the Baldur's Gate 3 over-the-shoulder camera mod has gone to great lengths to demonstrate it's not like other third-person viewpoint solutions",
+        "en": "The maker of the Baldur's Gate 3 over-the-shoulder camera mod has gone to great lengths to demonstrate it's not like other third-person viewpoint solutions"
       },
       "summary": {
-        "no": "Marvel Studios' Spider-Man: Brand New Day has broken yet another record after webbing up a whopping $168 million at the domestic box office on its opening day.",
-        "en": "Marvel Studios' Spider-Man: Brand New Day has broken yet another record after webbing up a whopping $168 million at the domestic box office on its opening day."
+        "no": "Published by PC Gamer. Open the source link for the full report.",
+        "en": "Published by PC Gamer. Open the source link for the full report."
       },
       "whyItMatters": {
         "no": "AI-redigert forklaring er ikke aktiv i denne reserveutgaven.",
         "en": "AI-edited context is not active in this fallback edition."
       },
       "importance": 5,
-      "sources": [
-        {
-          "name": "IGN",
-          "url": "https://www.ign.com/articles/spider-man-brand-new-day-beats-avengers-endgame-record-to-claim-biggest-domestic-opening-day-of-all-time",
-          "publishedAt": "2026-08-01T23:19:16.000Z"
-        }
-      ]
-    },
-    {
-      "id": "b519bbca8850",
-      "category": {
-        "no": "Gaming",
-        "en": "Gaming"
-      },
-      "status": "reported",
-      "title": {
-        "no": "Game of Thrones: The Mad King Reveals Full Stage Cast and First Portrait",
-        "en": "Game of Thrones: The Mad King Reveals Full Stage Cast and First Portrait"
-      },
-      "summary": {
-        "no": "See the first official cast photo for Game of Thrones: The Mad King stage play, featuring King Aerys II, Rhaegar Targaryen, Young Ned Stark, and more.",
-        "en": "See the first official cast photo for Game of Thrones: The Mad King stage play, featuring King Aerys II, Rhaegar Targaryen, Young Ned Stark, and more."
-      },
-      "whyItMatters": {
-        "no": "AI-redigert forklaring er ikke aktiv i denne reserveutgaven.",
-        "en": "AI-edited context is not active in this fallback edition."
-      },
-      "importance": 4,
-      "sources": [
-        {
-          "name": "IGN",
-          "url": "https://www.ign.com/articles/game-of-thrones-the-mad-king-cast-first-look",
-          "publishedAt": "2026-08-01T21:35:11.000Z"
-        }
-      ]
-    },
-    {
-      "id": "77a848a3398d",
-      "category": {
-        "no": "Gaming",
-        "en": "Gaming"
-      },
-      "status": "reported",
-      "title": {
-        "no": "Vincent Pastore, The Sopranos Actor, Dies at 80",
-        "en": "Vincent Pastore, The Sopranos Actor, Dies at 80"
-      },
-      "summary": {
-        "no": "Vincent Pastore, the actor best known for playing Salvatore Bonpensiero in the groundbreaking TV series The Sopranos, has died at 80.",
-        "en": "Vincent Pastore, the actor best known for playing Salvatore Bonpensiero in the groundbreaking TV series The Sopranos, has died at 80."
-      },
-      "whyItMatters": {
-        "no": "AI-redigert forklaring er ikke aktiv i denne reserveutgaven.",
-        "en": "AI-edited context is not active in this fallback edition."
-      },
-      "importance": 3,
-      "sources": [
-        {
-          "name": "IGN",
-          "url": "https://www.ign.com/articles/vincent-pastore-the-sopranos-actor-dies-at-80",
-          "publishedAt": "2026-08-01T21:34:05.000Z"
-        }
-      ]
-    }
-  ],
-  "briefs": [
-    {
-      "id": "fac03e71e6d1",
-      "title": {
-        "no": "The maker of the Baldur's Gate 3 over-the-shoulder camera mod has gone to great lengths to demonstrate it's not like other third-person viewpoint solutions",
-        "en": "The maker of the Baldur's Gate 3 over-the-shoulder camera mod has gone to great lengths to demonstrate it's not like other third-person viewpoint solutions"
-      },
-      "summary": {
-        "no": "Kort oppføring fra PC Gamer.",
-        "en": "Brief listing from PC Gamer."
-      },
       "sources": [
         {
           "name": "PC Gamer",
@@ -230,15 +154,25 @@
       ]
     },
     {
-      "id": "67b2aebe879a",
+      "id": "cd9df96ee152",
+      "category": {
+        "no": "Gaming",
+        "en": "Gaming"
+      },
+      "status": "reported",
       "title": {
         "no": "Elden Ring Players Are Hoping for Godwyn DLC After FromSoftware Shares Cryptic Social Media Post",
         "en": "Elden Ring Players Are Hoping for Godwyn DLC After FromSoftware Shares Cryptic Social Media Post"
       },
       "summary": {
-        "no": "Kort oppføring fra IGN.",
-        "en": "Brief listing from IGN."
+        "no": "Published by IGN. Open the source link for the full report.",
+        "en": "Published by IGN. Open the source link for the full report."
       },
+      "whyItMatters": {
+        "no": "AI-redigert forklaring er ikke aktiv i denne reserveutgaven.",
+        "en": "AI-edited context is not active in this fallback edition."
+      },
+      "importance": 4,
       "sources": [
         {
           "name": "IGN",
@@ -248,15 +182,25 @@
       ]
     },
     {
-      "id": "32cfc5af23c4",
+      "id": "e0ad0226a706",
+      "category": {
+        "no": "Gaming",
+        "en": "Gaming"
+      },
+      "status": "reported",
       "title": {
         "no": "Barbie 2 Will Have to Start from Scratch if Warner Bros. Can't Make a Deal With Talent by December",
         "en": "Barbie 2 Will Have to Start from Scratch if Warner Bros. Can't Make a Deal With Talent by December"
       },
       "summary": {
-        "no": "Kort oppføring fra IGN.",
-        "en": "Brief listing from IGN."
+        "no": "Published by IGN. Open the source link for the full report.",
+        "en": "Published by IGN. Open the source link for the full report."
       },
+      "whyItMatters": {
+        "no": "AI-redigert forklaring er ikke aktiv i denne reserveutgaven.",
+        "en": "AI-edited context is not active in this fallback edition."
+      },
+      "importance": 3,
       "sources": [
         {
           "name": "IGN",
@@ -266,6 +210,7 @@
       ]
     }
   ],
+  "briefs": [],
   "sourceHealth": [
     {
       "id": "ign",
