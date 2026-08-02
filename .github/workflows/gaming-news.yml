@@ -13,6 +13,8 @@ run-name: Gaming news · ${{ github.event_name }}
   schedule:
     - cron: '17 6 * * *'
       timezone: 'Europe/Oslo'
+    - cron: '47 */2 * * *'
+      timezone: 'Europe/Oslo'
 
 permissions:
   contents: write
@@ -37,13 +39,36 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Determine whether publication is needed
+        id: freshness
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const parts = new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'Europe/Oslo', year: 'numeric', month: '2-digit', day: '2-digit'
+          }).formatToParts(new Date());
+          const get = (type) => parts.find((part) => part.type === type)?.value;
+          const today = `${get('year')}-${get('month')}-${get('day')}`;
+          let publishedDate = '';
+          try {
+            publishedDate = JSON.parse(fs.readFileSync('news/data/automation.json', 'utf8')).date || '';
+          } catch {}
+          const needed = publishedDate !== today;
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `needed=${needed}\n`);
+          console.log(needed ? `Publication is needed for ${today}.` : `A validated automatic edition already exists for ${today}.`);
+          NODE
+
       - name: Run news unit tests
+        if: steps.freshness.outputs.needed == 'true'
         run: node --test scripts/gaming-news.test.mjs
 
       - name: Add the bilingual homepage menu entry
+        if: steps.freshness.outputs.needed == 'true'
         run: node scripts/install-gaming-news.mjs
 
       - name: Check AI credential
+        if: steps.freshness.outputs.needed == 'true'
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         shell: bash
@@ -54,15 +79,33 @@ jobs:
           fi
 
       - name: Collect and rewrite today's gaming news
+        if: steps.freshness.outputs.needed == 'true'
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-5-mini' }}
         run: node scripts/gaming-news.mjs
 
       - name: Validate generated data
+        if: steps.freshness.outputs.needed == 'true'
         run: node scripts/validate-gaming-news.mjs
 
+      - name: Mark automatic publication complete
+        if: steps.freshness.outputs.needed == 'true'
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const edition = JSON.parse(fs.readFileSync('news/data/latest.json', 'utf8'));
+          fs.writeFileSync('news/data/automation.json', JSON.stringify({
+            date: edition.date,
+            generatedAt: edition.generatedAt,
+            workflowRun: process.env.GITHUB_RUN_ID,
+            provider: 'openai'
+          }, null, 2) + '\n');
+          NODE
+
       - name: Commit the published edition
+        if: steps.freshness.outputs.needed == 'true'
         shell: bash
         run: |
           if git diff --quiet -- index.html news/data; then
@@ -118,7 +161,7 @@ jobs:
               `- Trigger: ${context.eventName}`,
               `- Time: ${new Date().toISOString()}`,
               '',
-              'The previous valid edition remains published. Inspect the failed step in the linked run.',
+              'The previous valid edition remains published. The workflow retries automatically every two hours until a valid edition is published.',
               '',
               'Human input is required only when the failure concerns the OPENAI_API_KEY repository secret, API billing/limits, repository permissions, or another unavailable required service.'
             ].join('\n');
@@ -130,7 +173,7 @@ jobs:
             });
             const existing = data.find((item) => item.title === title && !item.pull_request);
             if (existing) {
-              await github.rest.issues.createComment({
+              await github.rest.issues.update({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: existing.number,
