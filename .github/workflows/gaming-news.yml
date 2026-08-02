@@ -42,7 +42,7 @@ jobs:
       - name: Collect and rewrite today's gaming news
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_MODEL: ${{ vars.GITHUB_MODEL || 'openai/gpt-4.1' }}
+          GITHUB_MODEL: ${{ vars.GITHUB_MODEL || 'openai/gpt-4o' }}
         run: node scripts/gaming-news.mjs
 
       - name: Validate generated data
