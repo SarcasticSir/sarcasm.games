@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "mode": "draft",
+  "date": "2026-08-02",
+  "generatedAt": "2026-08-02T11:49:00.000Z",
+  "timezone": "Europe/Oslo",
+  "editionTitle": {
+    "no": "Gamingnytt – 2. august 2026",
+    "en": "Gaming news – 2 August 2026"
+  },
+  "intro": {
+    "no": "Nyhetssiden og den automatiske publiseringslinjen er satt opp. Dette er en tom og ærlig førsteutgave; den inneholder ingen konstruerte saker. Den daglige jobben erstatter den med kildebaserte nyheter når den kjører.",
+    "en": "The news page and automated publishing pipeline are configured. This is an intentionally empty first edition with no fabricated stories. The daily job replaces it with source-based news when it runs."
+  },
+  "stories": [],
+  "briefs": [],
+  "sourceHealth": [
+    { "id": "ign", "name": "IGN", "homepage": "https://www.ign.com/", "status": "configured", "itemCount": 0 },
+    { "id": "gamespot", "name": "GameSpot", "homepage": "https://www.gamespot.com/", "status": "configured", "itemCount": 0 },
+    { "id": "pcgamer", "name": "PC Gamer", "homepage": "https://www.pcgamer.com/", "status": "configured", "itemCount": 0 },
+    { "id": "eurogamer", "name": "Eurogamer", "homepage": "https://www.eurogamer.net/", "status": "configured", "itemCount": 0 },
+    { "id": "polygon", "name": "Polygon", "homepage": "https://www.polygon.com/", "status": "configured", "itemCount": 0 },
+    { "id": "kotaku", "name": "Kotaku", "homepage": "https://kotaku.com/", "status": "configured", "itemCount": 0 },
+    { "id": "gamesradar", "name": "GamesRadar+", "homepage": "https://www.gamesradar.com/", "status": "configured", "itemCount": 0 },
+    { "id": "rockpapershotgun", "name": "Rock Paper Shotgun", "homepage": "https://www.rockpapershotgun.com/", "status": "configured", "itemCount": 0 },
+    { "id": "nintendolife", "name": "Nintendo Life", "homepage": "https://www.nintendolife.com/", "status": "configured", "itemCount": 0 },
+    { "id": "pushsquare", "name": "Push Square", "homepage": "https://www.pushsquare.com/", "status": "configured", "itemCount": 0 }
+  ],
+  "editorialPolicy": {
+    "no": "Kondensert fra valgte kilder. Rykter merkes tydelig, og alle saker lenker til originalkildene.",
+    "en": "Condensed from selected sources. Rumours are labelled, and every item links to its original sources."
+  }
+}
