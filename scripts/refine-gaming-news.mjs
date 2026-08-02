@@ -6,16 +6,25 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const LATEST = path.join(ROOT, 'news', 'data', 'latest.json');
 
-const NON_GAMING = /\b(box office|stage cast|theatre cast|actor dies|actress dies|dies at \d+|tv series|television series|movie review|film review|netflix series|hbo series|disney\+ series|marvel studios|the sopranos|game of thrones.*stage|comic book issue)\b/i;
+const NON_GAMING = /\b(box office|stage cast|theatre cast|actor dies|actress dies|dies at \d+|tv series|television series|movie review|film review|netflix series|hbo series|disney\+ series|marvel studios|the sopranos|game of thrones.*stage|squid game|comic book issue|warner bros.*talent|casting deal)\b/i;
 const GAMING_CONTEXT = /\b(video game|gaming|gameplay|playstation|ps5|ps6|xbox|nintendo|switch|steam|pc gaming|console|dlc|patch|mod support|remaster|remake|early access|esports|developer|development studio|game studio|gamescom)\b/i;
 
 function text(entry) {
   return [entry?.title?.no, entry?.title?.en, entry?.summary?.no, entry?.summary?.en, ...(entry?.sources || []).map((source) => source.url)].filter(Boolean).join(' ');
 }
 
+function hasGamingContext(value) {
+  if (GAMING_CONTEXT.test(value)) return true;
+  return /\bgames?\b/i.test(value) && !/\b(game of thrones|squid game)\b/i.test(value);
+}
+
 function isGaming(entry) {
   const value = text(entry);
-  if (NON_GAMING.test(value) && !GAMING_CONTEXT.test(value)) return false;
+  const gamingContext = hasGamingContext(value);
+  if (NON_GAMING.test(value) && !gamingContext) return false;
+  const sources = entry?.sources || [];
+  const onlyIgn = sources.length > 0 && sources.every((source) => source.name === 'IGN');
+  if (onlyIgn && !gamingContext) return false;
   return true;
 }
 
