@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "date": "2026-08-02",
-  "generatedAt": "2026-08-02T12:15:00.000Z",
+  "generatedAt": "2026-08-02T12:53:00.000Z",
   "timezone": "Europe/Oslo",
   "editionTitle": {
     "no": "Gamingnytt – 2. august 2026",
@@ -9,19 +9,19 @@
   },
   "stories": [
     {
-      "id": "space-marine-2-updates",
+      "id": "space-marine-2-workshop-chaos",
       "category": {
         "no": "Oppdateringer",
         "en": "Updates"
       },
       "status": "reported",
       "title": {
-        "no": "Space Marine 2 utvider både kaosstyrkene og modstøtten",
-        "en": "Space Marine 2 expands its Chaos roster and mod support"
+        "no": "Space Marine 2 får Steam Workshop og nye Chaos-enheter",
+        "en": "Space Marine 2 adds Steam Workshop support and new Chaos units"
       },
       "summary": {
-        "no": "Nye oppdateringer til Space Marine 2 skal blant annet introdusere Terminator Sorcerers og støtte for Steam Workshop. Modstøtten gjør det samtidig enklere å distribuere løsninger som kan åpne for langt større samarbeidsgrupper enn i standardspillet.",
-        "en": "New Space Marine 2 updates are set to introduce Terminator Sorcerers alongside Steam Workshop integration. Easier mod distribution could also make expanded co-op configurations far more accessible than before."
+        "no": "Kommende oppdateringer til Space Marine 2 skal legge til Terminator Sorcerers og integrasjon med Steam Workshop. Den nye modstøtten vil gjøre det enklere å installere og dele modifikasjoner, blant annet løsninger som utvider størrelsen på samarbeidsgrupper.",
+        "en": "Upcoming Space Marine 2 updates are reported to add Terminator Sorcerers and Steam Workshop integration. The new mod support should simplify installing and sharing modifications, including configurations that allow larger cooperative groups."
       },
       "importance": 9,
       "sources": [
@@ -33,19 +33,19 @@
       ]
     },
     {
-      "id": "xbox-europe-price-rise",
+      "id": "xbox-hardware-europe-prices",
       "category": {
         "no": "Maskinvare",
         "en": "Hardware"
       },
       "status": "confirmed",
       "title": {
-        "no": "Xbox-konsoller får kraftige prisøkninger i Europa",
-        "en": "Xbox console prices rise sharply across Europe"
+        "no": "Microsoft setter opp Xbox-prisene i Europa",
+        "en": "Microsoft raises Xbox hardware prices in Europe"
       },
       "summary": {
-        "no": "Microsoft har offentliggjort nye europeiske priser for Xbox-maskinvaren. I Storbritannia ligger konsollene nå rundt 34 til 49 prosent høyere enn måneden før, noe som også illustrerer størrelsen på prisjusteringen i regionen.",
-        "en": "Microsoft has published revised European pricing for Xbox hardware. In the UK, console prices are now roughly 34 to 49 percent higher than the previous month, showing the scale of the regional increase."
+        "no": "Microsoft har publisert nye europeiske priser for Xbox-konsollene. De britiske prisene ligger rundt 34 til 49 prosent over nivået måneden før, og viser hvor omfattende den regionale prisjusteringen er.",
+        "en": "Microsoft has published new European prices for its Xbox consoles. UK pricing is roughly 34 to 49 percent above the previous month's level, illustrating the scale of the regional adjustment."
       },
       "importance": 8,
       "sources": [
@@ -57,19 +57,19 @@
       ]
     },
     {
-      "id": "silent-hill-townfall-crtv",
+      "id": "townfall-crtv-prototype",
       "category": {
         "no": "Utvikling",
         "en": "Development"
       },
       "status": "reported",
       "title": {
-        "no": "Townfall-teamet bygget spillteknologi av ødelagte TV-er",
-        "en": "Townfall's developers prototyped its device with broken televisions"
+        "no": "Silent Hill: Townfall brukte fysiske TV-eksperimenter i utviklingen",
+        "en": "Silent Hill: Townfall used physical television experiments during development"
       },
       "summary": {
-        "no": "Utviklerne bak Silent Hill: Townfall brukte gamle TV-apparater og magneter for å utforske hvordan spillets CRTV-enhet skulle oppleves. Det fysiske eksperimentet ble brukt for å gi den digitale gjenstanden et mer troverdig analogt uttrykk.",
-        "en": "The Silent Hill: Townfall team experimented with discarded televisions and magnets while designing the in-game CRTV device. That physical research helped the digital object feel convincingly analogue rather than merely look retro."
+        "no": "Teamet bak Silent Hill: Townfall eksperimenterte med gamle TV-apparater og magneter mens spillets CRTV-enhet ble utviklet. Arbeidet ga utviklerne et fysisk utgangspunkt for å skape et mer overbevisende analogt uttrykk i spillet.",
+        "en": "The Silent Hill: Townfall team experimented with old television sets and magnets while developing the game's CRTV device. The physical prototypes gave the developers a practical reference for creating a more convincing analogue appearance in the game."
       },
       "importance": 7,
       "sources": [
@@ -81,19 +81,19 @@
       ]
     },
     {
-      "id": "baldurs-gate-3-camera-mod",
+      "id": "bg3-over-shoulder-camera",
       "category": {
         "no": "Mods",
         "en": "Mods"
       },
       "status": "reported",
       "title": {
-        "no": "Ny kameramod vil gjøre Baldur's Gate 3 mer skuldernært",
-        "en": "A new camera mod gives Baldur's Gate 3 a closer perspective"
+        "no": "Baldur's Gate 3-mod flytter kameraet nærmere figuren",
+        "en": "Baldur's Gate 3 mod moves the camera closer to the character"
       },
       "summary": {
-        "no": "En utvikler arbeider med en kameramod som flytter Baldur's Gate 3 til et tettere perspektiv bak figuren. Prosjektet fremheves som en mer gjennomarbeidet løsning enn eksisterende tredjepersonsvarianter, med særskilt fokus på hvordan kameraet oppfører seg i selve spillet.",
-        "en": "A modder is building a closer over-the-shoulder view for Baldur's Gate 3. The project is being presented as a more integrated alternative to existing third-person camera solutions, with particular attention paid to in-game behaviour."
+        "no": "En ny mod under utvikling gir Baldur's Gate 3 et nærmere kamera plassert bak spillerfiguren. Skaperen arbeider med kamerabevegelse og oppførsel i selve spillet for å gjøre løsningen mer helhetlig enn en enkel tredjepersonsvisning.",
+        "en": "A mod currently in development gives Baldur's Gate 3 a closer camera positioned behind the player character. Its creator is refining movement and in-game behaviour to make the result more integrated than a basic third-person viewpoint."
       },
       "importance": 6,
       "sources": [
@@ -105,19 +105,19 @@
       ]
     },
     {
-      "id": "elden-ring-godwyn-speculation",
+      "id": "elden-ring-godwyn-post-rumor",
       "category": {
         "no": "Rykter",
         "en": "Rumours"
       },
       "status": "rumor",
       "title": {
-        "no": "FromSoftware-innlegg setter fart i nye Godwyn-spekulasjoner",
-        "en": "A FromSoftware post reignites speculation about Godwyn"
+        "no": "Kryptisk FromSoftware-innlegg utløser nye Godwyn-rykter",
+        "en": "Cryptic FromSoftware post triggers fresh Godwyn rumours"
       },
       "summary": {
-        "no": "Et kryptisk innlegg fra FromSoftware har fått deler av Elden Ring-miljøet til å håpe på nytt innhold knyttet til Godwyn. Det finnes foreløpig ingen bekreftelse på en utvidelse, og saken bør derfor behandles som ren fanspekulasjon.",
-        "en": "A cryptic FromSoftware post has prompted some Elden Ring players to speculate about new content involving Godwyn. No expansion has been announced, so the discussion remains fan interpretation rather than confirmed information."
+        "no": "Et innlegg fra FromSoftware har ført til nye teorier om mulig Elden Ring-innhold knyttet til Godwyn. Studioet har ikke annonsert en slik utvidelse, og tolkningen er derfor fortsatt ubekreftet fanspekulasjon.",
+        "en": "A FromSoftware post has prompted new theories about possible Elden Ring content involving Godwyn. The studio has not announced such an expansion, so the interpretation remains unconfirmed fan speculation."
       },
       "importance": 5,
       "sources": [
