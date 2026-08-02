@@ -1,36 +1,27 @@
 {
-  "schemaVersion": 1,
-  "mode": "headline-fallback",
+  "schemaVersion": 2,
   "date": "2026-08-02",
-  "generatedAt": "2026-08-02T12:07:15.701Z",
+  "generatedAt": "2026-08-02T12:15:00.000Z",
   "timezone": "Europe/Oslo",
   "editionTitle": {
     "no": "Gamingnytt – 2. august 2026",
     "en": "Gaming news – 2 August 2026"
   },
-  "intro": {
-    "no": "Automatisk oversikt for 2. august 2026. Denne reserveutgaven viser kildebaserte overskrifter fordi AI-redigering ikke var tilgjengelig.",
-    "en": "Automated overview for 2 August 2026. This fallback edition shows source-based headlines because AI editing was unavailable."
-  },
   "stories": [
     {
-      "id": "6a327a96a4a8",
+      "id": "space-marine-2-updates",
       "category": {
-        "no": "Gaming",
-        "en": "Gaming"
+        "no": "Oppdateringer",
+        "en": "Updates"
       },
       "status": "reported",
       "title": {
-        "no": "Space Marine 2's latest updates add Terminator Sorcerers and Steam Workshop support, so you can now play co-op with 9 other players if you want",
-        "en": "Space Marine 2's latest updates add Terminator Sorcerers and Steam Workshop support, so you can now play co-op with 9 other players if you want"
+        "no": "Space Marine 2 utvider både kaosstyrkene og modstøtten",
+        "en": "Space Marine 2 expands its Chaos roster and mod support"
       },
       "summary": {
-        "no": "Published by PC Gamer. Open the source link for the full report.",
-        "en": "Published by PC Gamer. Open the source link for the full report."
-      },
-      "whyItMatters": {
-        "no": "AI-redigert forklaring er ikke aktiv i denne reserveutgaven.",
-        "en": "AI-edited context is not active in this fallback edition."
+        "no": "Nye oppdateringer til Space Marine 2 skal blant annet introdusere Terminator Sorcerers og støtte for Steam Workshop. Modstøtten gjør det samtidig enklere å distribuere løsninger som kan åpne for langt større samarbeidsgrupper enn i standardspillet.",
+        "en": "New Space Marine 2 updates are set to introduce Terminator Sorcerers alongside Steam Workshop integration. Easier mod distribution could also make expanded co-op configurations far more accessible than before."
       },
       "importance": 9,
       "sources": [
@@ -42,81 +33,21 @@
       ]
     },
     {
-      "id": "abc132e12de8",
+      "id": "xbox-europe-price-rise",
       "category": {
-        "no": "Gaming",
-        "en": "Gaming"
+        "no": "Maskinvare",
+        "en": "Hardware"
       },
-      "status": "reported",
+      "status": "confirmed",
       "title": {
-        "no": "Silent Hill: Townfall's dev team wrecked old TVs with magnets to make its in-game gadget feel real",
-        "en": "Silent Hill: Townfall's dev team wrecked old TVs with magnets to make its in-game gadget feel real"
+        "no": "Xbox-konsoller får kraftige prisøkninger i Europa",
+        "en": "Xbox console prices rise sharply across Europe"
       },
       "summary": {
-        "no": "Silent Hill: Townfall studio Screen Burn used broken TVs and magnets to make its in-game gadget, the CRTV, feel analogue as well as look it.",
-        "en": "Silent Hill: Townfall studio Screen Burn used broken TVs and magnets to make its in-game gadget, the CRTV, feel analogue as well as look it."
-      },
-      "whyItMatters": {
-        "no": "AI-redigert forklaring er ikke aktiv i denne reserveutgaven.",
-        "en": "AI-edited context is not active in this fallback edition."
+        "no": "Microsoft har offentliggjort nye europeiske priser for Xbox-maskinvaren. I Storbritannia ligger konsollene nå rundt 34 til 49 prosent høyere enn måneden før, noe som også illustrerer størrelsen på prisjusteringen i regionen.",
+        "en": "Microsoft has published revised European pricing for Xbox hardware. In the UK, console prices are now roughly 34 to 49 percent higher than the previous month, showing the scale of the regional increase."
       },
       "importance": 8,
-      "sources": [
-        {
-          "name": "Eurogamer",
-          "url": "https://www.eurogamer.net/silent-hill-townfall-crtv",
-          "publishedAt": "2026-08-02T11:50:59.000Z"
-        }
-      ]
-    },
-    {
-      "id": "aa2e7d655c20",
-      "category": {
-        "no": "Gaming",
-        "en": "Gaming"
-      },
-      "status": "reported",
-      "title": {
-        "no": "I enjoyed this video of Oblivion Remastered actor Wes Johnson goofing around in a sound booth dressed as Sheogorath, but a patch for the PC version would be nice too, Bethesda",
-        "en": "I enjoyed this video of Oblivion Remastered actor Wes Johnson goofing around in a sound booth dressed as Sheogorath, but a patch for the PC version would be nice too, Bethesda"
-      },
-      "summary": {
-        "no": "Bethesda takes a different approach to marketing its Switch 2 launch.",
-        "en": "Bethesda takes a different approach to marketing its Switch 2 launch."
-      },
-      "whyItMatters": {
-        "no": "AI-redigert forklaring er ikke aktiv i denne reserveutgaven.",
-        "en": "AI-edited context is not active in this fallback edition."
-      },
-      "importance": 7,
-      "sources": [
-        {
-          "name": "PC Gamer",
-          "url": "https://www.pcgamer.com/games/the-elder-scrolls/i-enjoyed-this-video-of-oblivion-remastered-actor-wes-johnson-goofing-around-in-a-sound-booth-dressed-as-sheogorath-but-a-patch-for-the-pc-version-would-be-nice-too-bethesda/",
-          "publishedAt": "2026-08-02T11:00:00.000Z"
-        }
-      ]
-    },
-    {
-      "id": "2c0131595a6a",
-      "category": {
-        "no": "Gaming",
-        "en": "Gaming"
-      },
-      "status": "reported",
-      "title": {
-        "no": "Xbox UK and Europe console price hikes revealed - and it's even worse than we expected",
-        "en": "Xbox UK and Europe console price hikes revealed - and it's even worse than we expected"
-      },
-      "summary": {
-        "no": "Xbox has finally revealed the price hikes recently rolled out across its hardware, and Xbox consoles in the UK are now between 34 and 49 percent more expensive than they were last month.",
-        "en": "Xbox has finally revealed the price hikes recently rolled out across its hardware, and Xbox consoles in the UK are now between 34 and 49 percent more expensive than they were last month."
-      },
-      "whyItMatters": {
-        "no": "AI-redigert forklaring er ikke aktiv i denne reserveutgaven.",
-        "en": "AI-edited context is not active in this fallback edition."
-      },
-      "importance": 6,
       "sources": [
         {
           "name": "Eurogamer",
@@ -126,25 +57,45 @@
       ]
     },
     {
-      "id": "2090afd6602f",
+      "id": "silent-hill-townfall-crtv",
       "category": {
-        "no": "Gaming",
-        "en": "Gaming"
+        "no": "Utvikling",
+        "en": "Development"
       },
       "status": "reported",
       "title": {
-        "no": "The maker of the Baldur's Gate 3 over-the-shoulder camera mod has gone to great lengths to demonstrate it's not like other third-person viewpoint solutions",
-        "en": "The maker of the Baldur's Gate 3 over-the-shoulder camera mod has gone to great lengths to demonstrate it's not like other third-person viewpoint solutions"
+        "no": "Townfall-teamet bygget spillteknologi av ødelagte TV-er",
+        "en": "Townfall's developers prototyped its device with broken televisions"
       },
       "summary": {
-        "no": "Published by PC Gamer. Open the source link for the full report.",
-        "en": "Published by PC Gamer. Open the source link for the full report."
+        "no": "Utviklerne bak Silent Hill: Townfall brukte gamle TV-apparater og magneter for å utforske hvordan spillets CRTV-enhet skulle oppleves. Det fysiske eksperimentet ble brukt for å gi den digitale gjenstanden et mer troverdig analogt uttrykk.",
+        "en": "The Silent Hill: Townfall team experimented with discarded televisions and magnets while designing the in-game CRTV device. That physical research helped the digital object feel convincingly analogue rather than merely look retro."
       },
-      "whyItMatters": {
-        "no": "AI-redigert forklaring er ikke aktiv i denne reserveutgaven.",
-        "en": "AI-edited context is not active in this fallback edition."
+      "importance": 7,
+      "sources": [
+        {
+          "name": "Eurogamer",
+          "url": "https://www.eurogamer.net/silent-hill-townfall-crtv",
+          "publishedAt": "2026-08-02T11:50:59.000Z"
+        }
+      ]
+    },
+    {
+      "id": "baldurs-gate-3-camera-mod",
+      "category": {
+        "no": "Mods",
+        "en": "Mods"
       },
-      "importance": 5,
+      "status": "reported",
+      "title": {
+        "no": "Ny kameramod vil gjøre Baldur's Gate 3 mer skuldernært",
+        "en": "A new camera mod gives Baldur's Gate 3 a closer perspective"
+      },
+      "summary": {
+        "no": "En utvikler arbeider med en kameramod som flytter Baldur's Gate 3 til et tettere perspektiv bak figuren. Prosjektet fremheves som en mer gjennomarbeidet løsning enn eksisterende tredjepersonsvarianter, med særskilt fokus på hvordan kameraet oppfører seg i selve spillet.",
+        "en": "A modder is building a closer over-the-shoulder view for Baldur's Gate 3. The project is being presented as a more integrated alternative to existing third-person camera solutions, with particular attention paid to in-game behaviour."
+      },
+      "importance": 6,
       "sources": [
         {
           "name": "PC Gamer",
@@ -154,25 +105,21 @@
       ]
     },
     {
-      "id": "cd9df96ee152",
+      "id": "elden-ring-godwyn-speculation",
       "category": {
-        "no": "Gaming",
-        "en": "Gaming"
+        "no": "Rykter",
+        "en": "Rumours"
       },
-      "status": "reported",
+      "status": "rumor",
       "title": {
-        "no": "Elden Ring Players Are Hoping for Godwyn DLC After FromSoftware Shares Cryptic Social Media Post",
-        "en": "Elden Ring Players Are Hoping for Godwyn DLC After FromSoftware Shares Cryptic Social Media Post"
+        "no": "FromSoftware-innlegg setter fart i nye Godwyn-spekulasjoner",
+        "en": "A FromSoftware post reignites speculation about Godwyn"
       },
       "summary": {
-        "no": "Published by IGN. Open the source link for the full report.",
-        "en": "Published by IGN. Open the source link for the full report."
+        "no": "Et kryptisk innlegg fra FromSoftware har fått deler av Elden Ring-miljøet til å håpe på nytt innhold knyttet til Godwyn. Det finnes foreløpig ingen bekreftelse på en utvidelse, og saken bør derfor behandles som ren fanspekulasjon.",
+        "en": "A cryptic FromSoftware post has prompted some Elden Ring players to speculate about new content involving Godwyn. No expansion has been announced, so the discussion remains fan interpretation rather than confirmed information."
       },
-      "whyItMatters": {
-        "no": "AI-redigert forklaring er ikke aktiv i denne reserveutgaven.",
-        "en": "AI-edited context is not active in this fallback edition."
-      },
-      "importance": 4,
+      "importance": 5,
       "sources": [
         {
           "name": "IGN",
@@ -182,81 +129,16 @@
       ]
     }
   ],
-  "briefs": [],
   "sourceHealth": [
-    {
-      "id": "ign",
-      "name": "IGN",
-      "homepage": "https://www.ign.com/",
-      "status": "ok",
-      "itemCount": 14
-    },
-    {
-      "id": "gamespot",
-      "name": "GameSpot",
-      "homepage": "https://www.gamespot.com/",
-      "status": "ok",
-      "itemCount": 14
-    },
-    {
-      "id": "pcgamer",
-      "name": "PC Gamer",
-      "homepage": "https://www.pcgamer.com/",
-      "status": "ok",
-      "itemCount": 14
-    },
-    {
-      "id": "eurogamer",
-      "name": "Eurogamer",
-      "homepage": "https://www.eurogamer.net/",
-      "status": "ok",
-      "itemCount": 14
-    },
-    {
-      "id": "polygon",
-      "name": "Polygon",
-      "homepage": "https://www.polygon.com/",
-      "status": "ok",
-      "itemCount": 10
-    },
-    {
-      "id": "kotaku",
-      "name": "Kotaku",
-      "homepage": "https://kotaku.com/",
-      "status": "ok",
-      "itemCount": 14
-    },
-    {
-      "id": "gamesradar",
-      "name": "GamesRadar+",
-      "homepage": "https://www.gamesradar.com/",
-      "status": "ok",
-      "itemCount": 14
-    },
-    {
-      "id": "rockpapershotgun",
-      "name": "Rock Paper Shotgun",
-      "homepage": "https://www.rockpapershotgun.com/",
-      "status": "ok",
-      "itemCount": 14
-    },
-    {
-      "id": "nintendolife",
-      "name": "Nintendo Life",
-      "homepage": "https://www.nintendolife.com/",
-      "status": "ok",
-      "itemCount": 14
-    },
-    {
-      "id": "pushsquare",
-      "name": "Push Square",
-      "homepage": "https://www.pushsquare.com/",
-      "status": "ok",
-      "itemCount": 14
-    }
-  ],
-  "editorialPolicy": {
-    "no": "Kondensert fra valgte kilder. Rykter merkes tydelig, og alle saker lenker til originalkildene.",
-    "en": "Condensed from selected sources. Rumours are labelled, and every item links to its original sources."
-  }
+    { "id": "ign", "name": "IGN", "homepage": "https://www.ign.com/", "status": "ok", "itemCount": 14 },
+    { "id": "gamespot", "name": "GameSpot", "homepage": "https://www.gamespot.com/", "status": "ok", "itemCount": 14 },
+    { "id": "pcgamer", "name": "PC Gamer", "homepage": "https://www.pcgamer.com/", "status": "ok", "itemCount": 14 },
+    { "id": "eurogamer", "name": "Eurogamer", "homepage": "https://www.eurogamer.net/", "status": "ok", "itemCount": 14 },
+    { "id": "polygon", "name": "Polygon", "homepage": "https://www.polygon.com/", "status": "ok", "itemCount": 10 },
+    { "id": "kotaku", "name": "Kotaku", "homepage": "https://kotaku.com/", "status": "ok", "itemCount": 14 },
+    { "id": "gamesradar", "name": "GamesRadar+", "homepage": "https://www.gamesradar.com/", "status": "ok", "itemCount": 14 },
+    { "id": "rockpapershotgun", "name": "Rock Paper Shotgun", "homepage": "https://www.rockpapershotgun.com/", "status": "ok", "itemCount": 14 },
+    { "id": "nintendolife", "name": "Nintendo Life", "homepage": "https://www.nintendolife.com/", "status": "ok", "itemCount": 14 },
+    { "id": "pushsquare", "name": "Push Square", "homepage": "https://www.pushsquare.com/", "status": "ok", "itemCount": 14 }
+  ]
 }
