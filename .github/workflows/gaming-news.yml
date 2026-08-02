@@ -17,7 +17,6 @@ run-name: Gaming news · ${{ github.event_name }}
 permissions:
   contents: write
   issues: write
-  models: read
 
 concurrency:
   group: daily-gaming-news
@@ -36,7 +35,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Run news unit tests
         run: node --test scripts/gaming-news.test.mjs
@@ -44,10 +43,20 @@ jobs:
       - name: Add the bilingual homepage menu entry
         run: node scripts/install-gaming-news.mjs
 
+      - name: Check AI credential
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        shell: bash
+        run: |
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo "::error::OPENAI_API_KEY is missing. Add it under Settings → Secrets and variables → Actions → Repository secrets."
+            exit 1
+          fi
+
       - name: Collect and rewrite today's gaming news
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_MODEL: ${{ vars.GITHUB_MODEL || 'openai/gpt-4o' }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-5-mini' }}
         run: node scripts/gaming-news.mjs
 
       - name: Validate generated data
@@ -109,7 +118,9 @@ jobs:
               `- Trigger: ${context.eventName}`,
               `- Time: ${new Date().toISOString()}`,
               '',
-              'The previous valid edition remains published. Inspect the failed step in the linked run. Human input is only required if the failure is caused by repository permissions, GitHub Models access, billing, or an unavailable required service.'
+              'The previous valid edition remains published. Inspect the failed step in the linked run.',
+              '',
+              'Human input is required only when the failure concerns the OPENAI_API_KEY repository secret, API billing/limits, repository permissions, or another unavailable required service.'
             ].join('\n');
             const { data } = await github.rest.issues.listForRepo({
               owner: context.repo.owner,
