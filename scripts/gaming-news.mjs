@@ -10,6 +10,7 @@ const TIMEZONE = 'Europe/Oslo';
 const MAX_PER_SOURCE = 14;
 const MAX_PROMPT_ITEMS = 52;
 const FETCH_TIMEOUT_MS = 18_000;
+const MODEL_TIMEOUT_MS = 120_000;
 const MODEL_ATTEMPTS = 3;
 
 export const SOURCES = [
@@ -144,20 +145,12 @@ function isObviousEntertainment(item) {
     && !/\b(video game|gaming|gameplay|playstation|xbox|nintendo|switch|steam|console|dlc|patch|mod|remaster|remake|developer|studio game)\b/i.test(value);
 }
 
-async function fetchWithTimeout(url) {
+async function fetchWithTimeout(url, options = {}, timeoutMs = FETCH_TIMEOUT_MS) {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const response = await fetch(url, {
-      signal: controller.signal,
-      redirect: 'follow',
-      headers: {
-        'user-agent': 'sarcasm.games-gaming-news/2.1 (+https://sarcasm.games/news/)',
-        accept: 'application/rss+xml, application/atom+xml, application/xml, text/xml, */*;q=0.5'
-      }
-    });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return response.text();
+    const response = await fetch(url, { ...options, signal: controller.signal });
+    return response;
   } finally {
     clearTimeout(timer);
   }
@@ -166,7 +159,15 @@ async function fetchWithTimeout(url) {
 async function collectFeeds(now) {
   const settled = await Promise.all(SOURCES.map(async (source) => {
     try {
-      const parsed = parseFeed(await fetchWithTimeout(source.feed), source)
+      const response = await fetchWithTimeout(source.feed, {
+        redirect: 'follow',
+        headers: {
+          'user-agent': 'sarcasm.games-gaming-news/3.0 (+https://sarcasm.games/news/)',
+          accept: 'application/rss+xml, application/atom+xml, application/xml, text/xml, */*;q=0.5'
+        }
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const parsed = parseFeed(await response.text(), source)
         .filter((item) => !isObviousEntertainment(item))
         .sort((a, b) => (b.publishedAt || '').localeCompare(a.publishedAt || ''))
         .slice(0, MAX_PER_SOURCE);
@@ -193,18 +194,62 @@ function dateKey(now) {
   return `${get('year')}-${get('month')}-${get('day')}`;
 }
 
-function extractJson(value) {
-  const text = String(value || '').replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
-  const start = text.indexOf('{');
-  const end = text.lastIndexOf('}');
-  if (start < 0 || end <= start) throw new Error('Model did not return JSON');
-  return JSON.parse(text.slice(start, end + 1));
+function outputSchema() {
+  const bilingual = {
+    type: 'object',
+    additionalProperties: false,
+    required: ['no', 'en'],
+    properties: {
+      no: { type: 'string', minLength: 1 },
+      en: { type: 'string', minLength: 1 }
+    }
+  };
+  return {
+    type: 'object',
+    additionalProperties: false,
+    required: ['stories'],
+    properties: {
+      stories: {
+        type: 'array',
+        minItems: 5,
+        maxItems: 8,
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['category', 'status', 'title', 'summary', 'sourceIds', 'importance'],
+          properties: {
+            category: bilingual,
+            status: { type: 'string', enum: ['confirmed', 'reported', 'rumor'] },
+            title: bilingual,
+            summary: bilingual,
+            sourceIds: {
+              type: 'array',
+              minItems: 1,
+              maxItems: 4,
+              items: { type: 'string' }
+            },
+            importance: { type: 'integer', minimum: 1, maximum: 10 }
+          }
+        }
+      }
+    }
+  };
 }
 
-async function rewriteWithGitHubModels(promptItems, now, feedback = '') {
-  const token = process.env.GITHUB_TOKEN?.trim();
-  if (!token) throw new Error('GITHUB_TOKEN is unavailable; no copied fallback will be published.');
-  const model = process.env.GITHUB_MODEL?.trim() || 'openai/gpt-4o';
+function responseText(payload) {
+  if (typeof payload?.output_text === 'string' && payload.output_text.trim()) return payload.output_text;
+  for (const output of payload?.output || []) {
+    for (const content of output?.content || []) {
+      if (content?.type === 'output_text' && typeof content.text === 'string') return content.text;
+    }
+  }
+  throw new Error('OpenAI response did not contain output text');
+}
+
+async function rewriteWithOpenAI(promptItems, now, feedback = '') {
+  const apiKey = process.env.OPENAI_API_KEY?.trim();
+  if (!apiKey) throw new Error('OPENAI_API_KEY is missing. Add it as a GitHub Actions repository secret.');
+  const model = process.env.OPENAI_MODEL?.trim() || 'gpt-5-mini';
   const instructions = `You edit a daily gaming-news page. Select 5-8 genuinely important gaming stories from the supplied feed entries and rewrite them in Norwegian Bokmål and English.
 
 Rules:
@@ -214,30 +259,33 @@ Rules:
 - Rewrite both headline and summary from scratch. Do not copy the source headline or source sentences.
 - Keep it compact: headline plus 2-3 factual sentences. No introduction, commentary, filler, hype, "why it matters", or editorial explanation.
 - Mark unconfirmed speculation as rumor. A single outlet normally means reported. Confirmed is reserved for official announcements or multiple independent sources.
-- Return plain JSON only, exactly: {"stories":[{"category":{"no":"","en":""},"status":"confirmed|reported|rumor","title":{"no":"","en":""},"summary":{"no":"","en":""},"sourceIds":["item-id"],"importance":1}]}
 - sourceIds must be copied exactly from the supplied entries.`;
   const correction = feedback ? `\n\nThe previous attempt was rejected for this reason: ${feedback}. Correct that problem in the new output.` : '';
-  const response = await fetch('https://models.github.ai/inference/chat/completions', {
+  const response = await fetchWithTimeout('https://api.openai.com/v1/responses', {
     method: 'POST',
     headers: {
-      authorization: `Bearer ${token}`,
-      'content-type': 'application/json',
-      accept: 'application/vnd.github+json'
+      authorization: `Bearer ${apiKey}`,
+      'content-type': 'application/json'
     },
     body: JSON.stringify({
       model,
-      temperature: 0.15,
-      max_tokens: 5000,
-      response_format: { type: 'json_object' },
-      messages: [
-        { role: 'system', content: instructions },
-        { role: 'user', content: `Edition date: ${localDate(now, 'nb-NO')} / ${localDate(now, 'en-GB')}\n\nFeed entries:\n${JSON.stringify(promptItems)}${correction}` }
-      ]
+      store: false,
+      instructions,
+      input: `Edition date: ${localDate(now, 'nb-NO')} / ${localDate(now, 'en-GB')}\n\nFeed entries:\n${JSON.stringify(promptItems)}${correction}`,
+      text: {
+        verbosity: 'low',
+        format: {
+          type: 'json_schema',
+          name: 'gaming_news_edition',
+          strict: true,
+          schema: outputSchema()
+        }
+      }
     })
-  });
+  }, MODEL_TIMEOUT_MS);
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload?.error?.message || `GitHub Models HTTP ${response.status}`);
-  return extractJson(payload?.choices?.[0]?.message?.content);
+  if (!response.ok) throw new Error(payload?.error?.message || `OpenAI HTTP ${response.status}`);
+  return JSON.parse(responseText(payload));
 }
 
 function words(value) {
@@ -302,12 +350,13 @@ async function generateStories(promptItems, itemById, now) {
   let lastError = null;
   for (let attempt = 1; attempt <= MODEL_ATTEMPTS; attempt += 1) {
     try {
-      const output = await rewriteWithGitHubModels(promptItems, now, feedback);
+      const output = await rewriteWithOpenAI(promptItems, now, feedback);
       return finalizeStories(output, itemById);
     } catch (error) {
       lastError = error;
       feedback = String(error?.message || error).slice(0, 300);
       console.warn(`[gaming-news] Model attempt ${attempt} failed: ${feedback}`);
+      if (/OPENAI_API_KEY is missing/i.test(feedback)) break;
     }
   }
   throw new Error(`All model attempts failed; previous edition remains published. Last error: ${lastError?.message || lastError}`);
