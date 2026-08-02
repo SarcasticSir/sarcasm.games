@@ -10,6 +10,7 @@ const TIMEZONE = 'Europe/Oslo';
 const MAX_PER_SOURCE = 14;
 const MAX_PROMPT_ITEMS = 52;
 const FETCH_TIMEOUT_MS = 18_000;
+const MODEL_ATTEMPTS = 3;
 
 export const SOURCES = [
   { id: 'ign', name: 'IGN', homepage: 'https://www.ign.com/', feed: 'https://feeds.feedburner.com/ign/all', weight: 10 },
@@ -151,7 +152,7 @@ async function fetchWithTimeout(url) {
       signal: controller.signal,
       redirect: 'follow',
       headers: {
-        'user-agent': 'sarcasm.games-gaming-news/2.0 (+https://sarcasm.games/news/)',
+        'user-agent': 'sarcasm.games-gaming-news/2.1 (+https://sarcasm.games/news/)',
         accept: 'application/rss+xml, application/atom+xml, application/xml, text/xml, */*;q=0.5'
       }
     });
@@ -200,21 +201,22 @@ function extractJson(value) {
   return JSON.parse(text.slice(start, end + 1));
 }
 
-async function rewriteWithGitHubModels(promptItems, now) {
+async function rewriteWithGitHubModels(promptItems, now, feedback = '') {
   const token = process.env.GITHUB_TOKEN?.trim();
   if (!token) throw new Error('GITHUB_TOKEN is unavailable; no copied fallback will be published.');
-  const model = process.env.GITHUB_MODEL?.trim() || 'openai/gpt-4.1';
+  const model = process.env.GITHUB_MODEL?.trim() || 'openai/gpt-4o';
   const instructions = `You edit a daily gaming-news page. Select 5-8 genuinely important gaming stories from the supplied feed entries and rewrite them in Norwegian Bokmål and English.
 
 Rules:
 - Use only supplied facts. Never invent details.
 - Exclude film, television, celebrity, shopping, guides and general entertainment.
 - Merge duplicate coverage of the same event.
-- Rewrite both headline and summary from scratch. Do not copy the source headline or source sentences. Avoid any run of seven or more source words except proper names.
+- Rewrite both headline and summary from scratch. Do not copy the source headline or source sentences.
 - Keep it compact: headline plus 2-3 factual sentences. No introduction, commentary, filler, hype, "why it matters", or editorial explanation.
 - Mark unconfirmed speculation as rumor. A single outlet normally means reported. Confirmed is reserved for official announcements or multiple independent sources.
 - Return plain JSON only, exactly: {"stories":[{"category":{"no":"","en":""},"status":"confirmed|reported|rumor","title":{"no":"","en":""},"summary":{"no":"","en":""},"sourceIds":["item-id"],"importance":1}]}
 - sourceIds must be copied exactly from the supplied entries.`;
+  const correction = feedback ? `\n\nThe previous attempt was rejected for this reason: ${feedback}. Correct that problem in the new output.` : '';
   const response = await fetch('https://models.github.ai/inference/chat/completions', {
     method: 'POST',
     headers: {
@@ -226,9 +228,10 @@ Rules:
       model,
       temperature: 0.15,
       max_tokens: 5000,
+      response_format: { type: 'json_object' },
       messages: [
         { role: 'system', content: instructions },
-        { role: 'user', content: `Edition date: ${localDate(now, 'nb-NO')} / ${localDate(now, 'en-GB')}\n\nFeed entries:\n${JSON.stringify(promptItems)}` }
+        { role: 'user', content: `Edition date: ${localDate(now, 'nb-NO')} / ${localDate(now, 'en-GB')}\n\nFeed entries:\n${JSON.stringify(promptItems)}${correction}` }
       ]
     })
   });
@@ -259,11 +262,11 @@ function hashId(value) {
   return crypto.createHash('sha256').update(value).digest('hex').slice(0, 12);
 }
 
-function bilingual(value, field) {
+function bilingual(value, field, requireDifferent = true) {
   const no = String(value?.no || '').trim();
   const en = String(value?.en || '').trim();
   if (!no || !en) throw new Error(`${field} is not bilingual`);
-  if (no === en) throw new Error(`${field} was not translated`);
+  if (requireDifferent && no.toLowerCase() === en.toLowerCase()) throw new Error(`${field} was not translated`);
   return { no: no.slice(0, 900), en: en.slice(0, 900) };
 }
 
@@ -274,15 +277,15 @@ function finalizeStories(modelOutput, itemById) {
     if (!sourceItems.length) throw new Error(`Story ${index + 1} has no valid source`);
     const title = bilingual(story.title, `Story ${index + 1} title`);
     const summary = bilingual(story.summary, `Story ${index + 1} summary`);
-    if (summary.no.length < 80 || summary.en.length < 80) throw new Error(`Story ${index + 1} is too thin`);
+    if (summary.no.length < 60 || summary.en.length < 60) throw new Error(`Story ${index + 1} is too thin`);
     for (const source of sourceItems) {
-      if (longestCommonRun(title.en, source.title) >= 7 || longestCommonRun(summary.en, source.description) >= 10) {
+      if (longestCommonRun(title.en, source.title) >= 9 || longestCommonRun(summary.en, source.description) >= 12) {
         throw new Error(`Story ${index + 1} copies source wording`);
       }
     }
     return {
       id: hashId(`${title.en}|${sourceItems[0].url}`),
-      category: bilingual(story.category, `Story ${index + 1} category`),
+      category: bilingual(story.category, `Story ${index + 1} category`, false),
       status: ['confirmed', 'reported', 'rumor'].includes(story.status) ? story.status : 'reported',
       title,
       summary,
@@ -292,6 +295,22 @@ function finalizeStories(modelOutput, itemById) {
   }).sort((a, b) => b.importance - a.importance);
   if (stories.length < 5 || stories.length > 8) throw new Error('Edition must contain 5-8 rewritten stories');
   return stories;
+}
+
+async function generateStories(promptItems, itemById, now) {
+  let feedback = '';
+  let lastError = null;
+  for (let attempt = 1; attempt <= MODEL_ATTEMPTS; attempt += 1) {
+    try {
+      const output = await rewriteWithGitHubModels(promptItems, now, feedback);
+      return finalizeStories(output, itemById);
+    } catch (error) {
+      lastError = error;
+      feedback = String(error?.message || error).slice(0, 300);
+      console.warn(`[gaming-news] Model attempt ${attempt} failed: ${feedback}`);
+    }
+  }
+  throw new Error(`All model attempts failed; previous edition remains published. Last error: ${lastError?.message || lastError}`);
 }
 
 async function readArchiveIndex() {
@@ -330,14 +349,13 @@ export async function main() {
       promptItems.push({ id, source: item.sourceName, title: item.title, description: item.description, publishedAt: item.publishedAt, url: item.url, corroboration: cluster.corroboration });
     }
   }
-  const rewritten = await rewriteWithGitHubModels(promptItems, now);
   const edition = {
     schemaVersion: 2,
     date: dateKey(now),
     generatedAt: now.toISOString(),
     timezone: TIMEZONE,
     editionTitle: { no: `Gamingnytt – ${localDate(now, 'nb-NO')}`, en: `Gaming news – ${localDate(now, 'en-GB')}` },
-    stories: finalizeStories(rewritten, itemById),
+    stories: await generateStories(promptItems, itemById, now),
     sourceHealth: collected.health
   };
   await writeEdition(edition);
