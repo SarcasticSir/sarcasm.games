@@ -1,0 +1,204 @@
+{
+  "schemaVersion": 2,
+  "date": "2026-08-01",
+  "generatedAt": "2026-08-01T21:15:00.000Z",
+  "timezone": "Europe/Oslo",
+  "editionTitle": {
+    "no": "Gamingnytt – 1. august 2026",
+    "en": "Gaming news – 1 August 2026"
+  },
+  "stories": [
+    {
+      "id": "playstation-digital-only-2028",
+      "category": {
+        "no": "Bransje",
+        "en": "Industry"
+      },
+      "status": "confirmed",
+      "title": {
+        "no": "Sony står fast på å avslutte produksjonen av spilldisker",
+        "en": "Sony stands by its plan to end game disc production"
+      },
+      "summary": {
+        "no": "Sony sier at selskapet fortsatt planlegger å avslutte produksjonen av fysiske spilldisker i 2028. Finansdirektør Lin Tao peker på den generelle overgangen til digitalt innhold og mener PlayStation fortsatt kan skille seg fra PC gjennom et kuratert og stabilt økosystem.",
+        "en": "Sony says it remains committed to ending physical game disc production in 2028. Chief financial officer Lin Tao cited the wider shift toward digital content and argued that PlayStation can still differ from PC through a curated and stable ecosystem."
+      },
+      "importance": 9,
+      "sources": [
+        {
+          "name": "PC Gamer",
+          "url": "https://www.pcgamer.com/gaming-industry/sony-exec-says-killing-discs-wont-make-the-playstation-6-too-much-like-a-pc-going-forward-we-can-coexist-peacefully-with-pc-games/",
+          "publishedAt": "2026-07-31T19:37:29.000Z"
+        }
+      ]
+    },
+    {
+      "id": "ea-takeover-regulatory-approval",
+      "category": {
+        "no": "Oppkjøp",
+        "en": "Acquisitions"
+      },
+      "status": "confirmed",
+      "title": {
+        "no": "EA-oppkjøpet har fått nødvendige myndighetsgodkjenninger",
+        "en": "EA takeover clears its required regulatory approvals"
+      },
+      "summary": {
+        "no": "Electronic Arts opplyser i en amerikansk børsmelding at alle nødvendige myndighetsgodkjenninger for oppkjøpet er innhentet. Avtalen på 55 milliarder dollar ventes å bli sluttført rundt 4. august og vil ta EA av børs.",
+        "en": "Electronic Arts says in a US securities filing that all required regulatory approvals for its acquisition have been obtained. The $55 billion transaction is expected to close around August 4 and will take EA private."
+      },
+      "importance": 8,
+      "sources": [
+        {
+          "name": "PC Gamer",
+          "url": "https://www.pcgamer.com/gaming-industry/saudi-arabias-usd55-billion-takeover-of-electronic-arts-will-happen-next-week/",
+          "publishedAt": "2026-07-30T22:08:00.000Z"
+        }
+      ]
+    },
+    {
+      "id": "fallout-new-california-gog",
+      "category": {
+        "no": "Mods",
+        "en": "Mods"
+      },
+      "status": "confirmed",
+      "title": {
+        "no": "Fallout: New California blir enklere å installere gjennom GOG",
+        "en": "Fallout: New California becomes easier to install through GOG"
+      },
+      "summary": {
+        "no": "Totalmodifikasjonen Fallout: New California er nå tilgjengelig gjennom GOG for eiere av Fallout: New Vegas Ultimate Edition. Utgivelsen samler installasjonen på ett sted og gjør det unødvendig å sette opp den omfattende modpakken manuelt.",
+        "en": "The total conversion Fallout: New California is now available through GOG for owners of Fallout: New Vegas Ultimate Edition. The release provides a simpler installation route without requiring players to assemble the extensive mod package manually."
+      },
+      "importance": 7,
+      "sources": [
+        {
+          "name": "PC Gamer",
+          "url": "https://www.pcgamer.com/games/rpg/the-mod-we-called-the-best-fallout-game-youll-play-this-year-back-in-2018-just-launched-on-gog/",
+          "publishedAt": "2026-07-31T00:15:19.000Z"
+        }
+      ]
+    },
+    {
+      "id": "stupid-never-dies-october",
+      "category": {
+        "no": "Lanseringer",
+        "en": "Releases"
+      },
+      "status": "confirmed",
+      "title": {
+        "no": "Stupid Never Dies lanseres i oktober",
+        "en": "Stupid Never Dies launches in October"
+      },
+      "summary": {
+        "no": "Actionrollespillet Stupid Never Dies har fått lanseringsdato 21. oktober 2026 på PlayStation 5 og PC. Spillet utvikles av GPTRACK50, ledet av Capcom-veteran Hiroyuki Kobayashi, og skal utgis globalt i samarbeid med Sega.",
+        "en": "Action RPG Stupid Never Dies has received an October 21, 2026 release date for PlayStation 5 and PC. The game is developed by GPTRACK50, led by Capcom veteran Hiroyuki Kobayashi, and will be published worldwide with Sega."
+      },
+      "importance": 6,
+      "sources": [
+        {
+          "name": "GamesRadar+",
+          "url": "https://www.gamesradar.com/games/action-rpg/resident-evil-4-and-dragons-dogma-leads-stylish-new-action-rpg-gets-an-october-release-date-steering-clear-of-the-gta-6-rush/",
+          "publishedAt": "2026-07-30T11:46:07.000Z"
+        }
+      ]
+    },
+    {
+      "id": "elden-ring-godwyn-post",
+      "category": {
+        "no": "Rykter",
+        "en": "Rumours"
+      },
+      "status": "rumor",
+      "title": {
+        "no": "Kryptisk FromSoftware-innlegg vekker nye Godwyn-teorier",
+        "en": "Cryptic FromSoftware post revives Godwyn theories"
+      },
+      "summary": {
+        "no": "Et innlegg fra FromSoftware har fått deler av Elden Ring-miljøet til å spekulere i nytt innhold knyttet til Godwyn. Utvikleren har ikke annonsert noen ny utvidelse, og koblingen bygger foreløpig bare på fansens tolkning av innlegget.",
+        "en": "A post from FromSoftware has prompted parts of the Elden Ring community to speculate about new content connected to Godwyn. The developer has not announced another expansion, and the connection currently rests only on fan interpretation."
+      },
+      "importance": 5,
+      "sources": [
+        {
+          "name": "IGN",
+          "url": "https://www.ign.com/articles/elden-ring-players-are-hoping-for-godwyn-dlc-after-fromsoftware-shares-cryptic-social-media-post",
+          "publishedAt": "2026-08-01T19:59:57.000Z"
+        }
+      ]
+    }
+  ],
+  "sourceHealth": [
+    {
+      "id": "ign",
+      "name": "IGN",
+      "homepage": "https://www.ign.com/",
+      "status": "manual",
+      "itemCount": 0
+    },
+    {
+      "id": "gamespot",
+      "name": "GameSpot",
+      "homepage": "https://www.gamespot.com/",
+      "status": "manual",
+      "itemCount": 0
+    },
+    {
+      "id": "pcgamer",
+      "name": "PC Gamer",
+      "homepage": "https://www.pcgamer.com/",
+      "status": "manual",
+      "itemCount": 0
+    },
+    {
+      "id": "eurogamer",
+      "name": "Eurogamer",
+      "homepage": "https://www.eurogamer.net/",
+      "status": "manual",
+      "itemCount": 0
+    },
+    {
+      "id": "polygon",
+      "name": "Polygon",
+      "homepage": "https://www.polygon.com/",
+      "status": "manual",
+      "itemCount": 0
+    },
+    {
+      "id": "kotaku",
+      "name": "Kotaku",
+      "homepage": "https://kotaku.com/",
+      "status": "manual",
+      "itemCount": 0
+    },
+    {
+      "id": "gamesradar",
+      "name": "GamesRadar+",
+      "homepage": "https://www.gamesradar.com/",
+      "status": "manual",
+      "itemCount": 0
+    },
+    {
+      "id": "rockpapershotgun",
+      "name": "Rock Paper Shotgun",
+      "homepage": "https://www.rockpapershotgun.com/",
+      "status": "manual",
+      "itemCount": 0
+    },
+    {
+      "id": "nintendolife",
+      "name": "Nintendo Life",
+      "homepage": "https://www.nintendolife.com/",
+      "status": "manual",
+      "itemCount": 0
+    },
+    {
+      "id": "pushsquare",
+      "name": "Push Square",
+      "homepage": "https://www.pushsquare.com/",
+      "status": "manual",
+      "itemCount": 0
+    }
+  ]
+}
