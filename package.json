@@ -12,6 +12,10 @@
     "test:tiermaker": "node --test tiermaker/tiermaker.test.mjs",
     "test:tiermaker:browser": "node scripts/tiermaker-browser-test.mjs",
     "quiz:baseline": "node scripts/quiz-load-baseline.mjs",
-    "quiz:baseline:target": "node scripts/quiz-load-baseline.mjs --duration-seconds 1800 --concurrency 200"
+    "quiz:baseline:target": "node scripts/quiz-load-baseline.mjs --duration-seconds 1800 --concurrency 200",
+    "news:install": "node scripts/install-gaming-news.mjs",
+    "news:generate": "node scripts/gaming-news.mjs",
+    "news:validate": "node scripts/validate-gaming-news.mjs",
+    "test:news": "node --test scripts/gaming-news.test.mjs"
   }
 }
