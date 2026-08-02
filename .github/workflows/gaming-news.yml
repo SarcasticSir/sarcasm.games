@@ -9,7 +9,6 @@ name: Publish daily gaming news
       - 'scripts/gaming-news.mjs'
       - 'scripts/install-gaming-news.mjs'
       - 'scripts/validate-gaming-news.mjs'
-      - 'news/**'
   schedule:
     - cron: '17 6 * * *'
       timezone: 'Europe/Oslo'
@@ -20,7 +19,7 @@ permissions:
 
 concurrency:
   group: daily-gaming-news
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   publish:
