@@ -170,6 +170,7 @@
     const QUIZ_LANGUAGE_KEY = 'quizLanguage';
 
     const GAMES = [
+      { href: '/news/', title: { en: 'News', no: 'Nyheter' }, tooltip: { en: 'A concise daily gaming news edition', no: 'En kondensert daglig utgave med gamingnyheter' } },
       { href: '/hodepinekalender/', title: 'Hodepinekalender', tooltip: { en: 'Simple headache and migraine calendar', no: 'Enkel kalender for hodepine, migrene og medisinbruk' } },
       { href: '/tiermaker/', title: 'Tier-maker', tooltip: { en: 'Make your own tier list.', no: 'Lag din egen tier-liste.' } },
       { href: '/monstercatch/', title: 'Monster catcher', tooltip: { en: 'A local game.', no: 'Et lokalt spill.' } },
@@ -413,7 +414,9 @@
       for (const game of GAMES) {
         const anchor = document.createElement('a');
         anchor.href = game.href;
-        anchor.textContent = game.title;
+        anchor.textContent = typeof game.title === 'string'
+          ? game.title
+          : (game.title[currentLanguage] || game.title.en);
 
         const tooltip = document.createElement('span');
         tooltip.className = 'tooltip-text';
