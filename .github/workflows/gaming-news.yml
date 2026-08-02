@@ -1,0 +1,62 @@
+name: Publish daily gaming news
+
+"on":
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/gaming-news.yml'
+      - 'scripts/gaming-news.mjs'
+      - 'scripts/install-gaming-news.mjs'
+      - 'scripts/validate-gaming-news.mjs'
+      - 'news/**'
+  schedule:
+    - cron: '17 6 * * *'
+      timezone: 'Europe/Oslo'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-gaming-news
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Check out the website
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Add the bilingual homepage menu entry
+        run: node scripts/install-gaming-news.mjs
+
+      - name: Collect, edit and publish today's edition
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-5-mini' }}
+        run: node scripts/gaming-news.mjs
+
+      - name: Validate generated data
+        run: node scripts/validate-gaming-news.mjs
+
+      - name: Commit the published edition
+        shell: bash
+        run: |
+          if git diff --quiet -- index.html news/data; then
+            echo "No publication changes."
+            exit 0
+          fi
+          git config user.name "sarcasm.games news bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html news/data
+          git commit -m "Publish daily gaming news [skip ci]"
+          git push
