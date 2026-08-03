@@ -1,144 +1,226 @@
 {
   "schemaVersion": 2,
-  "date": "2026-08-02",
-  "generatedAt": "2026-08-02T12:53:00.000Z",
+  "date": "2026-08-03",
+  "generatedAt": "2026-08-03T09:20:00.000Z",
   "timezone": "Europe/Oslo",
   "editionTitle": {
-    "no": "Gamingnytt – 2. august 2026",
-    "en": "Gaming news – 2 August 2026"
+    "no": "Gamingnytt – 3. august 2026",
+    "en": "Gaming news – 3 August 2026"
   },
   "stories": [
     {
-      "id": "space-marine-2-workshop-chaos",
+      "id": "beast-of-reincarnation-launch",
       "category": {
-        "no": "Oppdateringer",
-        "en": "Updates"
+        "no": "Lanseringer",
+        "en": "Releases"
       },
-      "status": "reported",
+      "status": "confirmed",
       "title": {
-        "no": "Space Marine 2 får Steam Workshop og nye Chaos-enheter",
-        "en": "Space Marine 2 adds Steam Workshop support and new Chaos units"
+        "no": "Beast of Reincarnation åpner ved midnatt UTC",
+        "en": "Beast of Reincarnation unlocks at midnight UTC"
       },
       "summary": {
-        "no": "Kommende oppdateringer til Space Marine 2 skal legge til Terminator Sorcerers og integrasjon med Steam Workshop. Den nye modstøtten vil gjøre det enklere å installere og dele modifikasjoner, blant annet løsninger som utvider størrelsen på samarbeidsgrupper.",
-        "en": "Upcoming Space Marine 2 updates are reported to add Terminator Sorcerers and Steam Workshop integration. The new mod support should simplify installing and sharing modifications, including configurations that allow larger cooperative groups."
+        "no": "Game Freaks nye actionrollespill låses opp globalt klokken 00.00 UTC 4. august, som betyr natt til tirsdag i Norge. Spillet kombinerer sanntidskamp med taktiske valg og følger Emma og hunden Koo gjennom et postapokalyptisk Japan.",
+        "en": "Game Freak's new action RPG unlocks worldwide at 00:00 UTC on August 4, placing the European release overnight. The game combines real-time combat with tactical decisions and follows Emma and her dog Koo through a post-apocalyptic Japan."
       },
       "importance": 9,
       "sources": [
         {
-          "name": "PC Gamer",
-          "url": "https://www.pcgamer.com/games/action/space-marine-2s-latest-updates-add-terminator-sorcerers-and-steam-workshop-support-so-you-can-now-play-co-op-with-9-other-players-if-you-want/",
-          "publishedAt": "2026-08-02T12:00:00.000Z"
+          "name": "PlayStation",
+          "url": "https://www.playstation.com/no-no/games/beast-of-reincarnation/"
+        },
+        {
+          "name": "Steam",
+          "url": "https://store.steampowered.com/app/2001760/Beast_of_Reincarnation/"
         }
       ]
     },
     {
-      "id": "xbox-hardware-europe-prices",
+      "id": "ostranauts-version-1-launch",
       "category": {
-        "no": "Maskinvare",
-        "en": "Hardware"
+        "no": "Lanseringer",
+        "en": "Releases"
       },
       "status": "confirmed",
       "title": {
-        "no": "Microsoft setter opp Xbox-prisene i Europa",
-        "en": "Microsoft raises Xbox hardware prices in Europe"
+        "no": "Ostranauts forlater tidlig tilgang med versjon 1.0",
+        "en": "Ostranauts leaves Early Access with version 1.0"
       },
       "summary": {
-        "no": "Microsoft har publisert nye europeiske priser for Xbox-konsollene. De britiske prisene ligger rundt 34 til 49 prosent over nivået måneden før, og viser hvor omfattende den regionale prisjusteringen er.",
-        "en": "Microsoft has published new European prices for its Xbox consoles. UK pricing is roughly 34 to 49 percent above the previous month's level, illustrating the scale of the regional adjustment."
+        "no": "Romskipssimulatoren Ostranauts lanserer versjon 1.0 i dag etter flere år i tidlig tilgang. Fullversjonen legger blant annet til sluttinnhold, dusørsystem, Steam Workshop-støtte, forbedret opplæring og nye romstasjonsdesign.",
+        "en": "Spaceship simulator Ostranauts launches version 1.0 today after several years in Early Access. The full release adds endgame content, a bounty system, Steam Workshop support, tutorial improvements, and new station designs."
       },
       "importance": 8,
       "sources": [
         {
-          "name": "Eurogamer",
-          "url": "https://www.eurogamer.net/xbox-console-price-rise-uk-europe",
-          "publishedAt": "2026-08-02T10:54:44.000Z"
+          "name": "Ostranauts on Steam",
+          "url": "https://steamcommunity.com/app/1022980/announcements/"
         }
       ]
     },
     {
-      "id": "townfall-crtv-prototype",
+      "id": "anomaly-president-early-access",
       "category": {
-        "no": "Utvikling",
-        "en": "Development"
+        "no": "Tidlig tilgang",
+        "en": "Early Access"
       },
-      "status": "reported",
+      "status": "confirmed",
       "title": {
-        "no": "Silent Hill: Townfall brukte fysiske TV-eksperimenter i utviklingen",
-        "en": "Silent Hill: Townfall used physical television experiments during development"
+        "no": "Anomaly President går inn i tidlig tilgang",
+        "en": "Anomaly President enters Early Access"
       },
       "summary": {
-        "no": "Teamet bak Silent Hill: Townfall eksperimenterte med gamle TV-apparater og magneter mens spillets CRTV-enhet ble utviklet. Arbeidet ga utviklerne et fysisk utgangspunkt for å skape et mer overbevisende analogt uttrykk i spillet.",
-        "en": "The Silent Hill: Townfall team experimented with old television sets and magnets while developing the game's CRTV device. The physical prototypes gave the developers a practical reference for creating a more convincing analogue appearance in the game."
+        "no": "Anomaly President lanseres i tidlig tilgang på Steam 3. august. Spillet blander valgkamp og basebygging på dagtid med actionpregede roguelike-kamper om natten, mens utviklerne bruker spillerinnspill til videre utvikling.",
+        "en": "Anomaly President enters Steam Early Access on August 3. The game mixes campaigning and base management during the day with action-focused roguelike combat at night, while player feedback will guide continued development."
       },
       "importance": 7,
       "sources": [
         {
-          "name": "Eurogamer",
-          "url": "https://www.eurogamer.net/silent-hill-townfall-crtv",
-          "publishedAt": "2026-08-02T11:50:59.000Z"
+          "name": "Steam",
+          "url": "https://store.steampowered.com/app/3156330/Anomaly_President/"
         }
       ]
     },
     {
-      "id": "bg3-over-shoulder-camera",
+      "id": "fields-of-mistria-version-1",
       "category": {
-        "no": "Mods",
-        "en": "Mods"
+        "no": "Oppdateringer",
+        "en": "Updates"
       },
-      "status": "reported",
+      "status": "confirmed",
       "title": {
-        "no": "Baldur's Gate 3-mod flytter kameraet nærmere figuren",
-        "en": "Baldur's Gate 3 mod moves the camera closer to the character"
+        "no": "Fields of Mistria gjør klart for fullversjonen",
+        "en": "Fields of Mistria prepares for its full release"
       },
       "summary": {
-        "no": "En ny mod under utvikling gir Baldur's Gate 3 et nærmere kamera plassert bak spillerfiguren. Skaperen arbeider med kamerabevegelse og oppførsel i selve spillet for å gjøre løsningen mer helhetlig enn en enkel tredjepersonsvisning.",
-        "en": "A mod currently in development gives Baldur's Gate 3 a closer camera positioned behind the player character. Its creator is refining movement and in-game behaviour to make the result more integrated than a basic third-person viewpoint."
+        "no": "Fields of Mistria forlater tidlig tilgang 5. august med versjon 1.0. Oppdateringen fullfører sentrale historier og oppdrag, øker relasjonsgrensene, legger til ekteskap og barn og utvider ferdigheter, belønninger og kosmetisk innhold.",
+        "en": "Fields of Mistria leaves Early Access on August 5 with version 1.0. The update completes major storylines and quests, raises relationship limits, adds marriage and children, and expands skills, rewards, and cosmetic content."
+      },
+      "importance": 7,
+      "sources": [
+        {
+          "name": "Fields of Mistria on Steam",
+          "url": "https://steamcommunity.com/app/2142790/allnews/"
+        }
+      ]
+    },
+    {
+      "id": "gears-eday-open-beta",
+      "category": {
+        "no": "Beta",
+        "en": "Beta"
+      },
+      "status": "confirmed",
+      "title": {
+        "no": "Gears of War: E-Day åpner betaen 6. august",
+        "en": "Gears of War: E-Day opens its beta on August 6"
+      },
+      "summary": {
+        "no": "Første periode med tidlig tilgang til den åpne flerspillerbetaen starter 6. august for forhåndskjøpere og kvalifiserte Game Pass-medlemmer. Betaen blir den første offentlige testen av spillets moderniserte Versus-kamper før lanseringen i oktober.",
+        "en": "The first early-access period for the open multiplayer beta begins on August 6 for pre-order customers and eligible Game Pass members. It will provide the first public test of the game's modernized Versus combat before the October launch."
       },
       "importance": 6,
       "sources": [
         {
-          "name": "PC Gamer",
-          "url": "https://www.pcgamer.com/games/baldurs-gate/the-maker-of-the-baldurs-gate-3-over-the-shoulder-camera-mod-has-gone-to-great-lengths-to-demonstrate-its-not-like-other-third-person-viewpoint-solutions/",
-          "publishedAt": "2026-08-02T06:32:05.000Z"
+          "name": "Xbox Wire",
+          "url": "https://news.xbox.com/en-us/2026/06/07/gears-of-war-eday-direct-xbox-games-showcase-2026/"
         }
       ]
     },
     {
-      "id": "elden-ring-godwyn-post-rumor",
+      "id": "marvel-tokon-august-launch",
       "category": {
-        "no": "Rykter",
-        "en": "Rumours"
+        "no": "Lanseringer",
+        "en": "Releases"
       },
-      "status": "rumor",
+      "status": "confirmed",
       "title": {
-        "no": "Kryptisk FromSoftware-innlegg utløser nye Godwyn-rykter",
-        "en": "Cryptic FromSoftware post triggers fresh Godwyn rumours"
+        "no": "MARVEL Tōkon: Fighting Souls lanseres denne uken",
+        "en": "MARVEL Tōkon: Fighting Souls launches this week"
       },
       "summary": {
-        "no": "Et innlegg fra FromSoftware har ført til nye teorier om mulig Elden Ring-innhold knyttet til Godwyn. Studioet har ikke annonsert en slik utvidelse, og tolkningen er derfor fortsatt ubekreftet fanspekulasjon.",
-        "en": "A FromSoftware post has prompted new theories about possible Elden Ring content involving Godwyn. The studio has not announced such an expansion, so the interpretation remains unconfirmed fan speculation."
+        "no": "Arc System Works lanserer MARVEL Tōkon: Fighting Souls på PlayStation 5 og PC 6. august. Lagkampspillet kommer med 20 figurer ved lansering, en historiedrevet Episode Mode og full stemmeskuespillstøtte på ti språk.",
+        "en": "Arc System Works launches MARVEL Tōkon: Fighting Souls on PlayStation 5 and PC on August 6. The team fighter arrives with 20 launch characters, a story-driven Episode Mode, and full voice acting across ten languages."
       },
-      "importance": 5,
+      "importance": 6,
       "sources": [
         {
-          "name": "IGN",
-          "url": "https://www.ign.com/articles/elden-ring-players-are-hoping-for-godwyn-dlc-after-fromsoftware-shares-cryptic-social-media-post",
-          "publishedAt": "2026-08-01T19:59:57.000Z"
+          "name": "PlayStation Blog",
+          "url": "https://blog.playstation.com/2026/02/12/marvel-tokon-fighting-souls-arrives-on-ps5-pc-august-6/"
         }
       ]
     }
   ],
   "sourceHealth": [
-    { "id": "ign", "name": "IGN", "homepage": "https://www.ign.com/", "status": "ok", "itemCount": 14 },
-    { "id": "gamespot", "name": "GameSpot", "homepage": "https://www.gamespot.com/", "status": "ok", "itemCount": 14 },
-    { "id": "pcgamer", "name": "PC Gamer", "homepage": "https://www.pcgamer.com/", "status": "ok", "itemCount": 14 },
-    { "id": "eurogamer", "name": "Eurogamer", "homepage": "https://www.eurogamer.net/", "status": "ok", "itemCount": 14 },
-    { "id": "polygon", "name": "Polygon", "homepage": "https://www.polygon.com/", "status": "ok", "itemCount": 10 },
-    { "id": "kotaku", "name": "Kotaku", "homepage": "https://kotaku.com/", "status": "ok", "itemCount": 14 },
-    { "id": "gamesradar", "name": "GamesRadar+", "homepage": "https://www.gamesradar.com/", "status": "ok", "itemCount": 14 },
-    { "id": "rockpapershotgun", "name": "Rock Paper Shotgun", "homepage": "https://www.rockpapershotgun.com/", "status": "ok", "itemCount": 14 },
-    { "id": "nintendolife", "name": "Nintendo Life", "homepage": "https://www.nintendolife.com/", "status": "ok", "itemCount": 14 },
-    { "id": "pushsquare", "name": "Push Square", "homepage": "https://www.pushsquare.com/", "status": "ok", "itemCount": 14 }
+    {
+      "id": "ign",
+      "name": "IGN",
+      "homepage": "https://www.ign.com/",
+      "status": "manual",
+      "itemCount": 0
+    },
+    {
+      "id": "gamespot",
+      "name": "GameSpot",
+      "homepage": "https://www.gamespot.com/",
+      "status": "manual",
+      "itemCount": 0
+    },
+    {
+      "id": "pcgamer",
+      "name": "PC Gamer",
+      "homepage": "https://www.pcgamer.com/",
+      "status": "manual",
+      "itemCount": 0
+    },
+    {
+      "id": "eurogamer",
+      "name": "Eurogamer",
+      "homepage": "https://www.eurogamer.net/",
+      "status": "manual",
+      "itemCount": 0
+    },
+    {
+      "id": "polygon",
+      "name": "Polygon",
+      "homepage": "https://www.polygon.com/",
+      "status": "manual",
+      "itemCount": 0
+    },
+    {
+      "id": "kotaku",
+      "name": "Kotaku",
+      "homepage": "https://kotaku.com/",
+      "status": "manual",
+      "itemCount": 0
+    },
+    {
+      "id": "gamesradar",
+      "name": "GamesRadar+",
+      "homepage": "https://www.gamesradar.com/",
+      "status": "manual",
+      "itemCount": 0
+    },
+    {
+      "id": "rockpapershotgun",
+      "name": "Rock Paper Shotgun",
+      "homepage": "https://www.rockpapershotgun.com/",
+      "status": "manual",
+      "itemCount": 0
+    },
+    {
+      "id": "nintendolife",
+      "name": "Nintendo Life",
+      "homepage": "https://www.nintendolife.com/",
+      "status": "manual",
+      "itemCount": 0
+    },
+    {
+      "id": "pushsquare",
+      "name": "Push Square",
+      "homepage": "https://www.pushsquare.com/",
+      "status": "manual",
+      "itemCount": 0
+    }
   ]
 }
