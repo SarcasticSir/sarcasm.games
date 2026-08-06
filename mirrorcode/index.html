@@ -50,6 +50,41 @@
     margin: 0 auto;
   }
 
+  .back-link-row {
+    display: flex;
+    justify-content: flex-start;
+    margin-bottom: 24px;
+  }
+
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 13px;
+    background: var(--panel);
+    color: var(--text);
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition:
+      background 0.15s ease,
+      border-color 0.15s ease,
+      transform 0.15s ease;
+  }
+
+  .back-link:hover {
+    background: rgba(159, 231, 245, 0.08);
+    border-color: var(--ice);
+    transform: translateY(-1px);
+  }
+
+  .back-link:focus-visible {
+    outline: 3px solid rgba(159, 231, 245, 0.2);
+    outline-offset: 3px;
+  }
+
   /* Header */
 
   header {
@@ -387,6 +422,12 @@
 <body>
 
 <div class="wrap">
+
+  <div class="back-link-row">
+    <a class="back-link" href="/" aria-label="Back to sarcasm.games">
+      ← Back to sarcasm.games
+    </a>
+  </div>
 
   <header>
     <h1 data-mirror="Mirrorcode">Mirrorcode</h1>
