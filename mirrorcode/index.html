@@ -3,1162 +3,1009 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>Mirrorcode – Encrypt and Decrypt Text</title>
-
 <style>
-  :root {
-    --bg: #1e2230;
-    --panel: #262b3d;
-    --panel-2: #2f354a;
-    --line: #3a4157;
-    --text: #eef1f7;
-    --muted: #9098ab;
-    --ice: #9fe7f5;
-    --amber: #f2a65a;
-    --danger: #f08b8b;
-    --success: #8fdaa8;
-  }
-
-  * {
-    box-sizing: border-box;
-  }
-
-  body {
-    margin: 0;
-    min-height: 100vh;
-    padding: 40px 20px 60px;
-    background: var(--bg);
-    color: var(--text);
-    font-family:
-      Inter,
-      system-ui,
-      -apple-system,
-      BlinkMacSystemFont,
-      "Segoe UI",
-      sans-serif;
-  }
-
-  button,
-  input {
-    font: inherit;
-  }
-
-  .wrap {
-    width: 100%;
-    max-width: 1080px;
-    margin: 0 auto;
-  }
-
-  .back-link-row {
-    display: flex;
-    justify-content: flex-start;
-    margin-bottom: 24px;
-  }
-
-  .back-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 9px 13px;
-    background: var(--panel);
-    color: var(--text);
-    border: 1px solid var(--line);
-    border-radius: 9px;
-    font-size: 0.88rem;
-    font-weight: 600;
-    text-decoration: none;
-    transition:
-      background 0.15s ease,
-      border-color 0.15s ease,
-      transform 0.15s ease;
-  }
-
-  .back-link:hover {
-    background: rgba(159, 231, 245, 0.08);
-    border-color: var(--ice);
-    transform: translateY(-1px);
-  }
-
-  .back-link:focus-visible {
-    outline: 3px solid rgba(159, 231, 245, 0.2);
-    outline-offset: 3px;
-  }
-
-  /* Header */
-
-  header {
-    margin-bottom: 38px;
-    text-align: center;
-  }
-
-  h1 {
-    position: relative;
-    display: inline-block;
-    margin: 0;
-    color: var(--text);
-    font-family: Georgia, "Times New Roman", serif;
-    font-size: clamp(2.2rem, 5vw, 3.4rem);
-    font-weight: 600;
-    letter-spacing: 0.01em;
-  }
-
-  h1::after {
-    content: attr(data-mirror);
-    position: absolute;
-    top: 100%;
-    left: 0;
-    width: 100%;
-    color: var(--ice);
-    opacity: 0.16;
-    transform: scaleY(-1);
-    pointer-events: none;
-
-    -webkit-mask-image:
-      linear-gradient(to bottom, rgba(0, 0, 0, 0.5), transparent 70%);
-
-    mask-image:
-      linear-gradient(to bottom, rgba(0, 0, 0, 0.5), transparent 70%);
-  }
-
-  header p {
-    max-width: 680px;
-    margin: 12px auto 0;
-    color: var(--muted);
-    font-size: 0.98rem;
-    line-height: 1.5;
-  }
-
-  /* Secret key */
-
-  .key-panel {
-    margin-bottom: 14px;
-    padding: 16px;
-    background: var(--panel);
-    border: 1px solid var(--line);
-    border-radius: 14px;
-  }
-
-  .key-panel label {
-    display: block;
-    margin-bottom: 8px;
-    color: var(--muted);
-    font-size: 0.78rem;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-
-  .key-row {
-    display: flex;
-    gap: 8px;
-  }
-
-  .key-row input {
-    flex: 1;
-    min-width: 0;
-    padding: 11px 13px;
-    background: var(--panel-2);
-    color: var(--text);
-    border: 1px solid var(--line);
-    border-radius: 9px;
-    outline: none;
-  }
-
-  .key-row input:focus {
-    border-color: var(--ice);
-    box-shadow: 0 0 0 3px rgba(159, 231, 245, 0.08);
-  }
-
-  .secondary-btn {
-    min-height: 42px;
-    padding: 0 16px;
-    background: var(--panel-2);
-    color: var(--text);
-    border: 1px solid var(--line);
-    border-radius: 9px;
-    cursor: pointer;
-  }
-
-  .secondary-btn:hover {
-    background: rgba(159, 231, 245, 0.08);
-    border-color: var(--ice);
-  }
-
-  .key-help {
-    margin: 9px 0 0;
-    color: var(--muted);
-    font-size: 0.83rem;
-    line-height: 1.45;
-  }
-
-  /* Formatting toolbar */
-
-  .toolbar {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-bottom: 14px;
-    padding: 10px;
-    background: var(--panel-2);
-    border: 1px solid var(--line);
-    border-radius: 12px;
-  }
-
-  .toolbar button {
-    min-width: 40px;
-    height: 40px;
-    padding: 0 12px;
-    background: transparent;
-    color: var(--text);
-    border: 1px solid transparent;
-    border-radius: 8px;
-    cursor: pointer;
-    transition:
-      background 0.15s ease,
-      border-color 0.15s ease;
-  }
-
-  .toolbar button:hover {
-    background: rgba(159, 231, 245, 0.1);
-    border-color: var(--line);
-  }
-
-  .toolbar button.b {
-    font-weight: 700;
-  }
-
-  .toolbar button.i {
-    font-style: italic;
-  }
-
-  .toolbar button.u {
-    text-decoration: underline;
-  }
-
-  .toolbar button.s {
-    text-decoration: line-through;
-  }
-
-  .toolbar .hint {
-    margin-left: auto;
-    align-self: center;
-    color: var(--muted);
-    font-size: 0.85rem;
-  }
-
-  /* Text fields */
-
-  .boxes {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 14px;
-  }
-
-  .field {
-    min-width: 0;
-    overflow: hidden;
-    background: var(--panel);
-    border: 1px solid var(--line);
-    border-radius: 14px;
-  }
-
-  .field-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 12px 16px 0;
-  }
-
-  .field-header label {
-    color: var(--muted);
-    font-size: 0.78rem;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-
-  .small-btn {
-    padding: 5px 9px;
-    background: transparent;
-    color: var(--muted);
-    border: 1px solid var(--line);
-    border-radius: 7px;
-    font-size: 0.78rem;
-    cursor: pointer;
-  }
-
-  .small-btn:hover {
-    color: var(--text);
-    border-color: var(--ice);
-  }
-
-  .editable {
-    min-height: 220px;
-    padding: 10px 16px 18px;
-    outline: none;
-    font-size: 1.02rem;
-    line-height: 1.55;
-    overflow-wrap: anywhere;
-    white-space: pre-wrap;
-  }
-
-  .editable ul,
-  .editable ol {
-    margin: 6px 0;
-    padding-left: 24px;
-  }
-
-  .editable:empty::before {
-    content: attr(data-placeholder);
-    color: var(--muted);
-    opacity: 0.7;
-    pointer-events: none;
-  }
-
-  .editable:focus {
-    background: rgba(159, 231, 245, 0.03);
-  }
-
-  /* Convert area */
-
-  .middle {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 9px;
-    margin: 4px 0;
-  }
-
-  .convert-btn {
-    min-width: 170px;
-    padding: 12px 24px;
-    background: var(--amber);
-    color: #2a1a08;
-    border: none;
-    border-radius: 999px;
-    box-shadow: 0 4px 14px rgba(242, 166, 90, 0.25);
-    font-weight: 700;
-    cursor: pointer;
-    transition:
-      transform 0.12s ease,
-      box-shadow 0.12s ease,
-      opacity 0.12s ease;
-  }
-
-  .convert-btn:hover:not(:disabled) {
-    box-shadow: 0 6px 18px rgba(242, 166, 90, 0.35);
-  }
-
-  .convert-btn:active:not(:disabled) {
-    transform: translateY(1px) scale(0.98);
-  }
-
-  .convert-btn:disabled {
-    cursor: wait;
-    opacity: 0.65;
-  }
-
-  .status {
-    min-height: 1.3em;
-    max-width: 230px;
-    color: var(--muted);
-    font-size: 0.8rem;
-    line-height: 1.35;
-    text-align: center;
-  }
-
-  .status.error {
-    color: var(--danger);
-  }
-
-  .status.success {
-    color: var(--success);
-  }
-
-  .privacy-note {
-    margin: 16px 0 0;
-    color: var(--muted);
-    font-size: 0.82rem;
-    line-height: 1.5;
-    text-align: center;
-  }
-
-  @media (min-width: 820px) {
-    .boxes {
-      grid-template-columns:
-        minmax(0, 1fr)
-        auto
-        minmax(0, 1fr);
-
-      align-items: stretch;
-    }
-
-    .middle {
-      margin: 0;
-    }
-  }
-
-  @media (max-width: 560px) {
-    body {
-      padding: 28px 14px 40px;
-    }
-
-    .key-row {
-      flex-direction: column;
-    }
-
-    .toolbar .hint {
-      width: 100%;
-      margin-left: 0;
-      padding: 3px 4px 0;
-    }
-  }
+:root {
+--bg: #1e2230;
+--panel: #262b3d;
+--panel-2: #2f354a;
+--line: #3a4157;
+--text: #eef1f7;
+--muted: #9098ab;
+--ice: #9fe7f5;
+--amber: #f2a65a;
+--danger: #f08b8b;
+--success: #8fdaa8;
+}
+* {
+box-sizing: border-box;
+}
+body {
+margin: 0;
+min-height: 100vh;
+padding: 40px 20px 60px;
+background: var(--bg);
+color: var(--text);
+font-family:
+Inter,
+system-ui,
+-apple-system,
+BlinkMacSystemFont,
+"Segoe UI",
+sans-serif;
+}
+button,
+input {
+font: inherit;
+}
+.wrap {
+width: 100%;
+max-width: 1080px;
+margin: 0 auto;
+}
+.back-link-row {
+display: flex;
+justify-content: flex-start;
+margin-bottom: 24px;
+}
+.back-link {
+display: inline-flex;
+align-items: center;
+gap: 8px;
+padding: 9px 13px;
+background: var(--panel);
+color: var(--text);
+border: 1px solid var(--line);
+border-radius: 9px;
+font-size: 0.88rem;
+font-weight: 600;
+text-decoration: none;
+transition:
+background 0.15s ease,
+border-color 0.15s ease,
+transform 0.15s ease;
+}
+.back-link:hover {
+background: rgba(159, 231, 245, 0.08);
+border-color: var(--ice);
+transform: translateY(-1px);
+}
+.back-link:focus-visible {
+outline: 3px solid rgba(159, 231, 245, 0.2);
+outline-offset: 3px;
+}
+header {
+margin-bottom: 38px;
+text-align: center;
+}
+h1 {
+position: relative;
+display: inline-block;
+margin: 0;
+color: var(--text);
+font-family: Georgia, "Times New Roman", serif;
+font-size: clamp(2.2rem, 5vw, 3.4rem);
+font-weight: 600;
+letter-spacing: 0.01em;
+}
+h1::after {
+content: attr(data-mirror);
+position: absolute;
+top: 100%;
+left: 0;
+width: 100%;
+color: var(--ice);
+opacity: 0.16;
+transform: scaleY(-1);
+pointer-events: none;
+-webkit-mask-image:
+linear-gradient(to bottom, rgba(0, 0, 0, 0.5), transparent 70%);
+mask-image:
+linear-gradient(to bottom, rgba(0, 0, 0, 0.5), transparent 70%);
+}
+header p {
+max-width: 680px;
+margin: 12px auto 0;
+color: var(--muted);
+font-size: 0.98rem;
+line-height: 1.5;
+}
+.key-panel {
+margin-bottom: 14px;
+padding: 16px;
+background: var(--panel);
+border: 1px solid var(--line);
+border-radius: 14px;
+}
+.key-panel label {
+display: block;
+margin-bottom: 8px;
+color: var(--muted);
+font-size: 0.78em;
+font-weight: 600;
+letter-spacing: 0.08em;
+text-transform: uppercase;
+}
+.key-row {
+display: flex;
+gap: 8px;
+}
+.key-row input {
+flex: 1;
+min-width: 0;
+padding: 11px 13px;
+background: var(--panel-2);
+color: var(--text);
+border: 1px solid var(--line);
+border-radius: 9px;
+outline: none;
+}
+.key-row input:focus {
+border-color: var(--ice);
+box-shadow: 0 0 0 3px rgba(159, 231, 245, 0.08);
+}
+.secondary-btn {
+min-height: 42px;
+padding: 0 16px;
+background: var(--panel-2);
+color: var(--text);
+border: 1px solid var(--line);
+border-radius: 9px;
+cursor: pointer;
+}
+.secondary-btn:hover {
+background: rgba(159, 231, 245, 0.08);
+border-color: var(--ice);
+}
+.key-help {
+margin: 9px 0 0;
+color: var(--muted);
+font-size: 0.83rem;
+line-height: 1.45;
+}
+.toolbar {
+display: flex;
+flex-wrap: wrap;
+gap: 8px;
+margin-bottom: 14px;
+padding: 10px;
+background: var(--panel-2);
+border: 1px solid var(--line);
+border-radius: 12px;
+}
+.toolbar button {
+min-width: 40px;
+height: 40px;
+padding: 0 12px;
+background: transparent;
+color: var(--text);
+border: 1px solid transparent;
+border-radius: 8px;
+cursor: pointer;
+transition:
+background 0.15s ease,
+border-color 0.15s ease;
+}
+.toolbar button:hover {
+background: rgba(159, 231, 245, 0.1);
+border-color: var(--line);
+}
+.toolbar button.b {
+font-weight: 700;
+}
+.toolbar button.i {
+font-style: italic;
+}
+.toolbar button.u {
+text-decoration: underline;
+}
+.toolbar button.s {
+text-decoration: line-through;
+}
+.toolbar .hint {
+margin-left: auto;
+align-self: center;
+color: var(--muted);
+font-size: 0.85rem;
+}
+.boxes {
+display: grid;
+grid-template-columns: 1fr;
+gap: 14px;
+}
+.field {
+min-width: 0;
+overflow: hidden;
+background: var(--panel);
+border: 1px solid var(--line);
+border-radius: 14px;
+}
+.field-header {
+display: flex;
+align-items: center;
+justify-content: space-between;
+gap: 12px;
+padding: 12px 16px 0;
+}
+.field-header label {
+color: var(--muted);
+font-size: 0.78rem;
+font-weight: 600;
+letter-spacing: 0.08em;
+text-transform: uppercase;
+}
+.small-btn {
+padding: 5px 9px;
+background: transparent;
+color: var(--muted);
+border: 1px solid var(--line);
+border-radius: 7px;
+font-size: 0.78rem;
+cursor: pointer;
+}
+.small-btn:hover {
+color: var(--text);
+border-color: var(--ice);
+}
+.editable {
+min-height: 220px;
+padding: 10px 16px 18px;
+outline: none;
+font-size: 1.02rem;
+line-height: 1.55;
+overflow-wrap: anywhere;
+white-space: pre-wrap;
+}
+.editable ul,
+.editable ol {
+margin: 6px 0;
+padding-left: 24px;
+}
+.editable:empty::before {
+content: attr(data-placeholder);
+color: var(--muted);
+opacity: 0.7;
+pointer-events: none;
+}
+.editable:focus {
+background: rgba(159, 231, 245, 0.03);
+}
+.middle {
+display: flex;
+flex-direction: column;
+align-items: center;
+justify-content: center;
+gap: 9px;
+margin: 4px 0;
+}
+.convert-btn {
+min-width: 170px;
+padding: 12px 24px;
+background: var(--amber);
+color: #2a1a08;
+border: none;
+border-radius: 999px;
+box-shadow: 0 4px 14px rgba(242, 166, 90, 0.25);
+font-weight: 700;
+cursor: pointer;
+transition:
+transform 0.12s ease,
+box-shadow 0.12s ease,
+opacity 0.12s ease;
+}
+.convert-btn:hover:not(:disabled) {
+box-shadow: 0 6px 18px rgba(242, 166, 90, 0.35);
+}
+.convert-btn:active:not(:disabled) {
+transform: translateY(1px) scale(0.98);
+}
+.convert-btn:disabled {
+cursor: wait;
+opacity: 0.65;
+}
+.status {
+min-height: 1.3em;
+max-width: 230px;
+color: var(--muted);
+font-size: 0.8rem;
+line-height: 1.35;
+text-align: center;
+}
+.status.error {
+color: var(--danger);
+}
+.status.success {
+color: var(--success);
+}
+.privacy-note {
+margin: 16px 0 0;
+color: var(--muted);
+font-size: 0.82rem;
+line-height: 1.5;
+text-align: center;
+}
+@media (min-width: 820px) {
+.boxes {
+grid-template-columns:
+minmax(0, 1fr)
+auto
+minmax(0, 1fr);
+align-items: stretch;
+}
+.middle {
+margin: 0;
+}
+}
+@media (max-width: 560px) {
+body {
+padding: 28px 14px 40px;
+}
+.key-row {
+flex-direction: column;
+}
+.toolbar .hint {
+width: 100%;
+margin-left: 0;
+padding: 3px 4px 0;
+}
+}
 </style>
 </head>
-
 <body>
-
 <div class="wrap">
-
-  <div class="back-link-row">
-    <a class="back-link" href="/" aria-label="Back to sarcasm.games">
-      ← Back to sarcasm.games
-    </a>
-  </div>
-
-  <header>
-    <h1 data-mirror="Mirrorcode">Mirrorcode</h1>
-
-    <p>
-      Encrypt text with a shared secret key, or paste an encrypted
-      message and use the same key to decrypt it.
-    </p>
-  </header>
-
-  <section class="key-panel">
-    <label for="keyInput">Secret key</label>
-
-    <div class="key-row">
-      <input
-        id="keyInput"
-        type="password"
-        autocomplete="new-password"
-        autocapitalize="none"
-        autocorrect="off"
-        spellcheck="false"
-        placeholder="Enter a secret key"
-      >
-
-      <button
-        class="secondary-btn"
-        id="toggleKeyBtn"
-        type="button"
-      >
-        Show
-      </button>
-    </div>
-
-    <p class="key-help">
-      The recipient must use exactly the same key. Uppercase and
-      lowercase characters are treated as different characters.
-    </p>
-  </section>
-
-  <div class="toolbar">
-    <button
-      class="b"
-      data-cmd="bold"
-      title="Bold"
-      type="button"
-    >
-      B
-    </button>
-
-    <button
-      class="i"
-      data-cmd="italic"
-      title="Italic"
-      type="button"
-    >
-      I
-    </button>
-
-    <button
-      class="u"
-      data-cmd="underline"
-      title="Underline"
-      type="button"
-    >
-      U
-    </button>
-
-    <button
-      class="s"
-      data-cmd="strikeThrough"
-      title="Strikethrough"
-      type="button"
-    >
-      S
-    </button>
-
-    <button
-      data-cmd="insertUnorderedList"
-      title="Bullet list"
-      type="button"
-    >
-      • List
-    </button>
-
-    <span class="hint">
-      Formatting applies to the field you last selected
-    </span>
-  </div>
-
-  <div class="boxes">
-
-    <section class="field">
-      <div class="field-header">
-        <label for="inputBox">Input</label>
-
-        <button
-          class="small-btn"
-          id="clearInputBtn"
-          type="button"
-        >
-          Clear
-        </button>
-      </div>
-
-      <div
-        id="inputBox"
-        class="editable"
-        contenteditable="true"
-        spellcheck="true"
-        data-placeholder="Write a message, or paste encrypted text here..."
-      ></div>
-    </section>
-
-    <div class="middle">
-      <button
-        class="convert-btn"
-        id="convertBtn"
-        type="button"
-      >
-        Encrypt / Decrypt
-      </button>
-
-      <div
-        id="status"
-        class="status"
-        role="status"
-        aria-live="polite"
-      ></div>
-    </div>
-
-    <section class="field">
-      <div class="field-header">
-        <label for="outputBox">Output</label>
-
-        <button
-          class="small-btn"
-          id="copyOutputBtn"
-          type="button"
-        >
-          Copy
-        </button>
-      </div>
-
-      <div
-        id="outputBox"
-        class="editable"
-        contenteditable="true"
-        spellcheck="false"
-        data-placeholder="The result will appear here..."
-      ></div>
-    </section>
-
-  </div>
-
-  <p class="privacy-note">
-    Nothing is stored by this page. The text and secret key only
-    exist temporarily in the browser while the page is open.
-  </p>
-
+<div class="back-link-row">
+<a class="back-link" id="backLink" href="/" aria-label="Back to sarcasm.games">
+← Back to sarcasm.games
+</a>
 </div>
-
+<header>
+<h1 data-mirror="Mirrorcode">Mirrorcode</h1>
+<p id="headerDescription">
+Encrypt text with a shared secret key, or paste an encrypted
+message and use the same key to decrypt it.
+</p>
+</header>
+<section class="key-panel">
+<label id="keyLabel" for="keyInput">Secret key</label>
+<div class="key-row">
+<input
+id="keyInput"
+type="password"
+autocomplete="new-password"
+autocapitalize="none"
+autocorrect="off"
+spellcheck="false"
+placeholder="Enter a secret key"
+>
+<button
+class="secondary-btn"
+id="toggleKeyBtn"
+type="button"
+>
+Show
+</button>
+</div>
+<p class="key-help" id="keyHelp">
+The recipient must use exactly the same key. Uppercase and
+lowercase characters are treated as different characters.
+</p>
+</section>
+<div class="toolbar">
+<button
+class="b"
+id="boldBtn"
+data-cmd="bold"
+title="Bold"
+type="button"
+>
+B
+</button>
+<button
+class="i"
+id="italicBtn"
+data-cmd="italic"
+title="Italic"
+type="button"
+>
+I
+</button>
+<button
+class="u"
+id="underlineBtn"
+data-cmd="underline"
+title="Underline"
+type="button"
+>
+U
+</button>
+<button
+class="s"
+id="strikeBtn"
+data-cmd="strikeThrough"
+title="Strikethrough"
+type="button"
+>
+S
+</button>
+<button
+id="listBtn"
+data-cmd="insertUnorderedList"
+title="Bullet list"
+type="button"
+>
+• List
+</button>
+<span class="hint" id="toolbarHint">
+Formatting applies to the field you last selected
+</span>
+</div>
+<div class="boxes">
+<section class="field">
+<div class="field-header">
+<label id="inputLabel" for="inputBox">Input</label>
+<button
+class="small-btn"
+id="clearInputBtn"
+type="button"
+>
+Clear
+</button>
+</div>
+<div
+id="inputBox"
+class="editable"
+contenteditable="true"
+spellcheck="true"
+data-placeholder="Write a message, or paste encrypted text here..."
+></div>
+</section>
+<div class="middle">
+<button
+class="convert-btn"
+id="convertBtn"
+type="button"
+>
+Encrypt / Decrypt
+</button>
+<div
+id="status"
+class="status"
+role="status"
+aria-live="polite"
+></div>
+</div>
+<section class="field">
+<div class="field-header">
+<label id="outputLabel" for="outputBox">Output</label>
+<button
+class="small-btn"
+id="copyOutputBtn"
+type="button"
+>
+Copy
+</button>
+</div>
+<div
+id="outputBox"
+class="editable"
+contenteditable="true"
+spellcheck="false"
+data-placeholder="The result will appear here..."
+></div>
+</section>
+</div>
+<p class="privacy-note" id="privacyNote">
+Nothing is stored by this page. The text and secret key only
+exist temporarily in the browser while the page is open.
+</p>
+</div>
 <script>
-  "use strict";
-
-  /*
-   * This prefix identifies the encrypted message format.
-   * It is not secret and does not weaken the encryption.
-   */
-  const CIPHER_PREFIX = "MIRROR1:";
-
-  /*
-   * PBKDF2 makes automated secret-key guessing more expensive.
-   */
-  const PBKDF2_ITERATIONS = 300000;
-
-  const textEncoder = new TextEncoder();
-
-  /*
-   * fatal: true causes invalid UTF-8 data to throw an error rather
-   * than returning replacement characters.
-   */
-  const textDecoder = new TextDecoder("utf-8", {
-    fatal: true
-  });
-
-  const inputBox = document.getElementById("inputBox");
-  const outputBox = document.getElementById("outputBox");
-  const keyInput = document.getElementById("keyInput");
-  const convertBtn = document.getElementById("convertBtn");
-  const toggleKeyBtn = document.getElementById("toggleKeyBtn");
-  const copyOutputBtn = document.getElementById("copyOutputBtn");
-  const clearInputBtn = document.getElementById("clearInputBtn");
-  const statusElement = document.getElementById("status");
-
-  /*
-   * This is deliberately shown for both an incorrect secret key
-   * and damaged or modified encrypted content.
-   */
-  const LOREM_IPSUM =
-    "Lorem ipsum dolor sit amet, consectetur adipiscing elit. " +
-    "Sed do eiusmod tempor incididunt ut labore et dolore magna " +
-    "aliqua. Ut enim ad minim veniam, quis nostrud exercitation " +
-    "ullamco laboris nisi ut aliquip ex ea commodo consequat.";
-
-  /*
-   * Convert bytes into Base64.
-   */
-  function bytesToBase64(bytes) {
-    let binary = "";
-    const chunkSize = 0x8000;
-
-    for (let i = 0; i < bytes.length; i += chunkSize) {
-      const chunk = bytes.subarray(i, i + chunkSize);
-      binary += String.fromCharCode(...chunk);
-    }
-
-    return btoa(binary);
-  }
-
-  /*
-   * Convert Base64 back into bytes.
-   */
-  function base64ToBytes(base64) {
-    const binary = atob(base64);
-    const bytes = new Uint8Array(binary.length);
-
-    for (let i = 0; i < binary.length; i++) {
-      bytes[i] = binary.charCodeAt(i);
-    }
-
-    return bytes;
-  }
-
-  /*
-   * Check that a string is canonical Base64.
-   *
-   * This prevents ordinary text that merely resembles encrypted
-   * content from being treated as an encrypted message.
-   */
-  function isStrictBase64(value) {
-    if (!value) {
-      return false;
-    }
-
-    if (value.length % 4 !== 0) {
-      return false;
-    }
-
-    if (!/^[A-Za-z0-9+/]+={0,2}$/.test(value)) {
-      return false;
-    }
-
-    try {
-      const decoded = base64ToBytes(value);
-      return bytesToBase64(decoded) === value;
-    } catch {
-      return false;
-    }
-  }
-
-  /*
-   * Determine whether the input actually follows the complete
-   * encrypted-message format.
-   *
-   * A normal sentence beginning with "MIRROR1:" will return false
-   * unless all three following sections are valid Base64 and have
-   * the expected cryptographic lengths.
-   */
-  function looksLikeEncryptedContent(text) {
-    /*
-     * Encrypted messages contain no meaningful whitespace, so line
-     * wrapping introduced while copying can safely be removed.
-     */
-    const normalized = text.replace(/\s+/g, "");
-
-    if (!normalized.startsWith(CIPHER_PREFIX)) {
-      return false;
-    }
-
-    const payload = normalized.slice(CIPHER_PREFIX.length);
-    const parts = payload.split(".");
-
-    if (parts.length !== 3) {
-      return false;
-    }
-
-    const [
-      encodedSalt,
-      encodedIv,
-      encodedCipherText
-    ] = parts;
-
-    if (
-      !isStrictBase64(encodedSalt) ||
-      !isStrictBase64(encodedIv) ||
-      !isStrictBase64(encodedCipherText)
-    ) {
-      return false;
-    }
-
-    try {
-      const salt = base64ToBytes(encodedSalt);
-      const iv = base64ToBytes(encodedIv);
-      const encryptedBytes = base64ToBytes(encodedCipherText);
-
-      /*
-       * Salt: 16 bytes
-       * IV: 12 bytes
-       * AES-GCM authentication tag: at least 16 bytes
-       */
-      return (
-        salt.length === 16 &&
-        iv.length === 12 &&
-        encryptedBytes.length >= 16
-      );
-    } catch {
-      return false;
-    }
-  }
-
-  /*
-   * Create an AES key from the supplied secret key.
-   *
-   * The salt is not secret. It is included in the encrypted text
-   * so the key can be recreated during decryption.
-   */
-  async function deriveEncryptionKey(password, salt) {
-    const passwordMaterial = await crypto.subtle.importKey(
-      "raw",
-      textEncoder.encode(password),
-      "PBKDF2",
-      false,
-      ["deriveKey"]
-    );
-
-    return crypto.subtle.deriveKey(
-      {
-        name: "PBKDF2",
-        salt,
-        iterations: PBKDF2_ITERATIONS,
-        hash: "SHA-256"
-      },
-      passwordMaterial,
-      {
-        name: "AES-GCM",
-        length: 256
-      },
-      false,
-      ["encrypt", "decrypt"]
-    );
-  }
-
-  /*
-   * Encrypt formatted HTML using AES-GCM.
-   *
-   * TextEncoder uses UTF-8, so this supports:
-   * Æ, Ø and Å
-   * uppercase and lowercase letters
-   * numbers
-   * punctuation
-   * line breaks
-   * symbols
-   * emoji
-   * other writing systems
-   */
-  async function encryptContent(html, password) {
-    const salt = crypto.getRandomValues(
-      new Uint8Array(16)
-    );
-
-    const iv = crypto.getRandomValues(
-      new Uint8Array(12)
-    );
-
-    const encryptionKey = await deriveEncryptionKey(
-      password,
-      salt
-    );
-
-    const encryptedBuffer = await crypto.subtle.encrypt(
-      {
-        name: "AES-GCM",
-        iv
-      },
-      encryptionKey,
-      textEncoder.encode(html)
-    );
-
-    const encryptedBytes = new Uint8Array(
-      encryptedBuffer
-    );
-
-    return (
-      CIPHER_PREFIX +
-      bytesToBase64(salt) +
-      "." +
-      bytesToBase64(iv) +
-      "." +
-      bytesToBase64(encryptedBytes)
-    );
-  }
-
-  /*
-   * Decrypt a MIRROR1 message.
-   *
-   * AES-GCM rejects the operation when:
-   * - the secret key is incorrect
-   * - the encrypted text is incomplete
-   * - the encrypted text has been modified
-   */
-  async function decryptContent(cipherText, password) {
-    const normalizedCipherText =
-      cipherText.replace(/\s+/g, "");
-
-    if (!looksLikeEncryptedContent(normalizedCipherText)) {
-      throw new Error("Invalid encrypted format.");
-    }
-
-    const payload = normalizedCipherText.slice(
-      CIPHER_PREFIX.length
-    );
-
-    const [
-      encodedSalt,
-      encodedIv,
-      encodedCipherText
-    ] = payload.split(".");
-
-    const salt = base64ToBytes(encodedSalt);
-    const iv = base64ToBytes(encodedIv);
-    const encryptedBytes =
-      base64ToBytes(encodedCipherText);
-
-    const encryptionKey = await deriveEncryptionKey(
-      password,
-      salt
-    );
-
-    const decryptedBuffer = await crypto.subtle.decrypt(
-      {
-        name: "AES-GCM",
-        iv
-      },
-      encryptionKey,
-      encryptedBytes
-    );
-
-    return textDecoder.decode(decryptedBuffer);
-  }
-
-  /*
-   * Only retain formatting elements used by this application.
-   *
-   * All attributes are removed to prevent scripts, event handlers
-   * and external content from being inserted through decrypted HTML.
-   */
-  function sanitizeFormattedHtml(html) {
-    const template = document.createElement("template");
-    template.innerHTML = html;
-
-    const allowedTags = new Set([
-      "B",
-      "STRONG",
-      "I",
-      "EM",
-      "U",
-      "S",
-      "STRIKE",
-      "UL",
-      "OL",
-      "LI",
-      "DIV",
-      "P",
-      "BR",
-      "SPAN"
-    ]);
-
-    const walker = document.createTreeWalker(
-      template.content,
-      NodeFilter.SHOW_ELEMENT
-    );
-
-    const elements = [];
-
-    while (walker.nextNode()) {
-      elements.push(walker.currentNode);
-    }
-
-    for (const element of elements) {
-      if (!allowedTags.has(element.tagName)) {
-        element.replaceWith(
-          ...Array.from(element.childNodes)
-        );
-
-        continue;
-      }
-
-      for (
-        const attribute of Array.from(element.attributes)
-      ) {
-        element.removeAttribute(attribute.name);
-      }
-    }
-
-    return template.innerHTML;
-  }
-
-  /*
-   * Return the visible plain text from an editable field.
-   */
-  function getPlainText(element) {
-    return element.innerText
-      .replace(/\r\n/g, "\n")
-      .trim();
-  }
-
-  /*
-   * Determine whether the field contains visible content.
-   */
-  function hasVisibleContent(element) {
-    return getPlainText(element).length > 0;
-  }
-
-  function setStatus(message, type = "") {
-    statusElement.textContent = message;
-    statusElement.className = "status";
-
-    if (type) {
-      statusElement.classList.add(type);
-    }
-  }
-
-  /*
-   * The same button performs both actions:
-   *
-   * Valid MIRROR1 content -> decrypt
-   * Anything else -> encrypt
-   */
-  convertBtn.addEventListener("click", async () => {
-    const password = keyInput.value;
-    const plainInput = getPlainText(inputBox);
-
-    setStatus("");
-
-    if (!window.crypto || !window.crypto.subtle) {
-      setStatus(
-        "Secure browser encryption is not available in this environment.",
-        "error"
-      );
-
-      return;
-    }
-
-    if (!password) {
-      setStatus(
-        "Enter a secret key first.",
-        "error"
-      );
-
-      keyInput.focus();
-      return;
-    }
-
-    if (!hasVisibleContent(inputBox)) {
-      setStatus(
-        "Enter or paste some text first.",
-        "error"
-      );
-
-      inputBox.focus();
-      return;
-    }
-
-    convertBtn.disabled = true;
-    convertBtn.textContent = "Working...";
-
-    try {
-      if (looksLikeEncryptedContent(plainInput)) {
-        const decryptedHtml = await decryptContent(
-          plainInput,
-          password
-        );
-
-        outputBox.innerHTML =
-          sanitizeFormattedHtml(decryptedHtml);
-
-        setStatus(
-          "Message decrypted.",
-          "success"
-        );
-      } else {
-        const encryptedText = await encryptContent(
-          inputBox.innerHTML,
-          password
-        );
-
-        /*
-         * textContent ensures that the encrypted string is shown
-         * as plain text rather than interpreted as HTML.
-         */
-        outputBox.textContent = encryptedText;
-
-        setStatus(
-          "Message encrypted.",
-          "success"
-        );
-      }
-    } catch {
-      /*
-       * Do not reveal whether the failure was caused by:
-       * - an incorrect key
-       * - damaged encrypted content
-       * - deliberately modified content
-       */
-      outputBox.textContent = LOREM_IPSUM;
-
-      setStatus(
-        "The message could not be decrypted.",
-        "error"
-      );
-    } finally {
-      convertBtn.disabled = false;
-      convertBtn.textContent = "Encrypt / Decrypt";
-    }
-  });
-
-  /*
-   * Show or hide the secret key.
-   */
-  toggleKeyBtn.addEventListener("click", () => {
-    const keyIsVisible = keyInput.type === "text";
-
-    keyInput.type =
-      keyIsVisible ? "password" : "text";
-
-    toggleKeyBtn.textContent =
-      keyIsVisible ? "Show" : "Hide";
-
-    keyInput.focus();
-  });
-
-  /*
-   * Copy the output as plain text.
-   */
-  copyOutputBtn.addEventListener("click", async () => {
-    const outputText = getPlainText(outputBox);
-
-    if (!outputText) {
-      setStatus(
-        "There is no output to copy.",
-        "error"
-      );
-
-      return;
-    }
-
-    try {
-      await navigator.clipboard.writeText(outputText);
-
-      setStatus(
-        "Output copied.",
-        "success"
-      );
-    } catch {
-      /*
-       * Fallback for browsers where Clipboard API access is blocked.
-       */
-      const range = document.createRange();
-      const selection = window.getSelection();
-
-      range.selectNodeContents(outputBox);
-
-      selection.removeAllRanges();
-      selection.addRange(range);
-
-      setStatus(
-        "Output selected. Press Ctrl+C to copy it.",
-        "success"
-      );
-    }
-  });
-
-  /*
-   * Clear the text fields. The secret key is deliberately retained.
-   */
-  clearInputBtn.addEventListener("click", () => {
-    inputBox.innerHTML = "";
-    outputBox.innerHTML = "";
-
-    setStatus("");
-    inputBox.focus();
-  });
-
-  /*
-   * Formatting toolbar.
-   */
-  let activeBox = inputBox;
-
-  inputBox.addEventListener("focus", () => {
-    activeBox = inputBox;
-  });
-
-  outputBox.addEventListener("focus", () => {
-    activeBox = outputBox;
-  });
-
-  document
-    .querySelectorAll(".toolbar button[data-cmd]")
-    .forEach((button) => {
-      /*
-       * Prevent the editable field from losing its selection when
-       * a formatting button is pressed.
-       */
-      button.addEventListener(
-        "mousedown",
-        (event) => {
-          event.preventDefault();
-        }
-      );
-
-      button.addEventListener("click", () => {
-        activeBox.focus();
-
-        document.execCommand(
-          button.dataset.cmd,
-          false,
-          null
-        );
-      });
-    });
+"use strict";
+const CIPHER_PREFIX = "MIRROR1:";
+const PBKDF2_ITERATIONS = 300000;
+const textEncoder = new TextEncoder();
+const textDecoder = new TextDecoder("utf-8", {
+fatal: true
+});
+const inputBox = document.getElementById("inputBox");
+const outputBox = document.getElementById("outputBox");
+const keyInput = document.getElementById("keyInput");
+const convertBtn = document.getElementById("convertBtn");
+const toggleKeyBtn = document.getElementById("toggleKeyBtn");
+const copyOutputBtn = document.getElementById("copyOutputBtn");
+const clearInputBtn = document.getElementById("clearInputBtn");
+const statusElement = document.getElementById("status");
+const LANGUAGE_STORAGE_KEY = "quizLanguage";
+const I18N = {
+en: {
+pageTitle: "Mirrorcode – Encrypt and Decrypt Text",
+back: "← Back to sarcasm.games",
+headerDescription:
+"Encrypt text with a shared secret key, or paste an encrypted message and use the same key to decrypt it.",
+keyLabel: "Secret key",
+keyPlaceholder: "Enter a secret key",
+show: "Show",
+hide: "Hide",
+keyHelp:
+"The recipient must use exactly the same key. Uppercase and lowercase characters are treated as different characters.",
+boldTitle: "Bold",
+italicTitle: "Italic",
+underlineTitle: "Underline",
+strikeTitle: "Strikethrough",
+listTitle: "Bullet list",
+listLabel: "• List",
+toolbarHint: "Formatting applies to the field you last selected",
+inputLabel: "Input",
+clear: "Clear",
+inputPlaceholder: "Write a message, or paste encrypted text here...",
+convert: "Encrypt / Decrypt",
+working: "Working...",
+outputLabel: "Output",
+copy: "Copy",
+outputPlaceholder: "The result will appear here...",
+privacy:
+"Nothing is stored by this page. The text and secret key only exist temporarily in the browser while the page is open.",
+cryptoUnavailable:
+"Secure browser encryption is not available in this environment.",
+enterKey: "Enter a secret key first.",
+enterText: "Enter or paste some text first.",
+decrypted: "Message decrypted.",
+encrypted: "Message encrypted.",
+decryptFailed: "The message could not be decrypted.",
+nothingToCopy: "There is no output to copy.",
+copied: "Output copied.",
+selected: "Output selected. Press Ctrl+C to copy it."
+},
+no: {
+pageTitle: "Mirrorcode – Krypter og dekrypter tekst",
+back: "← Tilbake til sarcasm.games",
+headerDescription:
+"Krypter tekst med en delt hemmelig nøkkel, eller lim inn en kryptert melding og bruk den samme nøkkelen for å dekryptere den.",
+keyLabel: "Hemmelig nøkkel",
+keyPlaceholder: "Skriv inn en hemmelig nøkkel",
+show: "Vis",
+hide: "Skjul",
+keyHelp:
+"Mottakeren må bruke nøyaktig samme nøkkel. Store og små bokstaver behandles som forskjellige tegn.",
+boldTitle: "Fet",
+italicTitle: "Kursiv",
+underlineTitle: "Understreking",
+strikeTitle: "Gjennomstreking",
+listTitle: "Punktliste",
+listLabel: "• Liste",
+toolbarHint: "Formatering brukes på feltet du valgte sist",
+inputLabel: "Inndata",
+clear: "Tøm",
+inputPlaceholder: "Skriv en melding, eller lim inn kryptert tekst her...",
+convert: "Krypter / dekrypter",
+working: "Arbeider...",
+outputLabel: "Resultat",
+copy: "Kopier",
+outputPlaceholder: "Resultatet vises her...",
+privacy:
+"Ingenting lagres av denne siden. Teksten og den hemmelige nøkkelen finnes bare midlertidig i nettleseren mens siden er åpen.",
+cryptoUnavailable:
+"Sikker kryptering i nettleseren er ikke tilgjengelig i dette miljøet.",
+enterKey: "Skriv inn en hemmelig nøkkel først.",
+enterText: "Skriv eller lim inn tekst først.",
+decrypted: "Meldingen er dekryptert.",
+encrypted: "Meldingen er kryptert.",
+decryptFailed: "Meldingen kunne ikke dekrypteres.",
+nothingToCopy: "Det finnes ikke noe resultat å kopiere.",
+copied: "Resultatet er kopiert.",
+selected: "Resultatet er markert. Trykk Ctrl+C for å kopiere det."
+}
+};
+function getStoredLanguage() {
+try {
+const storedLanguage = window.localStorage.getItem(
+LANGUAGE_STORAGE_KEY
+);
+if (storedLanguage === "en" || storedLanguage === "no") {
+return storedLanguage;
+}
+} catch {
+}
+const browserLanguage = (navigator.language || "").toLowerCase();
+return (
+browserLanguage.startsWith("no") ||
+browserLanguage.startsWith("nb") ||
+browserLanguage.startsWith("nn")
+) ? "no" : "en";
+}
+let currentLanguage = getStoredLanguage();
+function t() {
+return I18N[currentLanguage] || I18N.en;
+}
+function applyTranslations() {
+const texts = t();
+const keyIsVisible = keyInput.type === "text";
+document.documentElement.lang = currentLanguage === "no" ? "no" : "en";
+document.title = texts.pageTitle;
+const backLink = document.getElementById("backLink");
+backLink.textContent = texts.back;
+backLink.setAttribute("aria-label", texts.back.replace(/^←\s*/, ""));
+document.getElementById("headerDescription").textContent =
+texts.headerDescription;
+document.getElementById("keyLabel").textContent = texts.keyLabel;
+keyInput.placeholder = texts.keyPlaceholder;
+toggleKeyBtn.textContent = keyIsVisible ? texts.hide : texts.show;
+document.getElementById("keyHelp").textContent = texts.keyHelp;
+document.getElementById("boldBtn").title = texts.boldTitle;
+document.getElementById("italicBtn").title = texts.italicTitle;
+document.getElementById("underlineBtn").title = texts.underlineTitle;
+document.getElementById("strikeBtn").title = texts.strikeTitle;
+const listBtn = document.getElementById("listBtn");
+listBtn.title = texts.listTitle;
+listBtn.textContent = texts.listLabel;
+document.getElementById("toolbarHint").textContent = texts.toolbarHint;
+document.getElementById("inputLabel").textContent = texts.inputLabel;
+clearInputBtn.textContent = texts.clear;
+inputBox.dataset.placeholder = texts.inputPlaceholder;
+convertBtn.textContent = texts.convert;
+document.getElementById("outputLabel").textContent = texts.outputLabel;
+copyOutputBtn.textContent = texts.copy;
+outputBox.dataset.placeholder = texts.outputPlaceholder;
+document.getElementById("privacyNote").textContent = texts.privacy;
+}
+applyTranslations();
+window.addEventListener("storage", (event) => {
+if (
+event.key !== LANGUAGE_STORAGE_KEY ||
+(event.newValue !== "en" && event.newValue !== "no")
+) {
+return;
+}
+currentLanguage = event.newValue;
+applyTranslations();
+});
+const LOREM_IPSUM =
+"Lorem ipsum dolor sit amet, consectetur adipiscing elit. " +
+"Sed do eiusmod tempor incididunt ut labore et dolore magna " +
+"aliqua. Ut enim ad minim veniam, quis nostrud exercitation " +
+"ullamco laboris nisi ut aliquip ex ea commodo consequat.";
+function bytesToBase64(bytes) {
+let binary = "";
+const chunkSize = 0x8000;
+for (let i = 0; i < bytes.length; i += chunkSize) {
+const chunk = bytes.subarray(i, i + chunkSize);
+binary += String.fromCharCode(...chunk);
+}
+return btoa(binary);
+}
+function base64ToBytes(base64) {
+const binary = atob(base64);
+const bytes = new Uint8Array(binary.length);
+for (let i = 0; i < binary.length; i++) {
+bytes[i] = binary.charCodeAt(i);
+}
+return bytes;
+}
+function isStrictBase64(value) {
+if (!value) {
+return false;
+}
+if (value.length % 4 !== 0) {
+return false;
+}
+if (!/^[A-Za-z0-9+/]+={0,2}$/.test(value)) {
+return false;
+}
+try {
+const decoded = base64ToBytes(value);
+return bytesToBase64(decoded) === value;
+} catch {
+return false;
+}
+}
+function looksLikeEncryptedContent(text) {
+const normalized = text.replace(/\s+/g, "");
+if (!normalized.startsWith(CIPHER_PREFIX)) {
+return false;
+}
+const payload = normalized.slice(CIPHER_PREFIX.length);
+const parts = payload.split(".");
+if (parts.length !== 3) {
+return false;
+}
+const [
+encodedSalt,
+encodedIv,
+encodedCipherText
+] = parts;
+if (
+!isStrictBase64(encodedSalt) ||
+!isStrictBase64(encodedIv) ||
+!isStrictBase64(encodedCipherText)
+) {
+return false;
+}
+try {
+const salt = base64ToBytes(encodedSalt);
+const iv = base64ToBytes(encodedIv);
+const encryptedBytes = base64ToBytes(encodedCipherText);
+return (
+salt.length === 16 &&
+iv.length === 12 &&
+encryptedBytes.length >= 16
+);
+} catch {
+return false;
+}
+}
+async function deriveEncryptionKey(password, salt) {
+const passwordMaterial = await crypto.subtle.importKey(
+"raw",
+textEncoder.encode(password),
+"PBKDF2",
+false,
+["deriveKey"]
+);
+return crypto.subtle.deriveKey(
+{
+name: "PBKDF2",
+salt,
+iterations: PBKDF2_ITERATIONS,
+hash: "SHA-256"
+},
+passwordMaterial,
+{
+name: "AES-GCM",
+length: 256
+},
+false,
+["encrypt", "decrypt"]
+);
+}
+async function encryptContent(html, password) {
+const salt = crypto.getRandomValues(
+new Uint8Array(16)
+);
+const iv = crypto.getRandomValues(
+new Uint8Array(12)
+);
+const encryptionKey = await deriveEncryptionKey(
+password,
+salt
+);
+const encryptedBuffer = await crypto.subtle.encrypt(
+{
+name: "AES-GCM",
+iv
+},
+encryptionKey,
+textEncoder.encode(html)
+);
+const encryptedBytes = new Uint8Array(
+encryptedBuffer
+);
+return (
+CIPHER_PREFIX +
+bytesToBase64(salt) +
+"." +
+bytesToBase64(iv) +
+"." +
+bytesToBase64(encryptedBytes)
+);
+}
+async function decryptContent(cipherText, password) {
+const normalizedCipherText =
+cipherText.replace(/\s+/g, "");
+if (!looksLikeEncryptedContent(normalizedCipherText)) {
+throw new Error("Invalid encrypted format.");
+}
+const payload = normalizedCipherText.slice(
+CIPHER_PREFIX.length
+);
+const [
+encodedSalt,
+encodedIv,
+encodedCipherText
+] = payload.split(".");
+const salt = base64ToBytes(encodedSalt);
+const iv = base64ToBytes(encodedIv);
+const encryptedBytes =
+base64ToBytes(encodedCipherText);
+const encryptionKey = await deriveEncryptionKey(
+password,
+salt
+);
+const decryptedBuffer = await crypto.subtle.decrypt(
+{
+name: "AES-GCM",
+iv
+},
+encryptionKey,
+encryptedBytes
+);
+return textDecoder.decode(decryptedBuffer);
+}
+function sanitizeFormattedHtml(html) {
+const template = document.createElement("template");
+template.innerHTML = html;
+const allowedTags = new Set([
+"B",
+"STRONG",
+"I",
+"EM",
+"U",
+"S",
+"STRIKE",
+"UL",
+"OL",
+"LI",
+"DIV",
+"P",
+"BR",
+"SPAN"
+]);
+const walker = document.createTreeWalker(
+template.content,
+NodeFilter.SHOW_ELEMENT
+);
+const elements = [];
+while (walker.nextNode()) {
+elements.push(walker.currentNode);
+}
+for (const element of elements) {
+if (!allowedTags.has(element.tagName)) {
+element.replaceWith(
+...Array.from(element.childNodes)
+);
+continue;
+}
+for (
+const attribute of Array.from(element.attributes)
+) {
+element.removeAttribute(attribute.name);
+}
+}
+return template.innerHTML;
+}
+function getPlainText(element) {
+return element.innerText
+.replace(/\r\n/g, "\n")
+.trim();
+}
+function hasVisibleContent(element) {
+return getPlainText(element).length > 0;
+}
+function setStatus(message, type = "") {
+statusElement.textContent = message;
+statusElement.className = "status";
+if (type) {
+statusElement.classList.add(type);
+}
+}
+convertBtn.addEventListener("click", async () => {
+const password = keyInput.value;
+const plainInput = getPlainText(inputBox);
+setStatus("");
+if (!window.crypto || !window.crypto.subtle) {
+setStatus(
+t().cryptoUnavailable,
+"error"
+);
+return;
+}
+if (!password) {
+setStatus(
+t().enterKey,
+"error"
+);
+keyInput.focus();
+return;
+}
+if (!hasVisibleContent(inputBox)) {
+setStatus(
+t().enterText,
+"error"
+);
+inputBox.focus();
+return;
+}
+convertBtn.disabled = true;
+convertBtn.textContent = t().working;
+try {
+if (looksLikeEncryptedContent(plainInput)) {
+const decryptedHtml = await decryptContent(
+plainInput,
+password
+);
+outputBox.innerHTML =
+sanitizeFormattedHtml(decryptedHtml);
+setStatus(
+t().decrypted,
+"success"
+);
+} else {
+const encryptedText = await encryptContent(
+inputBox.innerHTML,
+password
+);
+outputBox.textContent = encryptedText;
+setStatus(
+t().encrypted,
+"success"
+);
+}
+} catch {
+outputBox.textContent = LOREM_IPSUM;
+setStatus(
+t().decryptFailed,
+"error"
+);
+} finally {
+convertBtn.disabled = false;
+convertBtn.textContent = t().convert;
+}
+});
+toggleKeyBtn.addEventListener("click", () => {
+const keyIsVisible = keyInput.type === "text";
+keyInput.type =
+keyIsVisible ? "password" : "text";
+toggleKeyBtn.textContent =
+keyIsVisible ? t().show : t().hide;
+keyInput.focus();
+});
+copyOutputBtn.addEventListener("click", async () => {
+const outputText = getPlainText(outputBox);
+if (!outputText) {
+setStatus(
+t().nothingToCopy,
+"error"
+);
+return;
+}
+try {
+await navigator.clipboard.writeText(outputText);
+setStatus(
+t().copied,
+"success"
+);
+} catch {
+const range = document.createRange();
+const selection = window.getSelection();
+range.selectNodeContents(outputBox);
+selection.removeAllRanges();
+selection.addRange(range);
+setStatus(
+t().selected,
+"success"
+);
+}
+});
+clearInputBtn.addEventListener("click", () => {
+inputBox.innerHTML = "";
+outputBox.innerHTML = "";
+setStatus("");
+inputBox.focus();
+});
+let activeBox = inputBox;
+inputBox.addEventListener("focus", () => {
+activeBox = inputBox;
+});
+outputBox.addEventListener("focus", () => {
+activeBox = outputBox;
+});
+document
+.querySelectorAll(".toolbar button[data-cmd]")
+.forEach((button) => {
+button.addEventListener(
+"mousedown",
+(event) => {
+event.preventDefault();
+}
+);
+button.addEventListener("click", () => {
+activeBox.focus();
+document.execCommand(
+button.dataset.cmd,
+false,
+null
+);
+});
+});
 </script>
-
 </body>
 </html>
